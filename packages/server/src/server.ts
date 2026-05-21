@@ -9,7 +9,7 @@ const SERVER_VERSION = '0.1.0'
 
 export class GlyphServer {
   private app = new Hono()
-  private glyphs = new Map<string, GlyphDefinition<unknown, unknown>>()
+  private glyphs = new Map<string, GlyphDefinition<any, any>>()
   private port: number
 
   constructor(options?: { port?: number }) {
@@ -17,7 +17,7 @@ export class GlyphServer {
     this.setupRoutes()
   }
 
-  register(glyph: GlyphDefinition<unknown, unknown>): this {
+  register(glyph: GlyphDefinition<any, any>): this {
     this.glyphs.set(glyph.card.name, glyph)
     return this
   }

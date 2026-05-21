@@ -22,6 +22,13 @@ pnpm server   # terminal 1
 pnpm client   # terminal 2
 ```
 
+## Verify
+
+```bash
+pnpm typecheck   # type-check every package and the example
+pnpm test        # run the @glyph/core and @glyph/server test suites
+```
+
 ## Status
 
-Phase 1 — MVP in progress.
+Phase 1 — MVP complete. Four packages + the `01-hello-glyph` example, typechecked and tested.

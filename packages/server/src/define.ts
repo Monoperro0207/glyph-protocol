@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { computeGlyphId, signGlyph } from '@glyph/core'

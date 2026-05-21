@@ -7,8 +7,8 @@
     "examples/*"
   ],
   "scripts": {
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test packages/*/test/*.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
