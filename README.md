@@ -12,6 +12,7 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyph/core` | Hash, sign, validate |
 | `@glyph/server` | GlyphServer (Hono) |
 | `@glyph/client` | GlyphClient |
+| `@glyph/resolver` | Intent → glyph resolver (pluggable scorers) |
 
 ## Quick Start
 
@@ -32,6 +33,9 @@ pnpm test        # run the @glyph/core and @glyph/server test suites
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
-- **Phase 2 — in progress.** ed25519 signing: glyph cards carry an embedded
-  public key and an ed25519 signature over the card id; `verifyGlyph` checks
-  both content integrity and provenance.
+- **Phase 2 — in progress.**
+  - ed25519 signing: glyph cards carry an embedded public key and an ed25519
+    signature over the card id; `verifyGlyph` checks both content integrity
+    and provenance.
+  - `@glyph/resolver`: natural-language intent → candidate glyphs, with a
+    zero-dependency lexical scorer by default and an opt-in embedding scorer.
