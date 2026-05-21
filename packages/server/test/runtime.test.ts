@@ -1,0 +1,109 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { z } from 'zod'
+import { defineGlyph, GlyphServer } from '../src/index.js'
+
+const baseCost = {
+  latency: 'fast' as const,
+  sideEffects: false,
+  reversible: true,
+  riskTier: 'safe' as const,
+  requiresConfirmation: false,
+}
+
+const honest = defineGlyph({
+  name: 'honest',
+  intent: 'Returns output that matches its declared schema',
+  cost: baseCost,
+  input: z.object({}),
+  output: z.object({ value: z.number() }),
+  provider: 'test',
+  handler: async () => ({ value: 42 }),
+})
+
+const liar = defineGlyph({
+  name: 'liar',
+  intent: 'Declares a number but returns a string',
+  cost: baseCost,
+  input: z.object({}),
+  output: z.object({ value: z.number() }),
+  provider: 'test',
+  handler: async () => ({ value: 'not a number' } as any),
+})
+
+const thrower = defineGlyph({
+  name: 'thrower',
+  intent: 'A handler that throws',
+  cost: baseCost,
+  input: z.object({}),
+  output: z.object({}),
+  provider: 'test',
+  handler: async () => {
+    throw new Error('handler exploded')
+  },
+})
+
+const slow = defineGlyph({
+  name: 'slow',
+  intent: 'A handler that never resolves in time',
+  cost: baseCost,
+  input: z.object({}),
+  output: z.object({}),
+  provider: 'test',
+  handler: async () => {
+    await new Promise((resolve) => {
+      const t = setTimeout(resolve, 5000)
+      t.unref()
+    })
+    return {}
+  },
+})
+
+const server = new GlyphServer({ callTimeoutMs: 200 })
+server.register(honest)
+server.register(liar)
+server.register(thrower)
+server.register(slow)
+
+async function call(name: string) {
+  const res = await server.fetch(
+    new Request(`http://glyph/glyphs/${name}/call`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ input: {} }),
+    })
+  )
+  return { status: res.status, body: (await res.json()) as any }
+}
+
+test('output matching the declared schema passes through', async () => {
+  const res = await call('honest')
+  assert.equal(res.status, 200)
+  assert.equal(res.body.type, 'data')
+  assert.equal(res.body.payload.value, 42)
+})
+
+test('output not matching the schema → 502 OUTPUT_VALIDATION_FAILED', async () => {
+  const res = await call('liar')
+  assert.equal(res.status, 502)
+  assert.equal(res.body.error.code, 'OUTPUT_VALIDATION_FAILED')
+})
+
+test('a handler that throws → 502 HANDLER_ERROR', async () => {
+  const res = await call('thrower')
+  assert.equal(res.status, 502)
+  assert.equal(res.body.error.code, 'HANDLER_ERROR')
+  assert.match(res.body.error.message, /exploded/)
+})
+
+test('a handler that exceeds the timeout → 504 HANDLER_TIMEOUT', async () => {
+  const res = await call('slow')
+  assert.equal(res.status, 504)
+  assert.equal(res.body.error.code, 'HANDLER_TIMEOUT')
+})
+
+test('an unknown glyph → 404 NOT_FOUND', async () => {
+  const res = await call('does-not-exist')
+  assert.equal(res.status, 404)
+  assert.equal(res.body.error.code, 'NOT_FOUND')
+})

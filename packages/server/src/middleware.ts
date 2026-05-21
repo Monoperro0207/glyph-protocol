@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono'
 import { getConnInfo } from '@hono/node-server/conninfo'
+import { errorResponse } from './errors.js'
 
 export interface AuthConfig {
   tokens?: string[]
@@ -27,7 +28,7 @@ export function authMiddleware(config: AuthConfig): MiddlewareHandler {
     if (c.req.path === '/health') return next()
     const token = bearerToken(c)
     if (!token || !verify(token)) {
-      return c.json({ error: 'Unauthorized' }, 401)
+      return errorResponse(c, 401, 'UNAUTHORIZED', 'Missing or invalid bearer token')
     }
     return next()
   }
@@ -56,7 +57,7 @@ export function rateLimitMiddleware(config: RateLimitConfig): MiddlewareHandler 
     entry.count++
     if (entry.count > config.max) {
       c.header('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)))
-      return c.json({ error: 'Too Many Requests' }, 429)
+      return errorResponse(c, 429, 'RATE_LIMITED', 'Too many requests')
     }
     return next()
   }

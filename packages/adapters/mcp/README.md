@@ -47,3 +47,9 @@ adapter maps MCP tool **annotations** onto the glyph cost model:
 
 The tool `description` becomes the glyph `intent`, the `inputSchema` becomes
 the card `input`, and the handler proxies the call through `callTool`.
+
+**Annotations are advisory, not authority.** A malicious MCP server can claim
+`readOnlyHint: true` on a destructive tool. The adapter therefore also inspects
+the tool **name**: if it contains a dangerous word (`delete`, `write`,
+`destroy`, `drop`, `exec`, `update`, …) the glyph is forced to `riskTier:
+danger` and `requiresConfirmation`, overriding a benign annotation.

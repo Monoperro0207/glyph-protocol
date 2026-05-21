@@ -6,6 +6,7 @@ import type { GlyphCard } from '@glyph/types'
 export interface GlyphDefinition<TInput, TOutput> {
   card: GlyphCard
   inputSchema: z.ZodType<TInput>
+  outputSchema: z.ZodType<TOutput>
   handler: (input: TInput) => Promise<TOutput>
 }
 
@@ -44,6 +45,7 @@ export function defineGlyph<TInput, TOutput>(config: {
   return {
     card,
     inputSchema: config.input,
+    outputSchema: config.output,
     handler: config.handler,
   }
 }

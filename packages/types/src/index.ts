@@ -6,5 +6,6 @@ export type {
   HandshakeRequest,
   HandshakeResponse,
   ConfirmationTicket,
+  GlyphError,
   JSONSchema,
 } from './types.js'

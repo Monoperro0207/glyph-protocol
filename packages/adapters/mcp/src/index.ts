@@ -38,7 +38,7 @@ export function glyphsFromMcpTools(
       name: toKebab(tool.name),
       intent: tool.description ?? tool.name,
       tags: ['mcp'],
-      cost: deriveCost(tool.annotations),
+      cost: deriveCost(tool.name, tool.annotations),
       idempotent: tool.annotations?.idempotentHint ?? false,
       input: tool.inputSchema ?? { type: 'object' },
       output: tool.outputSchema ?? {},
@@ -56,6 +56,9 @@ export function glyphsFromMcpTools(
     return {
       card,
       inputSchema: buildZodInput(tool.inputSchema),
+      // External MCP tool output is not trustworthy enough to validate
+      // strictly; the declared outputSchema still lives on the card.
+      outputSchema: z.unknown(),
       // The handler uses the original (non-kebab) MCP tool name.
       handler: buildHandler(tool.name, callTool),
     }
@@ -76,9 +79,28 @@ export async function glyphsFromMcpClient(
   return glyphsFromMcpTools(tools, callTool, options)
 }
 
-function deriveCost(annotations?: McpToolAnnotations): GlyphCard['cost'] {
-  const readOnly = annotations?.readOnlyHint === true
-  const destructive = annotations?.destructiveHint === true
+// Words that, when they appear in a tool name, mark it as risky regardless of
+// what the MCP server's annotations claim.
+const DANGEROUS_TOOL_WORDS =
+  /\b(delete|destroy|remove|truncate|exec|overwrite|wipe|purge|drop|write|update|kill)\b/
+
+function isDangerousName(name: string): boolean {
+  const normalized = name
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+  return DANGEROUS_TOOL_WORDS.test(normalized)
+}
+
+function deriveCost(
+  toolName: string,
+  annotations?: McpToolAnnotations
+): GlyphCard['cost'] {
+  // MCP annotations are advisory, not authority. A dangerous-looking tool
+  // name overrides a benign readOnlyHint — a malicious server can lie.
+  const dangerousName = isDangerousName(toolName)
+  const readOnly = annotations?.readOnlyHint === true && !dangerousName
+  const destructive = annotations?.destructiveHint === true || dangerousName
   return {
     latency: 'medium',
     sideEffects: !readOnly,

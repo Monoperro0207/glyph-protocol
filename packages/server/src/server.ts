@@ -18,14 +18,26 @@ import type {
 import type { GlyphDefinition } from './define.js'
 import { authMiddleware, rateLimitMiddleware } from './middleware.js'
 import type { AuthConfig, RateLimitConfig } from './middleware.js'
+import { errorResponse } from './errors.js'
 
 const SERVER_VERSION = '0.1.0'
 const CONFIRMATION_TTL_MS = 5 * 60_000
+const DEFAULT_CALL_TIMEOUT_MS = 30_000
 
 function hashInput(input: unknown): string {
   return createHash('sha256')
     .update(JSON.stringify(canonicalize(input)))
     .digest('hex')
+}
+
+class HandlerTimeoutError extends Error {}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new HandlerTimeoutError()), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
 
 export class GlyphServer {
@@ -39,16 +51,19 @@ export class GlyphServer {
   private keyPair: GlyphKeyPair
   private auth?: AuthConfig
   private rateLimit?: RateLimitConfig
+  private callTimeoutMs: number
 
   constructor(options?: {
     port?: number
     keyPair?: GlyphKeyPair
     auth?: AuthConfig
     rateLimit?: RateLimitConfig
+    callTimeoutMs?: number
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
     this.rateLimit = options?.rateLimit
+    this.callTimeoutMs = options?.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -111,19 +126,25 @@ export class GlyphServer {
       const name = c.req.param('name')
       const depth = (c.req.query('depth') as 'minimal' | 'standard' | 'rich') ?? 'rich'
       const glyph = this.glyphs.get(name)
-      if (!glyph) return c.json({ error: 'Not found' }, 404)
+      if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
       return c.json(applyDepth(glyph.card, depth))
     })
 
     app.post('/glyphs/:name/prepare', async (c) => {
       const name = c.req.param('name')
       const glyph = this.glyphs.get(name)
-      if (!glyph) return c.json({ error: 'Not found' }, 404)
+      if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
 
       const body = await c.req.json<{ input: unknown }>()
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
-        return c.json({ error: 'Validation failed', issues: parsed.error.issues }, 400)
+        return errorResponse(
+          c,
+          400,
+          'VALIDATION_FAILED',
+          'Input validation failed',
+          parsed.error.issues
+        )
       }
 
       const now = Date.now()
@@ -155,7 +176,7 @@ export class GlyphServer {
     app.post('/glyphs/:name/call', async (c) => {
       const name = c.req.param('name')
       const glyph = this.glyphs.get(name)
-      if (!glyph) return c.json({ error: 'Not found' }, 404)
+      if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
 
       const body = await c.req.json<{
         input: unknown
@@ -166,7 +187,13 @@ export class GlyphServer {
 
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
-        return c.json({ error: 'Validation failed', issues: parsed.error.issues }, 400)
+        return errorResponse(
+          c,
+          400,
+          'VALIDATION_FAILED',
+          'Input validation failed',
+          parsed.error.issues
+        )
       }
 
       // Policy gate: a glyph that declares requiresConfirmation cannot run
@@ -176,14 +203,16 @@ export class GlyphServer {
         const token = body.confirmationToken
         const pending = token ? this.pendingConfirmations.get(token) : undefined
         if (!token || !pending) {
-          return c.json(
+          return errorResponse(
+            c,
+            403,
+            'CONFIRMATION_REQUIRED',
+            'This glyph requires confirmation',
             {
-              error: 'Confirmation required',
               glyph: name,
               cost: glyph.card.cost,
               hint: `POST /glyphs/${name}/prepare to obtain a confirmation token`,
-            },
-            403
+            }
           )
         }
         this.pendingConfirmations.delete(token) // single-use
@@ -192,24 +221,58 @@ export class GlyphServer {
           pending.glyphName === name &&
           pending.inputHash === hashInput(parsed.data)
         if (!valid) {
-          return c.json(
-            { error: 'Invalid, expired, or mismatched confirmation token' },
-            403
+          return errorResponse(
+            c,
+            403,
+            'INVALID_CONFIRMATION',
+            'Invalid, expired, or mismatched confirmation token'
           )
         }
       }
 
       const start = Date.now()
-      const result = await glyph.handler(parsed.data)
+      let result: unknown
+      try {
+        result = await withTimeout(
+          glyph.handler(parsed.data),
+          this.callTimeoutMs
+        )
+      } catch (err) {
+        if (err instanceof HandlerTimeoutError) {
+          return errorResponse(
+            c,
+            504,
+            'HANDLER_TIMEOUT',
+            `Handler exceeded the ${this.callTimeoutMs}ms timeout`
+          )
+        }
+        return errorResponse(
+          c,
+          502,
+          'HANDLER_ERROR',
+          err instanceof Error ? err.message : 'The handler threw an error'
+        )
+      }
       const latencyMs = Date.now() - start
 
-      const envelope = sealResult(glyph.card.id, callId, result, latencyMs, glyph.card.provider)
-
-      // Enforce: envelope type must always be 'data'
-      if (envelope.type !== 'data') {
-        return c.json({ error: 'Invalid envelope type' }, 400)
+      const checked = glyph.outputSchema.safeParse(result)
+      if (!checked.success) {
+        return errorResponse(
+          c,
+          502,
+          'OUTPUT_VALIDATION_FAILED',
+          'Handler output did not match the declared output schema',
+          checked.error.issues
+        )
       }
 
+      const envelope = sealResult(
+        glyph.card.id,
+        callId,
+        checked.data,
+        latencyMs,
+        glyph.card.provider
+      )
       return c.json(envelope)
     })
   }

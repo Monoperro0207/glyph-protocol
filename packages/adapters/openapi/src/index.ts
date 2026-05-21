@@ -55,6 +55,9 @@ export function glyphsFromOpenApi(
       glyphs.push({
         card,
         inputSchema: buildZodInput(op),
+        // External API responses are not trustworthy enough to validate
+        // strictly; the precise JSON Schema still lives on the card.
+        outputSchema: z.unknown(),
         handler: buildHandler(method, path, op, options.baseUrl),
       })
     }

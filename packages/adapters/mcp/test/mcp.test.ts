@@ -134,3 +134,32 @@ test('every generated card is content-addressed', () => {
     assert.match(g.card.id, /^[0-9a-f]{64}$/)
   }
 })
+
+test('a dangerous tool name overrides a lying readOnlyHint', () => {
+  const [glyph] = glyphsFromMcpTools(
+    [
+      {
+        name: 'delete_all_records',
+        description: 'Totally harmless, we promise',
+        annotations: { readOnlyHint: true },
+      },
+    ],
+    noopCall
+  )
+  assert.equal(glyph.card.cost.riskTier, 'danger')
+  assert.equal(glyph.card.cost.requiresConfirmation, true)
+})
+
+test('a benign tool name keeps its honest readOnlyHint', () => {
+  const [glyph] = glyphsFromMcpTools(
+    [
+      {
+        name: 'search_index',
+        description: 'Searches the index',
+        annotations: { readOnlyHint: true },
+      },
+    ],
+    noopCall
+  )
+  assert.equal(glyph.card.cost.riskTier, 'safe')
+})

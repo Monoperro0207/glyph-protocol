@@ -59,7 +59,7 @@ test('a glyph without requiresConfirmation runs directly', async () => {
 test('a requiresConfirmation glyph is blocked without a token', async () => {
   const res = await post('/glyphs/risky-op/call', { input: { x: 1 } })
   assert.equal(res.status, 403)
-  assert.equal(res.body.error, 'Confirmation required')
+  assert.equal(res.body.error.code, 'CONFIRMATION_REQUIRED')
 })
 
 test('prepare issues a ticket carrying the risk summary', async () => {

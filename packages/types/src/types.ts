@@ -78,3 +78,11 @@ export interface ConfirmationTicket {
   input: unknown
   expiresAt: string
 }
+
+export interface GlyphError {
+  error: {
+    code: string
+    message: string
+    details?: unknown
+  }
+}
