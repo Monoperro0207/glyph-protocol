@@ -1,0 +1,20 @@
+{
+  "name": "02-resolver-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "tsx server.ts",
+    "client": "tsx client.ts"
+  },
+  "dependencies": {
+    "@glyph/server": "workspace:*",
+    "@glyph/client": "workspace:*",
+    "@glyph/resolver": "workspace:*",
+    "@glyph/core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0"
+  }
+}

@@ -25,6 +25,12 @@ pnpm server   # terminal 1
 pnpm client   # terminal 2
 ```
 
+## Examples
+
+- [`01-hello-glyph`](examples/01-hello-glyph) — one glyph, end to end in under 2 minutes
+- [`02-resolver-agent`](examples/02-resolver-agent) — multi-tool server + an agent
+  that resolves natural-language intent to the right glyph
+
 ## Verify
 
 ```bash
