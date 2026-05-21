@@ -29,13 +29,28 @@ pnpm client   # terminal 2
 
 ```bash
 pnpm typecheck   # type-check every package and the example
-pnpm test        # run the @glyph/core and @glyph/server test suites
+pnpm test        # run all package test suites
 ```
+
+## Server hardening
+
+`GlyphServer` accepts optional bearer-token auth and rate limiting — both off
+by default, so they never get in the way of local development.
+
+```typescript
+const server = new GlyphServer({
+  port: 3100,
+  auth: { tokens: ['s3cret'] },          // or { verify: (token) => ... }
+  rateLimit: { windowMs: 60_000, max: 100 },
+})
+```
+
+`/health` stays public and unlimited so health checks keep working.
 
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
-- **Phase 2 — in progress.**
+- **Phase 2 — complete.**
   - ed25519 signing: glyph cards carry an embedded public key and an ed25519
     signature over the card id; `verifyGlyph` checks both content integrity
     and provenance.
@@ -45,3 +60,4 @@ pnpm test        # run the @glyph/core and @glyph/server test suites
     callable glyphs.
   - `@glyph/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
     annotations onto the glyph cost/risk model.
+  - Server hardening: optional bearer-token auth and fixed-window rate limiting.

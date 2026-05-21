@@ -11,6 +11,8 @@ import {
 import type { GlyphKeyPair } from '@glyph/core'
 import type { HandshakeRequest, HandshakeResponse } from '@glyph/types'
 import type { GlyphDefinition } from './define.js'
+import { authMiddleware, rateLimitMiddleware } from './middleware.js'
+import type { AuthConfig, RateLimitConfig } from './middleware.js'
 
 const SERVER_VERSION = '0.1.0'
 
@@ -19,9 +21,18 @@ export class GlyphServer {
   private glyphs = new Map<string, GlyphDefinition<any, any>>()
   private port: number
   private keyPair: GlyphKeyPair
+  private auth?: AuthConfig
+  private rateLimit?: RateLimitConfig
 
-  constructor(options?: { port?: number; keyPair?: GlyphKeyPair }) {
+  constructor(options?: {
+    port?: number
+    keyPair?: GlyphKeyPair
+    auth?: AuthConfig
+    rateLimit?: RateLimitConfig
+  }) {
     this.port = options?.port ?? 3100
+    this.auth = options?.auth
+    this.rateLimit = options?.rateLimit
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -46,6 +57,9 @@ export class GlyphServer {
 
   private setupRoutes() {
     const { app } = this
+
+    if (this.rateLimit) app.use('*', rateLimitMiddleware(this.rateLimit))
+    if (this.auth) app.use('*', authMiddleware(this.auth))
 
     app.get('/health', (c) =>
       c.json({ ok: true, version: SERVER_VERSION })
