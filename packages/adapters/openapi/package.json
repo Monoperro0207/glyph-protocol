@@ -1,0 +1,16 @@
+{
+  "name": "@glyph/adapter-openapi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@glyph/types": "workspace:*",
+    "@glyph/core": "workspace:*",
+    "@glyph/server": "workspace:*",
+    "zod": "^3.23.8"
+  }
+}

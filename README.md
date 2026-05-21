@@ -13,6 +13,7 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyph/server` | GlyphServer (Hono) |
 | `@glyph/client` | GlyphClient |
 | `@glyph/resolver` | Intent → glyph resolver (pluggable scorers) |
+| `@glyph/adapter-openapi` | Convert an OpenAPI document into glyphs |
 
 ## Quick Start
 
@@ -39,3 +40,5 @@ pnpm test        # run the @glyph/core and @glyph/server test suites
     and provenance.
   - `@glyph/resolver`: natural-language intent → candidate glyphs, with a
     zero-dependency lexical scorer by default and an opt-in embedding scorer.
+  - `@glyph/adapter-openapi`: turn any OpenAPI 3.x document into registerable,
+    callable glyphs.

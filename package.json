@@ -4,11 +4,12 @@
   "version": "0.1.0",
   "workspaces": [
     "packages/*",
+    "packages/adapters/*",
     "examples/*"
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "tsx --test packages/*/test/*.test.ts"
+    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
