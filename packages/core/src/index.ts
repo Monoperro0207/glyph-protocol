@@ -29,7 +29,7 @@ const CANONICAL_FIELDS = [
   'provider',
 ] as const
 
-function canonicalize(value: unknown): unknown {
+export function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize)
   if (value !== null && typeof value === 'object') {
     const sorted: Record<string, unknown> = {}

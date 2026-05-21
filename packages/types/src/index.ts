@@ -5,5 +5,6 @@ export type {
   ControlMessage,
   HandshakeRequest,
   HandshakeResponse,
+  ConfirmationTicket,
   JSONSchema,
 } from './types.js'

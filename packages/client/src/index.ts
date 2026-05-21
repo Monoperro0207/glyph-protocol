@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type {
+  ConfirmationTicket,
   GlyphCard,
   HandshakeRequest,
   HandshakeResponse,
@@ -45,20 +46,32 @@ export class GlyphClient {
     return this.get<GlyphCard>(`/glyphs/${name}${query}`)
   }
 
+  // Prepare a confirmation ticket — required before calling a glyph whose
+  // card declares cost.requiresConfirmation.
+  async prepare(name: string, input: unknown): Promise<ConfirmationTicket> {
+    return this.post<ConfirmationTicket>(`/glyphs/${name}/prepare`, { input })
+  }
+
   async call<T = unknown>(
     name: string,
-    input: unknown
+    input: unknown,
+    options?: { confirmationToken?: string }
   ): Promise<SealedEnvelope & { payload: T }> {
     const callId = randomUUID()
     const envelope = await this.post<SealedEnvelope>(`/glyphs/${name}/call`, {
       input,
       callId,
+      confirmationToken: options?.confirmationToken,
     })
     return envelope as SealedEnvelope & { payload: T }
   }
 
-  async invoke<T = unknown>(name: string, input: unknown): Promise<T> {
-    const envelope = await this.call<T>(name, input)
+  async invoke<T = unknown>(
+    name: string,
+    input: unknown,
+    options?: { confirmationToken?: string }
+  ): Promise<T> {
+    const envelope = await this.call<T>(name, input, options)
     return envelope.payload
   }
 

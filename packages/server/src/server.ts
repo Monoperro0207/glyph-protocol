@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import {
@@ -7,18 +7,34 @@ import {
   sealResult,
   signGlyph,
   generateKeyPair,
+  canonicalize,
 } from '@glyph/core'
 import type { GlyphKeyPair } from '@glyph/core'
-import type { HandshakeRequest, HandshakeResponse } from '@glyph/types'
+import type {
+  ConfirmationTicket,
+  HandshakeRequest,
+  HandshakeResponse,
+} from '@glyph/types'
 import type { GlyphDefinition } from './define.js'
 import { authMiddleware, rateLimitMiddleware } from './middleware.js'
 import type { AuthConfig, RateLimitConfig } from './middleware.js'
 
 const SERVER_VERSION = '0.1.0'
+const CONFIRMATION_TTL_MS = 5 * 60_000
+
+function hashInput(input: unknown): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(input)))
+    .digest('hex')
+}
 
 export class GlyphServer {
   private app = new Hono()
   private glyphs = new Map<string, GlyphDefinition<any, any>>()
+  private pendingConfirmations = new Map<
+    string,
+    { glyphName: string; inputHash: string; expiresAt: number }
+  >()
   private port: number
   private keyPair: GlyphKeyPair
   private auth?: AuthConfig
@@ -53,6 +69,11 @@ export class GlyphServer {
     }
     this.glyphs.set(signedCard.name, { ...glyph, card: signedCard })
     return this
+  }
+
+  /** The request handler — usable in any fetch-based runtime, or for tests. */
+  get fetch() {
+    return this.app.fetch
   }
 
   private setupRoutes() {
@@ -94,17 +115,88 @@ export class GlyphServer {
       return c.json(applyDepth(glyph.card, depth))
     })
 
+    app.post('/glyphs/:name/prepare', async (c) => {
+      const name = c.req.param('name')
+      const glyph = this.glyphs.get(name)
+      if (!glyph) return c.json({ error: 'Not found' }, 404)
+
+      const body = await c.req.json<{ input: unknown }>()
+      const parsed = glyph.inputSchema.safeParse(body.input)
+      if (!parsed.success) {
+        return c.json({ error: 'Validation failed', issues: parsed.error.issues }, 400)
+      }
+
+      const now = Date.now()
+      if (this.pendingConfirmations.size > 1000) {
+        for (const [token, pending] of this.pendingConfirmations) {
+          if (now >= pending.expiresAt) this.pendingConfirmations.delete(token)
+        }
+      }
+
+      const confirmationToken = randomUUID()
+      const expiresAt = now + CONFIRMATION_TTL_MS
+      this.pendingConfirmations.set(confirmationToken, {
+        glyphName: name,
+        inputHash: hashInput(parsed.data),
+        expiresAt,
+      })
+
+      const ticket: ConfirmationTicket = {
+        confirmationToken,
+        glyphId: glyph.card.id,
+        name: glyph.card.name,
+        cost: glyph.card.cost,
+        input: parsed.data,
+        expiresAt: new Date(expiresAt).toISOString(),
+      }
+      return c.json(ticket)
+    })
+
     app.post('/glyphs/:name/call', async (c) => {
       const name = c.req.param('name')
       const glyph = this.glyphs.get(name)
       if (!glyph) return c.json({ error: 'Not found' }, 404)
 
-      const body = await c.req.json<{ input: unknown; callId?: string }>()
+      const body = await c.req.json<{
+        input: unknown
+        callId?: string
+        confirmationToken?: string
+      }>()
       const callId = body.callId ?? randomUUID()
 
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
         return c.json({ error: 'Validation failed', issues: parsed.error.issues }, 400)
+      }
+
+      // Policy gate: a glyph that declares requiresConfirmation cannot run
+      // without a single-use confirmation token, bound to this exact glyph
+      // and input, obtained from POST /glyphs/:name/prepare.
+      if (glyph.card.cost.requiresConfirmation) {
+        const token = body.confirmationToken
+        const pending = token ? this.pendingConfirmations.get(token) : undefined
+        if (!token || !pending) {
+          return c.json(
+            {
+              error: 'Confirmation required',
+              glyph: name,
+              cost: glyph.card.cost,
+              hint: `POST /glyphs/${name}/prepare to obtain a confirmation token`,
+            },
+            403
+          )
+        }
+        this.pendingConfirmations.delete(token) // single-use
+        const valid =
+          Date.now() < pending.expiresAt &&
+          pending.glyphName === name &&
+          pending.inputHash === hashInput(parsed.data)
+        if (!valid) {
+          return c.json(
+            { error: 'Invalid, expired, or mismatched confirmation token' },
+            403
+          )
+        }
       }
 
       const start = Date.now()

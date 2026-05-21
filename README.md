@@ -55,6 +55,24 @@ const server = new GlyphServer({
 
 `/health` stays public and unlimited so health checks keep working.
 
+### Confirmation gate
+
+A glyph whose card declares `cost.requiresConfirmation: true` cannot be
+executed directly — the server enforces it, the metadata is not just advisory.
+The caller must first obtain a single-use confirmation token, bound to that
+exact glyph and input, from `POST /glyphs/:name/prepare`:
+
+```typescript
+const ticket = await client.prepare('book-flight', input)
+// review ticket.cost — the risk summary — and approve, then:
+await client.call('book-flight', input, {
+  confirmationToken: ticket.confirmationToken,
+})
+```
+
+A call to a `requiresConfirmation` glyph without a valid token gets `403`.
+Tokens are single-use and expire after 5 minutes.
+
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.

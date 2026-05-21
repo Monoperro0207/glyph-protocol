@@ -69,3 +69,12 @@ export interface HandshakeResponse {
   cardDepth: 'minimal' | 'standard' | 'rich'
   serverVersion: string
 }
+
+export interface ConfirmationTicket {
+  confirmationToken: string
+  glyphId: string
+  name: string
+  cost: GlyphCard['cost']
+  input: unknown
+  expiresAt: string
+}
