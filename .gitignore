@@ -4,4 +4,3 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
-pnpm-lock.yaml
