@@ -30,6 +30,8 @@ pnpm client   # terminal 2
 - [`01-hello-glyph`](examples/01-hello-glyph) — one glyph, end to end in under 2 minutes
 - [`02-resolver-agent`](examples/02-resolver-agent) — multi-tool server + an agent
   that resolves natural-language intent to the right glyph
+- [`03-mcp-filesystem`](examples/03-mcp-filesystem) — connects to a **real** MCP
+  server, adapts its tools into glyphs, and calls one over the Glyph protocol
 
 ## Verify
 

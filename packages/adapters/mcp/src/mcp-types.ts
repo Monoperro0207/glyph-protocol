@@ -28,6 +28,7 @@ export interface McpToolResult {
   content?: McpContentBlock[]
   structuredContent?: unknown
   isError?: boolean
+  [key: string]: unknown
 }
 
 export type McpCallFn = (
