@@ -1,0 +1,49 @@
+# @glyph/adapter-mcp
+
+Converts the tools of an MCP (Model Context Protocol) server into glyphs you
+can register on a `GlyphServer`. Zero dependencies — the MCP client is yours
+to bring.
+
+## With an MCP SDK client
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { glyphsFromMcpClient } from '@glyph/adapter-mcp'
+import { GlyphServer } from '@glyph/server'
+
+const client = new Client({ name: 'glyph', version: '0.1.0' })
+await client.connect(new StdioClientTransport({ command: 'my-mcp-server' }))
+
+const glyphs = await glyphsFromMcpClient(client)
+
+const server = new GlyphServer({ port: 3100 })
+for (const glyph of glyphs) server.register(glyph)
+await server.start()
+```
+
+`glyphsFromMcpClient` accepts anything matching the SDK `Client` shape, so the
+adapter never imports the SDK itself.
+
+## With tools and a call function
+
+```typescript
+import { glyphsFromMcpTools } from '@glyph/adapter-mcp'
+
+const glyphs = glyphsFromMcpTools(tools, (name, args) => callTool(name, args))
+```
+
+## What it does
+
+MCP tools carry no cost or risk metadata — exactly the gap Glyph fills. The
+adapter maps MCP tool **annotations** onto the glyph cost model:
+
+| MCP annotation | Glyph card |
+|---|---|
+| `readOnlyHint: true` | `riskTier: safe`, no side effects |
+| `destructiveHint: true` | `riskTier: danger`, requires confirmation |
+| `idempotentHint: true` | `idempotent: true` |
+| (none) | `riskTier: caution` — unknown, so assume side effects |
+
+The tool `description` becomes the glyph `intent`, the `inputSchema` becomes
+the card `input`, and the handler proxies the call through `callTool`.
