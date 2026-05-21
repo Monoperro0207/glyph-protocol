@@ -1,4 +1,5 @@
 import { GlyphClient } from '@glyph/client'
+import { verifyGlyph } from '@glyph/core'
 
 const client = new GlyphClient({
   baseUrl: 'http://localhost:3100',
@@ -22,7 +23,9 @@ for (const entry of lexicon) {
 console.log('\n── Card: greet ─────────────────────────────')
 const card = await client.getCard('greet', 'rich')
 console.log('id:', card.id)
+console.log('publicKey:', card.publicKey)
 console.log('signature:', card.signature)
+console.log('signature valid:', verifyGlyph(card))
 
 // 4. call() — canonical, keeps the SealedEnvelope
 console.log('\n── call() → SealedEnvelope ─────────────────')

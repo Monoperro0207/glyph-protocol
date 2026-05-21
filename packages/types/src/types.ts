@@ -26,6 +26,7 @@ export interface GlyphCard {
     description: string
   }>
   provider: string
+  publicKey?: string
   signature?: string
   createdAt: string
 }

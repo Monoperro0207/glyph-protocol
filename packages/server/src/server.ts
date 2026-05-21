@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
-import { toLexiconEntry, applyDepth, sealResult } from '@glyph/core'
+import {
+  toLexiconEntry,
+  applyDepth,
+  sealResult,
+  signGlyph,
+  generateKeyPair,
+} from '@glyph/core'
+import type { GlyphKeyPair } from '@glyph/core'
 import type { HandshakeRequest, HandshakeResponse } from '@glyph/types'
 import type { GlyphDefinition } from './define.js'
 
@@ -11,14 +18,29 @@ export class GlyphServer {
   private app = new Hono()
   private glyphs = new Map<string, GlyphDefinition<any, any>>()
   private port: number
+  private keyPair: GlyphKeyPair
 
-  constructor(options?: { port?: number }) {
+  constructor(options?: { port?: number; keyPair?: GlyphKeyPair }) {
     this.port = options?.port ?? 3100
+    if (options?.keyPair) {
+      this.keyPair = options.keyPair
+    } else {
+      this.keyPair = generateKeyPair()
+      console.warn(
+        '[glyph] No keyPair provided — generated an ephemeral one for this run.'
+      )
+    }
+    console.log('[glyph] provider publicKey:', this.keyPair.publicKey)
     this.setupRoutes()
   }
 
   register(glyph: GlyphDefinition<any, any>): this {
-    this.glyphs.set(glyph.card.name, glyph)
+    const signedCard = {
+      ...glyph.card,
+      publicKey: this.keyPair.publicKey,
+      signature: signGlyph(glyph.card, this.keyPair.privateKey),
+    }
+    this.glyphs.set(signedCard.name, { ...glyph, card: signedCard })
     return this
   }
 

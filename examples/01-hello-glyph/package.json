@@ -10,6 +10,7 @@
   "dependencies": {
     "@glyph/server": "workspace:*",
     "@glyph/client": "workspace:*",
+    "@glyph/core": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

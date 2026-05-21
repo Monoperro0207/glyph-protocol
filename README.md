@@ -31,4 +31,7 @@ pnpm test        # run the @glyph/core and @glyph/server test suites
 
 ## Status
 
-Phase 1 — MVP complete. Four packages + the `01-hello-glyph` example, typechecked and tested.
+- **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
+- **Phase 2 — in progress.** ed25519 signing: glyph cards carry an embedded
+  public key and an ed25519 signature over the card id; `verifyGlyph` checks
+  both content integrity and provenance.

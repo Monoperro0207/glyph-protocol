@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { computeGlyphId, signGlyph } from '@glyph/core'
+import { computeGlyphId } from '@glyph/core'
 import type { GlyphCard } from '@glyph/types'
 
 export interface GlyphDefinition<TInput, TOutput> {
@@ -37,12 +37,12 @@ export function defineGlyph<TInput, TOutput>(config: {
   }
 
   const id = computeGlyphId(partial)
-  const createdAt = new Date().toISOString()
-  const cardWithoutSig: GlyphCard = { ...partial, id, createdAt }
-  const signature = signGlyph(cardWithoutSig)
+  const card: GlyphCard = { ...partial, id, createdAt: new Date().toISOString() }
 
+  // The card is left unsigned here — the GlyphServer signs it at register()
+  // time with the provider's keypair.
   return {
-    card: { ...cardWithoutSig, signature },
+    card,
     inputSchema: config.input,
     handler: config.handler,
   }

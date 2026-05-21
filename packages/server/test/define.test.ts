@@ -2,7 +2,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
 import { defineGlyph } from '../src/index.js'
-import { verifyGlyph } from '@glyph/core'
 
 const echo = defineGlyph({
   name: 'echo',
@@ -24,9 +23,9 @@ test('defineGlyph generates a content-addressed sha256 id', () => {
   assert.match(echo.card.id, /^[0-9a-f]{64}$/)
 })
 
-test('defineGlyph signs the card and verifyGlyph accepts it', () => {
-  assert.ok(echo.card.signature)
-  assert.equal(verifyGlyph(echo.card), true)
+test('defineGlyph leaves the card unsigned (the server signs at register)', () => {
+  assert.equal(echo.card.signature, undefined)
+  assert.equal(echo.card.publicKey, undefined)
 })
 
 test('defineGlyph converts the zod input schema to JSON Schema', () => {
