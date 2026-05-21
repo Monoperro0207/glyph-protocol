@@ -73,6 +73,22 @@ await client.call('book-flight', input, {
 A call to a `requiresConfirmation` glyph without a valid token gets `403`.
 Tokens are single-use and expire after 5 minutes.
 
+### Audit receipts
+
+Every successful call produces a **signed `CallReceipt`** — a tamper-evident
+record of `{callId, glyphId, inputHash, outputHash, riskTier, latencyMs,
+timestamp, provider}` signed with the server's ed25519 key. It rides back
+inside the `SealedEnvelope` and is also handed to an optional audit hook:
+
+```typescript
+const server = new GlyphServer({
+  onCall: (receipt) => auditLog.append(receipt), // persist it
+})
+```
+
+Anyone can verify a receipt with `verifyReceipt()` from `@glyph/core`. See
+[`spec/trust.md`](spec/trust.md) for what the signatures do and do not prove.
+
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.

@@ -1,6 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
 import * as ed from '@noble/ed25519'
-import type { GlyphCard, LexiconEntry, SealedEnvelope } from '@glyph/types'
+import type {
+  CallReceipt,
+  GlyphCard,
+  LexiconEntry,
+  SealedEnvelope,
+} from '@glyph/types'
 
 // @noble/ed25519 v2 needs a sha512 implementation wired in for synchronous use.
 ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
@@ -74,6 +79,38 @@ export function verifyGlyph(card: GlyphCard): boolean {
   try {
     const message = new TextEncoder().encode(card.id)
     return ed.verify(fromHex(card.signature), message, fromHex(card.publicKey))
+  } catch {
+    return false
+  }
+}
+
+/** Canonical SHA-256 of any JSON value — order-independent. */
+export function canonicalHash(value: unknown): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(value)))
+    .digest('hex')
+}
+
+/** Signs a call receipt with the server's ed25519 private key. */
+export function signReceipt(
+  receipt: Omit<CallReceipt, 'signature'>,
+  privateKey: string
+): string {
+  const message = new TextEncoder().encode(canonicalHash(receipt))
+  return toHex(ed.sign(message, fromHex(privateKey)))
+}
+
+/** Verifies a receipt's signature against its embedded serverPublicKey. */
+export function verifyReceipt(receipt: CallReceipt): boolean {
+  if (!receipt.signature || !receipt.serverPublicKey) return false
+  const { signature, ...rest } = receipt
+  try {
+    const message = new TextEncoder().encode(canonicalHash(rest))
+    return ed.verify(
+      fromHex(signature),
+      message,
+      fromHex(receipt.serverPublicKey)
+    )
   } catch {
     return false
   }

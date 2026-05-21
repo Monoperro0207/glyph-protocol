@@ -5,11 +5,14 @@ import {
   generateKeyPair,
   signGlyph,
   verifyGlyph,
+  signReceipt,
+  verifyReceipt,
+  canonicalHash,
   toLexiconEntry,
   applyDepth,
   sealResult,
 } from '../src/index.js'
-import type { GlyphCard } from '@glyph/types'
+import type { CallReceipt, GlyphCard } from '@glyph/types'
 
 const partial = {
   version: '1.0.0',
@@ -160,4 +163,43 @@ test('sealResult always produces an inert data envelope', () => {
 test('sealResult generates a callId when none is given', () => {
   const env = sealResult('g', '', null, 0, 'p')
   assert.match(env.callId, /^[0-9a-f-]{36}$/)
+})
+
+test('canonicalHash is deterministic and ignores key order', () => {
+  assert.equal(canonicalHash({ a: 1, b: 2 }), canonicalHash({ b: 2, a: 1 }))
+  assert.notEqual(canonicalHash({ a: 1 }), canonicalHash({ a: 2 }))
+})
+
+function buildReceipt(): CallReceipt {
+  const keyPair = generateKeyPair()
+  const base: Omit<CallReceipt, 'signature'> = {
+    receiptVersion: '0.1',
+    callId: 'call-1',
+    glyphId: 'glyph-1',
+    glyphName: 'test-glyph',
+    inputHash: canonicalHash({ q: 'hi' }),
+    outputHash: canonicalHash({ ok: true }),
+    riskTier: 'safe',
+    provider: 'test',
+    latencyMs: 5,
+    timestamp: new Date().toISOString(),
+    serverPublicKey: keyPair.publicKey,
+  }
+  return { ...base, signature: signReceipt(base, keyPair.privateKey) }
+}
+
+test('signReceipt + verifyReceipt roundtrip succeeds', () => {
+  assert.equal(verifyReceipt(buildReceipt()), true)
+})
+
+test('verifyReceipt fails when the receipt is tampered', () => {
+  const receipt = buildReceipt()
+  receipt.outputHash = canonicalHash({ ok: false })
+  assert.equal(verifyReceipt(receipt), false)
+})
+
+test('verifyReceipt fails when the public key is swapped', () => {
+  const receipt = buildReceipt()
+  receipt.serverPublicKey = generateKeyPair().publicKey
+  assert.equal(verifyReceipt(receipt), false)
 })

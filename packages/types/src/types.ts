@@ -49,6 +49,22 @@ export interface SealedEnvelope {
     provider: string
     timestamp: string
   }
+  receipt?: CallReceipt
+}
+
+export interface CallReceipt {
+  receiptVersion: string
+  callId: string
+  glyphId: string
+  glyphName: string
+  inputHash: string
+  outputHash: string
+  riskTier: 'safe' | 'caution' | 'danger'
+  provider: string
+  latencyMs: number
+  timestamp: string
+  serverPublicKey: string
+  signature: string
 }
 
 export interface ControlMessage {

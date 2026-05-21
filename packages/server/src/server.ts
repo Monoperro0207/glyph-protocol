@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import {
@@ -6,11 +6,13 @@ import {
   applyDepth,
   sealResult,
   signGlyph,
+  signReceipt,
   generateKeyPair,
-  canonicalize,
+  canonicalHash,
 } from '@glyph/core'
 import type { GlyphKeyPair } from '@glyph/core'
 import type {
+  CallReceipt,
   ConfirmationTicket,
   HandshakeRequest,
   HandshakeResponse,
@@ -21,14 +23,9 @@ import type { AuthConfig, RateLimitConfig } from './middleware.js'
 import { errorResponse } from './errors.js'
 
 const SERVER_VERSION = '0.1.0'
+const RECEIPT_VERSION = '0.1'
 const CONFIRMATION_TTL_MS = 5 * 60_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
-
-function hashInput(input: unknown): string {
-  return createHash('sha256')
-    .update(JSON.stringify(canonicalize(input)))
-    .digest('hex')
-}
 
 class HandlerTimeoutError extends Error {}
 
@@ -52,6 +49,7 @@ export class GlyphServer {
   private auth?: AuthConfig
   private rateLimit?: RateLimitConfig
   private callTimeoutMs: number
+  private onCall?: (receipt: CallReceipt) => void
 
   constructor(options?: {
     port?: number
@@ -59,11 +57,13 @@ export class GlyphServer {
     auth?: AuthConfig
     rateLimit?: RateLimitConfig
     callTimeoutMs?: number
+    onCall?: (receipt: CallReceipt) => void
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
     this.rateLimit = options?.rateLimit
     this.callTimeoutMs = options?.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS
+    this.onCall = options?.onCall
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -158,7 +158,7 @@ export class GlyphServer {
       const expiresAt = now + CONFIRMATION_TTL_MS
       this.pendingConfirmations.set(confirmationToken, {
         glyphName: name,
-        inputHash: hashInput(parsed.data),
+        inputHash: canonicalHash(parsed.data),
         expiresAt,
       })
 
@@ -219,7 +219,7 @@ export class GlyphServer {
         const valid =
           Date.now() < pending.expiresAt &&
           pending.glyphName === name &&
-          pending.inputHash === hashInput(parsed.data)
+          pending.inputHash === canonicalHash(parsed.data)
         if (!valid) {
           return errorResponse(
             c,
@@ -266,6 +266,32 @@ export class GlyphServer {
         )
       }
 
+      // Signed audit receipt: a tamper-evident record of this execution.
+      const receiptBase: Omit<CallReceipt, 'signature'> = {
+        receiptVersion: RECEIPT_VERSION,
+        callId,
+        glyphId: glyph.card.id,
+        glyphName: glyph.card.name,
+        inputHash: canonicalHash(parsed.data),
+        outputHash: canonicalHash(checked.data),
+        riskTier: glyph.card.cost.riskTier,
+        provider: glyph.card.provider,
+        latencyMs,
+        timestamp: new Date().toISOString(),
+        serverPublicKey: this.keyPair.publicKey,
+      }
+      const receipt: CallReceipt = {
+        ...receiptBase,
+        signature: signReceipt(receiptBase, this.keyPair.privateKey),
+      }
+      if (this.onCall) {
+        try {
+          this.onCall(receipt)
+        } catch (err) {
+          console.error('[glyph] onCall audit hook threw:', err)
+        }
+      }
+
       const envelope = sealResult(
         glyph.card.id,
         callId,
@@ -273,7 +299,7 @@ export class GlyphServer {
         latencyMs,
         glyph.card.provider
       )
-      return c.json(envelope)
+      return c.json({ ...envelope, receipt })
     })
   }
 
