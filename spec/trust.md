@@ -29,6 +29,12 @@ explicit. Today they are only distinguishable by inspection.
    riskTier, latencyMs, timestamp, provider}` signed by the same server key.
    `verifyReceipt()` verifies it. The receipt rides back in the
    `SealedEnvelope` and is also emitted to the server's `onCall` audit hook.
+3. **Update manifests.** When a provider chooses to publish one, an
+   `UpdateManifest` — committing `previousCardId → newCardId` with a reason and
+   a security-impact claim — is signed by the same server key. `verifyManifest()`
+   verifies it. A consumer MUST also check that the manifest's
+   `serverPublicKey` matches the *pinned* key (see
+   [`update-governance.md §7.2`](update-governance.md)).
 
 ## What is NOT verified (and why it matters)
 
@@ -40,9 +46,19 @@ explicit. Today they are only distinguishable by inspection.
   cross-organization key registry — discovering and trusting keys you have
   never seen — is still future work.
 - **Key rotation and revocation.** There is no mechanism to rotate or revoke a
-  server key yet. A compromised key cannot be invalidated.
-- **Executor integrity.** The protocol does not attest what the handler
-  actually ran. Output schema validation catches shape violations, not intent.
+  server *key* yet. A compromised key cannot be invalidated. (A consumer can
+  revoke a *tool* via `@glyphp/client.revokeTool()` — that is the consumer
+  distrusting a specific tool, not the invalidation of a server key.)
+- **Executor integrity.** A signed card commits to the tool's *declared
+  contract* — never to the *handler implementation* behind it. A provider that
+  keeps a card byte-identical and silently changes what the handler does
+  produces **the same `id` and the same `signature`**: card pinning,
+  `diffCards()`, and update manifests are all blind to it. Output schema
+  validation catches shape violations, not intent. Closing this requires
+  *execution attestation* — a signed build digest, source commit, or container
+  digest — and cooperation from build systems and runtimes. It is the
+  honest, structural limit of the protocol; see
+  [`update-governance.md §8`](update-governance.md).
 
 ## Threat posture
 

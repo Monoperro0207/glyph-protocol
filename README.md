@@ -16,7 +16,7 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
 | `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
-| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `init`) |
+| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `init`) |
 
 > **Versioning** — the npm packages are versioned independently of the wire
 > protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
@@ -162,6 +162,63 @@ model can still choose to obey a visible instruction inside a clearly
 delimited data block — see [`spec/trust.md`](spec/trust.md) for the limits.
 [`04-inert-data`](examples/04-inert-data) shows both layers end to end.
 
+## Update governance
+
+A glyph card is content-addressed: any change to behavior-defining content
+changes its `id`. So a tool that re-deploys with a wider blast radius — `safe`
+→ `danger`, a new input field, a different provider — is *detectable*. Glyph
+also lets a consumer **govern** that change instead of trusting it blindly.
+
+**Card pinning.** Give `GlyphClient` a `PinStore` and it gates execution: it
+verifies every card signature, pins the approved `(id, publicKey)` pair per
+tool, and `call()` refuses any tool that is new, changed, or revoked — before
+the handler ever runs.
+
+```typescript
+import { GlyphClient, MemoryPinStore } from '@glyphp/client'
+
+const client = new GlyphClient({
+  baseUrl: 'http://localhost:3100',
+  pins: new MemoryPinStore(), // swap in a persistent store for production
+})
+
+const card = await client.getCard('refund-payment') // signature verified here
+const { status, diff } = await client.inspectCard(card)
+
+if (status !== 'unchanged') {
+  // 'new'     — never approved
+  // 'changed' — the card moved since approval; `diff` says what and how severely
+  // 'revoked' — the consumer has explicitly distrusted this tool
+  await client.approveCard(card) // the deliberate human-approval step
+}
+
+await client.call('refund-payment', input) // refused unless 'unchanged'
+```
+
+**Revocation.** `client.revokeTool(name, reason?)` blocks a tool for good; a
+revoked tool is cleared only by an explicit
+`approveCard(card, { reinstate: true })`. A revocation can never be lifted by
+accident.
+
+**Diffing.** `diffCards()` (from `@glyphp/core`) classifies how two cards
+differ — `breaking` (cost/risk, schemas, provider, key) vs `review` (intent,
+tags, examples). The CLI wraps it: `glyph diff-card <old> <new>` exits
+non-zero on a breaking change, so CI can gate un-reviewed updates.
+
+**Signed update manifests.** A provider can publish a signed `UpdateManifest`
+with `server.registerManifest()` — an on-the-record statement of what
+changed and why. `client.getManifest()` fetches and verifies it against the
+*pinned* key (a manifest signed by a key the consumer never approved is
+rejected). The endpoint is **optional and additive** — `PROTOCOL_VERSION`
+stays `0.2`.
+
+This governs the **card** — the declared contract. It cannot catch a provider
+that keeps the card byte-identical and silently changes the handler's
+behavior; that is an honest, documented limit (see
+[`spec/update-governance.md §8`](spec/update-governance.md) and
+[`spec/trust.md`](spec/trust.md)). Closing it requires execution attestation,
+which is a separate, larger effort.
+
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
@@ -180,6 +237,9 @@ delimited data block — see [`spec/trust.md`](spec/trust.md) for the limits.
   sanitization, a signed inspection report on every envelope, and the
   `@glyphp/client` spotlighting render layer. This is a breaking wire change —
   `0.1` peers are rejected at the handshake with `426`.
+- **Update governance — current.** Consumer-side card pinning, a tool
+  lifecycle (approve / review on change / revoke), `diffCards`, and an optional
+  signed `UpdateManifest`. Additive — no wire-protocol change.
 
 ## Spec
 
@@ -189,6 +249,8 @@ The wire protocol is documented in [`spec/`](spec):
   confirmation flow, the inert-data inspection report, and the error model.
 - [`schemas/`](spec/schemas) — JSON Schema (draft 2020-12) for every wire message.
 - [`trust.md`](spec/trust.md) — the trust model: what the signatures prove.
+- [`update-governance.md`](spec/update-governance.md) — pinning, the tool
+  lifecycle, and signed update manifests.
 - [`security.md`](spec/security.md) — deploying a server safely.
 
 ## License
