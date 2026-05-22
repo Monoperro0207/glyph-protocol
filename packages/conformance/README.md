@@ -43,6 +43,17 @@ only, and never calls a glyph (which would require knowing valid inputs):
 - a glyph card validates against the schema
 - a glyph card's signature and content hash verify
 - an unknown glyph returns `404 NOT_FOUND` in the `GlyphError` envelope
+- the bundled `Sanitization` schema validates representative samples
 
 Response shapes are validated against the JSON Schemas bundled from
 [`spec/schemas/`](../../spec/schemas).
+
+### What it does not check
+
+Because the suite never calls a glyph, it never sees a `SealedEnvelope` or an
+`inspection` report produced by a live call. The `schema.sanitization` check
+confirms only that the `Sanitization` wire schema is published and
+self-consistent — **it does not prove that a server actually sanitizes its
+output.** Verifying inert-data behavior end to end requires invoking a glyph
+with known-hostile input, which is destructive and therefore out of scope
+here; [`04-inert-data`](../../examples/04-inert-data) demonstrates it instead.
