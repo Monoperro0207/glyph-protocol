@@ -19,3 +19,24 @@ const result = await client.invoke('greet', { name: 'Ada' })
 
 For a glyph whose card declares `cost.requiresConfirmation`, call `prepare()`
 first to obtain a single-use confirmation token, then pass it to `call()`.
+
+## Rendering tool output for an LLM
+
+`renderEnvelope` turns a `SealedEnvelope` into the exact text block to hand a
+model. The payload is wrapped in a per-render, cryptographically-random
+boundary nonce that untrusted content cannot predict — so a tool result
+cannot forge the closing marker and "break out" of the data channel. Emit
+`dataPreamble()` once as a trusted system message to explain the convention.
+
+```typescript
+import { GlyphClient, renderEnvelope, dataPreamble } from '@glyphp/client'
+
+const envelope = await client.call('search', { q: 'glyph protocol' })
+
+// systemMessage: dataPreamble().content
+// toolResult:    the delimited, inert data block
+const block = renderEnvelope(envelope, { verify: (e) => Boolean(e.receipt) })
+```
+
+This raises the floor against prompt injection; it does not eliminate it. See
+`spec/trust.md`.
