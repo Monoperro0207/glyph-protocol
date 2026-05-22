@@ -120,6 +120,25 @@ importers:
         specifier: workspace:*
         version: link:../types
 
+  packages/conformance:
+    dependencies:
+      '@glyph-protocol/core':
+        specifier: workspace:*
+        version: link:../core
+      '@glyph-protocol/types':
+        specifier: workspace:*
+        version: link:../types
+      ajv:
+        specifier: ^8.17.1
+        version: 8.20.0
+    devDependencies:
+      '@glyph-protocol/server':
+        specifier: workspace:*
+        version: link:../server
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
   packages/core:
     dependencies:
       '@glyph-protocol/types':

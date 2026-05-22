@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SealedEnvelope",
+  "description": "Successful response to POST /glyphs/:name/call — the call result plus metadata and a signed receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "glyphId", "callId", "payload", "meta"],
+  "properties": {
+    "type": { "const": "data" },
+    "glyphId": { "type": "string" },
+    "callId": { "type": "string" },
+    "payload": {
+      "description": "The glyph's output. Shape is defined by the glyph card's output schema."
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latencyMs", "provider", "timestamp"],
+      "properties": {
+        "latencyMs": { "type": "number" },
+        "provider": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "description": "A signed CallReceipt — see call-receipt.schema.json.",
+      "additionalProperties": false,
+      "required": [
+        "receiptVersion",
+        "callId",
+        "glyphId",
+        "glyphName",
+        "inputHash",
+        "outputHash",
+        "riskTier",
+        "provider",
+        "latencyMs",
+        "timestamp",
+        "serverPublicKey",
+        "signature"
+      ],
+      "properties": {
+        "receiptVersion": { "type": "string" },
+        "callId": { "type": "string" },
+        "glyphId": { "type": "string" },
+        "glyphName": { "type": "string" },
+        "inputHash": { "type": "string" },
+        "outputHash": { "type": "string" },
+        "riskTier": { "enum": ["safe", "caution", "danger"] },
+        "provider": { "type": "string" },
+        "latencyMs": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "serverPublicKey": { "type": "string" },
+        "signature": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GlyphError",
+  "description": "The versioned error envelope returned by every non-2xx Glyph response.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error"],
+  "properties": {
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "A stable, machine-readable error code.",
+          "enum": [
+            "NOT_FOUND",
+            "VALIDATION_FAILED",
+            "CONFIRMATION_REQUIRED",
+            "INVALID_CONFIRMATION",
+            "OUTPUT_VALIDATION_FAILED",
+            "HANDLER_ERROR",
+            "HANDLER_TIMEOUT",
+            "UNAUTHORIZED",
+            "RATE_LIMITED",
+            "PROTOCOL_VERSION_UNSUPPORTED"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "A human-readable explanation. Not stable — do not match on it."
+        },
+        "details": {
+          "description": "Optional structured context for the error."
+        }
+      }
+    }
+  }
+}

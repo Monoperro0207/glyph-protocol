@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HandshakeResponse",
+  "description": "Successful response to POST /handshake.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "sessionId", "lexicon", "cardDepth", "serverVersion"],
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "description": "The negotiated wire-protocol version."
+    },
+    "sessionId": { "type": "string" },
+    "lexicon": {
+      "type": "array",
+      "description": "Compact summaries of every registered glyph.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "intent", "tags", "riskTier"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "intent": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "riskTier": { "enum": ["safe", "caution", "danger"] }
+        }
+      }
+    },
+    "cardDepth": {
+      "enum": ["minimal", "standard", "rich"],
+      "description": "The card depth the server will serve for this session."
+    },
+    "serverVersion": {
+      "type": "string",
+      "description": "The server implementation's version. Distinct from protocolVersion."
+    }
+  }
+}

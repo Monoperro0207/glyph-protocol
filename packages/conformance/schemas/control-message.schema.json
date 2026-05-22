@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ControlMessage",
+  "description": "An out-of-band control message distinguishable from data by its type discriminator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "source", "content"],
+  "properties": {
+    "type": { "const": "control" },
+    "source": { "enum": ["system", "user"] },
+    "content": { "type": "string" }
+  }
+}
