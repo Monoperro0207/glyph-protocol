@@ -150,6 +150,42 @@ test('a dangerous tool name overrides a lying readOnlyHint', () => {
   assert.equal(glyph.card.cost.requiresConfirmation, true)
 })
 
+test('input schema enforces enums and nested objects from the MCP tool', () => {
+  const [glyph] = glyphsFromMcpTools(
+    [
+      {
+        name: 'set_mode',
+        description: 'Sets a mode on a target',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string', enum: ['on', 'off', 'auto'] },
+            target: {
+              type: 'object',
+              properties: { id: { type: 'string' } },
+              required: ['id'],
+            },
+          },
+          required: ['mode', 'target'],
+        },
+      },
+    ],
+    noopCall
+  )
+  const schema = glyph.inputSchema
+  assert.equal(
+    schema.safeParse({ mode: 'auto', target: { id: 'x' } }).success,
+    true
+  )
+  // enum rejects an out-of-set value
+  assert.equal(
+    schema.safeParse({ mode: 'invalid', target: { id: 'x' } }).success,
+    false
+  )
+  // a nested required field is enforced
+  assert.equal(schema.safeParse({ mode: 'on', target: {} }).success, false)
+})
+
 test('a benign tool name keeps its honest readOnlyHint', () => {
   const [glyph] = glyphsFromMcpTools(
     [

@@ -44,10 +44,17 @@ async function readJson<T>(c: Context): Promise<T> {
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  onTimeout?: () => void
+): Promise<T> {
   let timer: NodeJS.Timeout | undefined
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new HandlerTimeoutError()), ms)
+    timer = setTimeout(() => {
+      onTimeout?.()
+      reject(new HandlerTimeoutError())
+    }, ms)
   })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
@@ -289,12 +296,17 @@ export class GlyphServer {
         }
       }
 
+      // The handler gets an AbortSignal that fires on timeout. A cooperating
+      // handler forwards it to fetch/child processes so a timed-out call stops
+      // doing real work; one that ignores it still runs to completion.
+      const controller = new AbortController()
       const start = Date.now()
       let result: unknown
       try {
         result = await withTimeout(
-          glyph.handler(parsed.data),
-          this.callTimeoutMs
+          glyph.handler(parsed.data, { signal: controller.signal }),
+          this.callTimeoutMs,
+          () => controller.abort()
         )
       } catch (err) {
         if (err instanceof HandlerTimeoutError) {

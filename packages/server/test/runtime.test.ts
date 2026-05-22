@@ -59,11 +59,32 @@ const slow = defineGlyph({
   },
 })
 
+let abortFired = false
+const signalAware = defineGlyph({
+  name: 'signal-aware',
+  intent: 'Records whether its abort signal fired before resolving',
+  cost: baseCost,
+  input: z.object({}),
+  output: z.object({}),
+  provider: 'test',
+  handler: async (_input, ctx) => {
+    ctx?.signal.addEventListener('abort', () => {
+      abortFired = true
+    })
+    await new Promise((resolve) => {
+      const t = setTimeout(resolve, 5000)
+      t.unref()
+    })
+    return {}
+  },
+})
+
 const server = new GlyphServer({ callTimeoutMs: 200 })
 server.register(honest)
 server.register(liar)
 server.register(thrower)
 server.register(slow)
+server.register(signalAware)
 
 async function call(name: string) {
   const res = await server.fetch(
@@ -124,4 +145,12 @@ test('a malformed JSON body → 400 MALFORMED_JSON', async () => {
 test('register() rejects a duplicate glyph name', () => {
   // `honest` is already registered on the module-level server above.
   assert.throws(() => server.register(honest), /already registered/)
+})
+
+test('the handler abort signal fires when the call times out', async () => {
+  abortFired = false
+  const res = await call('signal-aware')
+  assert.equal(res.status, 504)
+  assert.equal(res.body.error.code, 'HANDLER_TIMEOUT')
+  assert.equal(abortFired, true)
 })

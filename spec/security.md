@@ -39,6 +39,19 @@ cards, inputs, outputs, and bearer tokens travel in clear text.
   whose output breaks its own card is rejected with `OUTPUT_VALIDATION_FAILED`,
   so a misbehaving upstream cannot silently return an off-contract payload.
 
+## Handler timeout
+
+A call whose handler runs longer than `callTimeoutMs` (default 30s) is answered
+with `504 HANDLER_TIMEOUT`. The server also **aborts** an `AbortSignal` it hands
+to the handler via its context (`{ signal }`).
+
+- A cooperating handler forwards that signal to `fetch`, child processes, or
+  database drivers — so a timed-out call actually stops doing work.
+- A handler that ignores the signal still **runs to completion in the
+  background**; the timeout only frees the request, it is not forced
+  cancellation. For glyphs with irreversible side effects, treat the signal as
+  mandatory.
+
 ## Inert tool output
 
 Tool output is treated as data, never instructions. The server sanitizes every

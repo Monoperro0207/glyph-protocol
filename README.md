@@ -18,6 +18,11 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
 | `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `init`) |
 
+> **Versioning** — the npm packages are versioned independently of the wire
+> protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
+> `PROTOCOL_VERSION` constant). A client and server must agree on the *wire*
+> version at the handshake, not on the package version.
+
 ## Quick Start
 
 ```bash
@@ -58,7 +63,15 @@ const server = new GlyphServer({
 })
 ```
 
-`/health` stays public and unlimited so health checks keep working.
+`/health` stays public and unlimited so health checks keep working. The client
+sends a matching token on every request:
+
+```typescript
+const client = new GlyphClient({
+  baseUrl: 'http://localhost:3100',
+  authToken: 's3cret',
+})
+```
 
 ### Confirmation gate
 
@@ -93,6 +106,23 @@ const server = new GlyphServer({
 
 Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
 [`spec/trust.md`](spec/trust.md) for what the signatures do and do not prove.
+
+### Production hardening checklist
+
+Before exposing a Glyph server beyond local development:
+
+- [ ] Pass a **stable `keyPair`** — an ephemeral key invalidates every issued
+      card and receipt on restart.
+- [ ] Run behind **TLS**; never serve the protocol in clear text.
+- [ ] Enable **`auth`** and give the client a matching `authToken`.
+- [ ] Set **`rateLimit`** — and rate-limit at the edge too behind a load balancer.
+- [ ] Set `cost.requiresConfirmation: true` on every irreversible or high-risk
+      glyph, and have handlers honour the timeout **`AbortSignal`**.
+- [ ] Persist receipts via the **`onCall`** hook for a tamper-evident audit log.
+- [ ] **Review adapted cards** — cost/risk derived from OpenAPI or MCP is a
+      suggestion, not authority.
+
+See [`spec/security.md`](spec/security.md) for the full operational guide.
 
 ## Inert data
 

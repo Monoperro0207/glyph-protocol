@@ -3,11 +3,21 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { computeGlyphId } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
 
+/**
+ * Runtime context handed to a glyph handler. `signal` aborts when the call
+ * exceeds the server's timeout — a cooperating handler should forward it to
+ * `fetch`/child processes so a timed-out call stops doing real work. A handler
+ * that ignores it still works; the server just cannot cancel it.
+ */
+export interface GlyphHandlerContext {
+  signal: AbortSignal
+}
+
 export interface GlyphDefinition<TInput, TOutput> {
   card: GlyphCard
   inputSchema: z.ZodType<TInput>
   outputSchema: z.ZodType<TOutput>
-  handler: (input: TInput) => Promise<TOutput>
+  handler: (input: TInput, ctx?: GlyphHandlerContext) => Promise<TOutput>
 }
 
 export function defineGlyph<TInput, TOutput>(config: {
@@ -21,7 +31,7 @@ export function defineGlyph<TInput, TOutput>(config: {
   examples?: GlyphCard['examples']
   failureModes?: GlyphCard['failureModes']
   provider: string
-  handler: (input: TInput) => Promise<TOutput>
+  handler: (input: TInput, ctx?: GlyphHandlerContext) => Promise<TOutput>
 }): GlyphDefinition<TInput, TOutput> {
   const partial = {
     version: '1.0.0',

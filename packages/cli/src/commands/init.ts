@@ -33,7 +33,9 @@ const PACKAGE_JSON =
       type: 'module',
       scripts: { dev: 'tsx server.ts' },
       dependencies: {
-        '@glyphp/server': '^0.1.0',
+        // `latest` so a freshly scaffolded project always installs the
+        // current release rather than a version that goes stale here.
+        '@glyphp/server': 'latest',
         zod: '^3.23.8',
       },
       devDependencies: { tsx: '^4.11.0' },

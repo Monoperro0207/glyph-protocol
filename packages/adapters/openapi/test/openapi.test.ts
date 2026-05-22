@@ -157,3 +157,64 @@ test('handler throws on a non-2xx response', async () => {
     globalThis.fetch = realFetch
   }
 })
+
+test('input schema enforces enums, typed arrays and nested objects', () => {
+  const doc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 'Rich API', version: '1.0.0' },
+    paths: {
+      '/search': {
+        post: {
+          operationId: 'search',
+          summary: 'Search',
+          parameters: [
+            {
+              name: 'sort',
+              in: 'query',
+              required: true,
+              schema: { type: 'string', enum: ['asc', 'desc'] },
+            },
+            {
+              name: 'ids',
+              in: 'query',
+              required: true,
+              schema: { type: 'array', items: { type: 'integer' } },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    filter: {
+                      type: 'object',
+                      properties: { tag: { type: 'string' } },
+                      required: ['tag'],
+                    },
+                  },
+                  required: ['filter'],
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    },
+  }
+  const [glyph] = glyphsFromOpenApi(doc, { baseUrl: 'https://x.test' })
+  const schema = glyph.inputSchema
+  const ok = { sort: 'asc', ids: [1, 2], body: { filter: { tag: 'a' } } }
+  assert.equal(schema.safeParse(ok).success, true)
+  // enum rejects an out-of-set value
+  assert.equal(schema.safeParse({ ...ok, sort: 'sideways' }).success, false)
+  // a typed array rejects a wrong element type
+  assert.equal(schema.safeParse({ ...ok, ids: ['nope'] }).success, false)
+  // a nested required field is enforced
+  assert.equal(
+    schema.safeParse({ ...ok, body: { filter: {} } }).success,
+    false
+  )
+})
