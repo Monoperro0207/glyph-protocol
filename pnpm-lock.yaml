@@ -23,13 +23,13 @@ importers:
 
   examples/01-hello-glyph:
     dependencies:
-      '@glyph-protocol/client':
+      '@glyphp/client':
         specifier: workspace:*
         version: link:../../packages/client
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../../packages/server
       zod:
@@ -42,16 +42,16 @@ importers:
 
   examples/02-resolver-agent:
     dependencies:
-      '@glyph-protocol/client':
+      '@glyphp/client':
         specifier: workspace:*
         version: link:../../packages/client
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@glyph-protocol/resolver':
+      '@glyphp/resolver':
         specifier: workspace:*
         version: link:../../packages/resolver
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../../packages/server
       zod:
@@ -64,16 +64,16 @@ importers:
 
   examples/03-mcp-filesystem:
     dependencies:
-      '@glyph-protocol/adapter-mcp':
+      '@glyphp/adapter-mcp':
         specifier: workspace:*
         version: link:../../packages/adapters/mcp
-      '@glyph-protocol/client':
+      '@glyphp/client':
         specifier: workspace:*
         version: link:../../packages/client
-      '@glyph-protocol/resolver':
+      '@glyphp/resolver':
         specifier: workspace:*
         version: link:../../packages/resolver
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../../packages/server
       '@modelcontextprotocol/sdk':
@@ -86,13 +86,13 @@ importers:
 
   packages/adapters/mcp:
     dependencies:
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../../core
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../../server
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../../types
       zod:
@@ -101,13 +101,13 @@ importers:
 
   packages/adapters/openapi:
     dependencies:
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../../core
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../../server
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../../types
       zod:
@@ -116,23 +116,23 @@ importers:
 
   packages/client:
     dependencies:
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../types
 
   packages/conformance:
     dependencies:
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../core
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../types
       ajv:
         specifier: ^8.17.1
         version: 8.20.0
     devDependencies:
-      '@glyph-protocol/server':
+      '@glyphp/server':
         specifier: workspace:*
         version: link:../server
       zod:
@@ -141,7 +141,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../types
       '@noble/ed25519':
@@ -153,16 +153,16 @@ importers:
 
   packages/resolver:
     dependencies:
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../types
 
   packages/server:
     dependencies:
-      '@glyph-protocol/core':
+      '@glyphp/core':
         specifier: workspace:*
         version: link:../core
-      '@glyph-protocol/types':
+      '@glyphp/types':
         specifier: workspace:*
         version: link:../types
       '@hono/node-server':

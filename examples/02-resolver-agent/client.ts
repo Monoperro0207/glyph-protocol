@@ -1,6 +1,6 @@
-import { GlyphClient } from '@glyph-protocol/client'
-import { GlyphResolver } from '@glyph-protocol/resolver'
-import { verifyGlyph } from '@glyph-protocol/core'
+import { GlyphClient } from '@glyphp/client'
+import { GlyphResolver } from '@glyphp/resolver'
+import { verifyGlyph } from '@glyphp/core'
 
 const client = new GlyphClient({
   baseUrl: 'http://localhost:3100',

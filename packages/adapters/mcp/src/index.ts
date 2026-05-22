@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { computeGlyphId } from '@glyph-protocol/core'
-import type { GlyphCard } from '@glyph-protocol/types'
-import type { GlyphDefinition } from '@glyph-protocol/server'
+import { computeGlyphId } from '@glyphp/core'
+import type { GlyphCard } from '@glyphp/types'
+import type { GlyphDefinition } from '@glyphp/server'
 import type {
   JsonSchema,
   McpCallFn,

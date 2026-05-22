@@ -1,4 +1,4 @@
-import type { LexiconEntry } from '@glyph-protocol/types'
+import type { LexiconEntry } from '@glyphp/types'
 import type { ResolverMatch, Scorer } from './resolver.js'
 
 export type EmbedFn = (texts: string[]) => Promise<number[][]>
@@ -51,7 +51,7 @@ export async function createTransformersScorer(
     transformers = await import(moduleName)
   } catch {
     throw new Error(
-      '@glyph-protocol/resolver: the embedding scorer requires @huggingface/transformers. ' +
+      '@glyphp/resolver: the embedding scorer requires @huggingface/transformers. ' +
         'Install it with: pnpm add @huggingface/transformers'
     )
   }

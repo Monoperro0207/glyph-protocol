@@ -5,7 +5,7 @@ import type {
   GlyphCard,
   LexiconEntry,
   SealedEnvelope,
-} from '@glyph-protocol/types'
+} from '@glyphp/types'
 
 // @noble/ed25519 v2 needs a sha512 implementation wired in for synchronous use.
 ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {

@@ -1,5 +1,5 @@
 {
-  "name": "@glyph-protocol/client",
+  "name": "@glyphp/client",
   "version": "0.1.0",
   "description": "Glyph Protocol client — discover and call glyphs",
   "license": "Apache-2.0",
@@ -37,6 +37,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@glyph-protocol/types": "workspace:*"
+    "@glyphp/types": "workspace:*"
   }
 }

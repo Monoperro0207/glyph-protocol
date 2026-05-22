@@ -31,7 +31,7 @@ The first run downloads the MCP filesystem server via `npx` — needs network.
    the MCP `description` becomes the `intent`, MCP annotations become the
    cost/risk tier
 3. `GlyphServer` serves those glyphs over HTTP
-4. `client.ts` does a handshake, uses `@glyph-protocol/resolver` to map the
+4. `client.ts` does a handshake, uses `@glyphp/resolver` to map the
    natural-language intent *"list the files in a directory"* to a glyph, and
    calls it on this example's own folder
 5. The result is a **real directory listing** produced by the MCP server,

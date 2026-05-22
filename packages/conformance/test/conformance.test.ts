@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
-import { defineGlyph, GlyphServer } from '@glyph-protocol/server'
+import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { runConformance } from '../src/index.js'
 
 const server = new GlyphServer()

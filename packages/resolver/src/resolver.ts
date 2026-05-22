@@ -1,4 +1,4 @@
-import type { LexiconEntry } from '@glyph-protocol/types'
+import type { LexiconEntry } from '@glyphp/types'
 
 export interface ResolverMatch {
   entry: LexiconEntry

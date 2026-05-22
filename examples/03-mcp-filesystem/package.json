@@ -8,10 +8,10 @@
     "client": "tsx client.ts"
   },
   "dependencies": {
-    "@glyph-protocol/server": "workspace:*",
-    "@glyph-protocol/client": "workspace:*",
-    "@glyph-protocol/adapter-mcp": "workspace:*",
-    "@glyph-protocol/resolver": "workspace:*",
+    "@glyphp/server": "workspace:*",
+    "@glyphp/client": "workspace:*",
+    "@glyphp/adapter-mcp": "workspace:*",
+    "@glyphp/resolver": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

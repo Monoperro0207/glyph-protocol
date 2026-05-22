@@ -13,7 +13,7 @@ A glyph passes through up to three distinct parties:
 | **Executor** | Whatever the handler ultimately calls (a REST API, an MCP server, local code) | not modeled separately |
 
 For glyphs created with `defineGlyph`, publisher = server. For adapted glyphs
-(`@glyph-protocol/adapter-openapi`, `@glyph-protocol/adapter-mcp`) the publisher is the upstream
+(`@glyphp/adapter-openapi`, `@glyphp/adapter-mcp`) the publisher is the upstream
 API/MCP server named in `provider`, while the Glyph server is the signer — the
 two genuinely differ, and a future version should make that cryptographically
 explicit. Today they are only distinguishable by inspection.

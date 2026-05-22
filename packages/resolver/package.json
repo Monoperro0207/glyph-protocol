@@ -1,5 +1,5 @@
 {
-  "name": "@glyph-protocol/resolver",
+  "name": "@glyphp/resolver",
   "version": "0.1.0",
   "description": "Resolve natural-language intent to Glyph Protocol glyphs with pluggable scorers",
   "license": "Apache-2.0",
@@ -37,6 +37,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@glyph-protocol/types": "workspace:*"
+    "@glyphp/types": "workspace:*"
   }
 }

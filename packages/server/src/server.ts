@@ -9,15 +9,15 @@ import {
   signReceipt,
   generateKeyPair,
   canonicalHash,
-} from '@glyph-protocol/core'
-import type { GlyphKeyPair } from '@glyph-protocol/core'
-import { PROTOCOL_VERSION } from '@glyph-protocol/types'
+} from '@glyphp/core'
+import type { GlyphKeyPair } from '@glyphp/core'
+import { PROTOCOL_VERSION } from '@glyphp/types'
 import type {
   CallReceipt,
   ConfirmationTicket,
   HandshakeRequest,
   HandshakeResponse,
-} from '@glyph-protocol/types'
+} from '@glyphp/types'
 import type { GlyphDefinition } from './define.js'
 import { authMiddleware, rateLimitMiddleware } from './middleware.js'
 import type { AuthConfig, RateLimitConfig } from './middleware.js'

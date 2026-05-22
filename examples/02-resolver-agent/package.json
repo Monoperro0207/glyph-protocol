@@ -8,10 +8,10 @@
     "client": "tsx client.ts"
   },
   "dependencies": {
-    "@glyph-protocol/server": "workspace:*",
-    "@glyph-protocol/client": "workspace:*",
-    "@glyph-protocol/resolver": "workspace:*",
-    "@glyph-protocol/core": "workspace:*",
+    "@glyphp/server": "workspace:*",
+    "@glyphp/client": "workspace:*",
+    "@glyphp/resolver": "workspace:*",
+    "@glyphp/core": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

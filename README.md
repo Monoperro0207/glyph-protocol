@@ -8,13 +8,13 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 
 | Package | Description |
 |---|---|
-| `@glyph-protocol/types` | Pure TypeScript interfaces |
-| `@glyph-protocol/core` | Hash, sign, validate |
-| `@glyph-protocol/server` | GlyphServer (Hono) |
-| `@glyph-protocol/client` | GlyphClient |
-| `@glyph-protocol/resolver` | Intent → glyph resolver (pluggable scorers) |
-| `@glyph-protocol/adapter-openapi` | Convert an OpenAPI document into glyphs |
-| `@glyph-protocol/adapter-mcp` | Convert an MCP server's tools into glyphs |
+| `@glyphp/types` | Pure TypeScript interfaces |
+| `@glyphp/core` | Hash, sign, validate |
+| `@glyphp/server` | GlyphServer (Hono) |
+| `@glyphp/client` | GlyphClient |
+| `@glyphp/resolver` | Intent → glyph resolver (pluggable scorers) |
+| `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
+| `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
 
 ## Quick Start
 
@@ -86,7 +86,7 @@ const server = new GlyphServer({
 })
 ```
 
-Anyone can verify a receipt with `verifyReceipt()` from `@glyph-protocol/core`. See
+Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
 [`spec/trust.md`](spec/trust.md) for what the signatures do and do not prove.
 
 ## Status
@@ -96,11 +96,11 @@ Anyone can verify a receipt with `verifyReceipt()` from `@glyph-protocol/core`. 
   - ed25519 signing: glyph cards carry an embedded public key and an ed25519
     signature over the card id; `verifyGlyph` checks both content integrity
     and provenance.
-  - `@glyph-protocol/resolver`: natural-language intent → candidate glyphs, with a
+  - `@glyphp/resolver`: natural-language intent → candidate glyphs, with a
     zero-dependency lexical scorer by default and an opt-in embedding scorer.
-  - `@glyph-protocol/adapter-openapi`: turn any OpenAPI 3.x document into registerable,
+  - `@glyphp/adapter-openapi`: turn any OpenAPI 3.x document into registerable,
     callable glyphs.
-  - `@glyph-protocol/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
+  - `@glyphp/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
     annotations onto the glyph cost/risk model.
   - Server hardening: optional bearer-token auth and fixed-window rate limiting.
 

@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
-import { GlyphClient } from '@glyph-protocol/client'
-import { GlyphResolver } from '@glyph-protocol/resolver'
+import { GlyphClient } from '@glyphp/client'
+import { GlyphResolver } from '@glyphp/resolver'
 
 const exampleDir = dirname(fileURLToPath(import.meta.url))
 

@@ -12,7 +12,7 @@ import {
   applyDepth,
   sealResult,
 } from '../src/index.js'
-import type { CallReceipt, GlyphCard } from '@glyph-protocol/types'
+import type { CallReceipt, GlyphCard } from '@glyphp/types'
 
 const partial = {
   version: '1.0.0',

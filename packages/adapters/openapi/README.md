@@ -1,11 +1,11 @@
-# @glyph-protocol/adapter-openapi
+# @glyphp/adapter-openapi
 
 Converts an OpenAPI 3.x document into glyphs — one per operation — that you can
 register on a `GlyphServer`.
 
 ```typescript
-import { glyphsFromOpenApi } from '@glyph-protocol/adapter-openapi'
-import { GlyphServer } from '@glyph-protocol/server'
+import { glyphsFromOpenApi } from '@glyphp/adapter-openapi'
+import { GlyphServer } from '@glyphp/server'
 
 const doc = await fetch('https://api.example.com/openapi.json').then((r) => r.json())
 

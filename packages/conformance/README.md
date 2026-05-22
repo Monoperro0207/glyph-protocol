@@ -1,4 +1,4 @@
-# @glyph-protocol/conformance
+# @glyphp/conformance
 
 An executable conformance suite for the [Glyph Protocol](../../spec/protocol.md).
 Point it at any Glyph server and it reports whether the server matches the spec.
@@ -14,7 +14,7 @@ Exit code `0` if every check passes, `1` otherwise.
 ## Library
 
 ```typescript
-import { runConformance, formatReport } from '@glyph-protocol/conformance'
+import { runConformance, formatReport } from '@glyphp/conformance'
 
 const report = await runConformance('http://localhost:3100')
 console.log(formatReport(report))
@@ -24,7 +24,7 @@ console.log(report.passed) // boolean
 Pass an in-process handler instead of hitting the network — useful in tests:
 
 ```typescript
-import { GlyphServer } from '@glyph-protocol/server'
+import { GlyphServer } from '@glyphp/server'
 
 const server = new GlyphServer()
 const report = await runConformance('http://glyph', { fetch: server.fetch })

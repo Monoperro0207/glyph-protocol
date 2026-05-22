@@ -41,8 +41,8 @@ cards, inputs, outputs, and bearer tokens travel in clear text.
 
 ## Adapted tools
 
-Glyphs produced by `@glyph-protocol/adapter-openapi` and
-`@glyph-protocol/adapter-mcp` derive their cost/risk metadata from the upstream
+Glyphs produced by `@glyphp/adapter-openapi` and
+`@glyphp/adapter-mcp` derive their cost/risk metadata from the upstream
 API or MCP server. **Upstream annotations are a suggestion, not authority.**
 The MCP adapter raises the risk tier by a name heuristic (`delete`, `drop`,
 `exec`, …) even when the tool claims to be read-only. Review adapted cards

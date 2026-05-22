@@ -1,5 +1,5 @@
 {
-  "name": "@glyph-protocol/types",
+  "name": "@glyphp/types",
   "version": "0.1.0",
   "description": "Shared TypeScript type definitions for the Glyph Protocol",
   "license": "Apache-2.0",

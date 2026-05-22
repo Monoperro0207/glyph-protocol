@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import type { LexiconEntry } from '@glyph-protocol/types'
+import type { LexiconEntry } from '@glyphp/types'
 import {
   LexicalScorer,
   GlyphResolver,

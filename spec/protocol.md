@@ -152,5 +152,5 @@ JSON Schema (draft 2020-12) for every wire message lives in
 
 ## 10. Conformance
 
-`@glyph-protocol/conformance` is an executable suite that points at any Glyph
+`@glyphp/conformance` is an executable suite that points at any Glyph
 server and checks it against this document.

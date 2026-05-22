@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { PROTOCOL_VERSION } from '@glyph-protocol/types'
+import { PROTOCOL_VERSION } from '@glyphp/types'
 import type {
   ConfirmationTicket,
   GlyphCard,
@@ -7,7 +7,7 @@ import type {
   HandshakeResponse,
   LexiconEntry,
   SealedEnvelope,
-} from '@glyph-protocol/types'
+} from '@glyphp/types'
 
 export class GlyphClient {
   private baseUrl: string

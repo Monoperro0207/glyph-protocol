@@ -1,6 +1,6 @@
-import { verifyGlyph } from '@glyph-protocol/core'
-import { PROTOCOL_VERSION } from '@glyph-protocol/types'
-import type { GlyphCard, LexiconEntry } from '@glyph-protocol/types'
+import { verifyGlyph } from '@glyphp/core'
+import { PROTOCOL_VERSION } from '@glyphp/types'
+import type { GlyphCard, LexiconEntry } from '@glyphp/types'
 import type { ValidateFunction } from 'ajv'
 import { validators } from './schemas.js'
 
