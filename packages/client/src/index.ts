@@ -9,6 +9,9 @@ import type {
   SealedEnvelope,
 } from '@glyphp/types'
 
+export { renderEnvelope, dataPreamble } from './render.js'
+export type { RenderOptions } from './render.js'
+
 export class GlyphClient {
   private baseUrl: string
   private consumerId: string
