@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Glyph Protocol server built on Hono — serve signed, self-describing glyph cards",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
@@ -9,7 +9,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build"
@@ -32,7 +35,13 @@
   },
   "homepage": "https://github.com/Monoperro0207/glyph-protocol#readme",
   "bugs": "https://github.com/Monoperro0207/glyph-protocol/issues",
-  "keywords": ["glyph", "glyph-protocol", "server", "hono", "llm"],
+  "keywords": [
+    "glyph",
+    "glyph-protocol",
+    "server",
+    "hono",
+    "llm"
+  ],
   "engines": {
     "node": ">=18"
   },
