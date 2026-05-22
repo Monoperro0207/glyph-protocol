@@ -11,6 +11,7 @@ import {
   toLexiconEntry,
   applyDepth,
   sealResult,
+  sanitize,
 } from '../src/index.js'
 import type { CallReceipt, GlyphCard } from '@glyphp/types'
 
@@ -202,4 +203,87 @@ test('verifyReceipt fails when the public key is swapped', () => {
   const receipt = buildReceipt()
   receipt.serverPublicKey = generateKeyPair().publicKey
   assert.equal(verifyReceipt(receipt), false)
+})
+
+// --- sanitize -------------------------------------------------------------
+// Invisible/dangerous characters are built at runtime so this test file
+// stays free of the very characters it exercises.
+const ZW = String.fromCodePoint(0x200b) // zero-width space
+const TAG = String.fromCodePoint(0xe0041) // Unicode tag block char
+const RLO = String.fromCodePoint(0x202e) // right-to-left override
+const BELL = String.fromCodePoint(0x07) // C0 control char
+const FW_AB = String.fromCodePoint(0xff21) + String.fromCodePoint(0xff22) // fullwidth AB
+
+test('sanitize strips Unicode tag-block characters', () => {
+  const { value, report } = sanitize({ msg: `hi${TAG}${TAG}` })
+  assert.deepEqual(value, { msg: 'hi' })
+  assert.equal(report.modified, true)
+  assert.deepEqual(report.findings, [
+    { path: '/msg', kind: 'unicode-tags', count: 2 },
+  ])
+})
+
+test('sanitize strips zero-width characters', () => {
+  const { value, report } = sanitize({ msg: `a${ZW}b` })
+  assert.deepEqual(value, { msg: 'ab' })
+  assert.equal(report.findings[0]?.kind, 'zero-width')
+})
+
+test('sanitize strips bidi override characters', () => {
+  const { value, report } = sanitize({ msg: `${RLO}evil` })
+  assert.deepEqual(value, { msg: 'evil' })
+  assert.equal(report.findings[0]?.kind, 'bidi-override')
+})
+
+test('sanitize strips C0/C1 control characters', () => {
+  const { value, report } = sanitize({ msg: `a${BELL}b` })
+  assert.deepEqual(value, { msg: 'ab' })
+  assert.equal(report.findings[0]?.kind, 'control-char')
+})
+
+test('sanitize preserves tab, newline and carriage return', () => {
+  const input = { msg: 'a\tb\nc\rd' }
+  const { value, report } = sanitize(input)
+  assert.deepEqual(value, input)
+  assert.equal(report.modified, false)
+})
+
+test('sanitize NFKC-normalizes compatibility characters', () => {
+  const { value, report } = sanitize({ msg: FW_AB })
+  assert.deepEqual(value, { msg: 'AB' })
+  assert.equal(report.findings[0]?.kind, 'nfkc-normalized')
+})
+
+test('sanitize recurses into nested objects and arrays', () => {
+  const { value, report } = sanitize({
+    items: ['clean', `bad${ZW}`],
+    note: 'ok',
+  })
+  assert.deepEqual(value, { items: ['clean', 'bad'], note: 'ok' })
+  assert.deepEqual(report.findings, [
+    { path: '/items/1', kind: 'zero-width', count: 1 },
+  ])
+})
+
+test('sanitize reports modified:false for a clean payload', () => {
+  const clean = { a: 1, b: 'plain text', c: [true, null] }
+  const { value, report } = sanitize(clean)
+  assert.deepEqual(value, clean)
+  assert.equal(report.modified, false)
+  assert.deepEqual(report.findings, [])
+})
+
+test('sanitize is deterministic', () => {
+  const input = { a: `x${ZW}`, b: [`${RLO}y`, 'z'] }
+  assert.deepEqual(sanitize(input), sanitize(input))
+})
+
+test('sanitize is idempotent — re-sanitizing a clean value finds nothing', () => {
+  const { value } = sanitize({ msg: `${TAG}danger${ZW}${RLO}` })
+  assert.equal(sanitize(value).report.modified, false)
+})
+
+test('sanitize records the JSON-Pointer path of each finding', () => {
+  const { report } = sanitize({ outer: { inner: `v${ZW}` } })
+  assert.equal(report.findings[0]?.path, '/outer/inner')
 })
