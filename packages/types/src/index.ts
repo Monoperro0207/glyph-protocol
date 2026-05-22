@@ -9,5 +9,7 @@ export type {
   CallReceipt,
   GlyphError,
   JSONSchema,
+  Sanitization,
+  SanitizationFinding,
 } from './types.js'
 export { PROTOCOL_VERSION } from './protocol.js'

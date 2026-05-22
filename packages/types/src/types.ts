@@ -104,3 +104,29 @@ export interface GlyphError {
     details?: unknown
   }
 }
+
+/**
+ * One category of neutralization applied by sanitize() to one string field.
+ * `path` is a JSON-Pointer to the field; `count` is the number of affected
+ * code points.
+ */
+export interface SanitizationFinding {
+  path: string
+  kind:
+    | 'unicode-tags'
+    | 'zero-width'
+    | 'bidi-override'
+    | 'control-char'
+    | 'nfkc-normalized'
+  count: number
+}
+
+/**
+ * The deterministic record of what sanitize() removed from a payload before
+ * it was delivered. Carried on the SealedEnvelope and committed (by hash)
+ * into the signed CallReceipt — so it is tamper-evident, not just advisory.
+ */
+export interface Sanitization {
+  modified: boolean
+  findings: SanitizationFinding[]
+}
