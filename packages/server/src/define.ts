@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { computeGlyphId } from '@glyph/core'
-import type { GlyphCard } from '@glyph/types'
+import { computeGlyphId } from '@glyph-protocol/core'
+import type { GlyphCard } from '@glyph-protocol/types'
 
 export interface GlyphDefinition<TInput, TOutput> {
   card: GlyphCard

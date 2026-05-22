@@ -2,18 +2,25 @@
   "name": "glyph",
   "private": true,
   "version": "0.1.0",
+  "license": "Apache-2.0",
+  "author": "Patrick Espino",
   "workspaces": [
     "packages/*",
     "packages/adapters/*",
     "examples/*"
   ],
   "scripts": {
+    "build": "pnpm -r build",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts"
+    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "typescript": "^5.4.5",
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^20.12.12",
-    "tsx": "^4.11.0"
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.5"
   }
 }

@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { glyphsFromMcpClient } from '@glyph/adapter-mcp'
-import { GlyphServer } from '@glyph/server'
+import { glyphsFromMcpClient } from '@glyph-protocol/adapter-mcp'
+import { GlyphServer } from '@glyph-protocol/server'
 
 const exampleDir = dirname(fileURLToPath(import.meta.url))
 

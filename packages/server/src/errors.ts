@@ -1,5 +1,5 @@
 import type { Context } from 'hono'
-import type { GlyphError } from '@glyph/types'
+import type { GlyphError } from '@glyph-protocol/types'
 
 /** Stable, machine-readable error codes returned by a Glyph server. */
 export type GlyphErrorCode =

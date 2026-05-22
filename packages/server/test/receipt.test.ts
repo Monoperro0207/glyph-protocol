@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
-import { verifyReceipt } from '@glyph/core'
-import type { CallReceipt } from '@glyph/types'
+import { verifyReceipt } from '@glyph-protocol/core'
+import type { CallReceipt } from '@glyph-protocol/types'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
 const echo = defineGlyph({

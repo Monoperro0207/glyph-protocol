@@ -22,7 +22,7 @@ pnpm client
 
 1. **Handshake** — the agent connects and gets a session
 2. **Lexicon** — five small entries (one per tool), not the full cards
-3. **Resolver** — `@glyph/resolver` ranks candidate glyphs for each
+3. **Resolver** — `@glyph-protocol/resolver` ranks candidate glyphs for each
    natural-language query, using the zero-dependency lexical scorer
 4. **Resolve → pull → verify → call** — the agent picks the best match,
    pulls its full card, verifies the ed25519 signature, and calls it,

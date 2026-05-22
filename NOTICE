@@ -1,0 +1,13 @@
+Glyph Protocol
+Copyright 2026 Patrick Espino
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes the Glyph Protocol specification (the `spec/`
+directory), which is licensed under the same terms. Anyone may build
+independent implementations of the specification under the Apache
+License, Version 2.0, including its grant of patent rights.

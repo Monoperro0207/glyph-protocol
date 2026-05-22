@@ -6,7 +6,7 @@ import type {
   HandshakeResponse,
   LexiconEntry,
   SealedEnvelope,
-} from '@glyph/types'
+} from '@glyph-protocol/types'
 
 export class GlyphClient {
   private baseUrl: string

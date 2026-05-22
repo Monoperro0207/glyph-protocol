@@ -1,11 +1,11 @@
-# @glyph/resolver
+# @glyph-protocol/resolver
 
 Maps a natural-language intent to candidate glyphs, ranked by a pluggable `Scorer`.
 
 ## Default — zero dependencies
 
 ```typescript
-import { GlyphResolver } from '@glyph/resolver'
+import { GlyphResolver } from '@glyph-protocol/resolver'
 
 const lexicon = await client.getLexicon()
 const resolver = new GlyphResolver(lexicon) // uses LexicalScorer by default
@@ -24,7 +24,7 @@ pnpm add @huggingface/transformers
 ```
 
 ```typescript
-import { GlyphResolver, createTransformersScorer } from '@glyph/resolver'
+import { GlyphResolver, createTransformersScorer } from '@glyph-protocol/resolver'
 
 const scorer = await createTransformersScorer() // downloads MiniLM on first run
 const resolver = new GlyphResolver(lexicon, scorer)

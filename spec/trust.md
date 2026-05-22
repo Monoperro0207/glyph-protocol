@@ -13,7 +13,7 @@ A glyph passes through up to three distinct parties:
 | **Executor** | Whatever the handler ultimately calls (a REST API, an MCP server, local code) | not modeled separately |
 
 For glyphs created with `defineGlyph`, publisher = server. For adapted glyphs
-(`@glyph/adapter-openapi`, `@glyph/adapter-mcp`) the publisher is the upstream
+(`@glyph-protocol/adapter-openapi`, `@glyph-protocol/adapter-mcp`) the publisher is the upstream
 API/MCP server named in `provider`, while the Glyph server is the signer — the
 two genuinely differ, and a future version should make that cryptographically
 explicit. Today they are only distinguishable by inspection.
@@ -46,3 +46,9 @@ Glyph as of v0.1 gives you **tamper-evidence and provenance within one
 server's keyspace**: you can detect a modified card or a forged receipt, and
 prove which server produced a result. It does **not** yet give you a
 cross-organization PKI. Treat `provider` as a claim until trust roots exist.
+
+## License
+
+This specification is licensed under the Apache License, Version 2.0. Anyone
+may build independent implementations of the Glyph Protocol under those terms,
+including its grant of patent rights. See [`LICENSE`](../LICENSE).

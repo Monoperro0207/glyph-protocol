@@ -1,13 +1,42 @@
 {
-  "name": "@glyph/resolver",
+  "name": "@glyph-protocol/resolver",
   "version": "0.1.0",
-  "private": true,
+  "description": "Resolve natural-language intent to Glyph Protocol glyphs with pluggable scorers",
+  "license": "Apache-2.0",
+  "author": "Patrick Espino",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Monoperro0207/glyph-protocol.git",
+    "directory": "packages/resolver"
+  },
+  "homepage": "https://github.com/Monoperro0207/glyph-protocol#readme",
+  "bugs": "https://github.com/Monoperro0207/glyph-protocol/issues",
+  "keywords": ["glyph", "glyph-protocol", "resolver", "llm", "agents"],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@glyph/types": "workspace:*"
+    "@glyph-protocol/types": "workspace:*"
   }
 }

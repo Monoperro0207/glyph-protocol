@@ -1,14 +1,43 @@
 {
-  "name": "@glyph/core",
+  "name": "@glyph-protocol/core",
   "version": "0.1.0",
-  "private": true,
+  "description": "Glyph Protocol core — content hashing, ed25519 signing, validation, and signed call receipts",
+  "license": "Apache-2.0",
+  "author": "Patrick Espino",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Monoperro0207/glyph-protocol.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Monoperro0207/glyph-protocol#readme",
+  "bugs": "https://github.com/Monoperro0207/glyph-protocol/issues",
+  "keywords": ["glyph", "glyph-protocol", "ed25519", "signing", "llm"],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@glyph/types": "workspace:*",
+    "@glyph-protocol/types": "workspace:*",
     "@noble/ed25519": "^2.1.0",
     "zod": "^3.23.8"
   }

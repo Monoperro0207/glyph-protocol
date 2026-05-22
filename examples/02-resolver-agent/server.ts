@@ -1,4 +1,4 @@
-import { defineGlyph, GlyphServer } from '@glyph/server'
+import { defineGlyph, GlyphServer } from '@glyph-protocol/server'
 import { z } from 'zod'
 
 const searchFlights = defineGlyph({
