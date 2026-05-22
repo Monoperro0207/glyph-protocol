@@ -28,4 +28,5 @@ export const validators = {
   confirmationTicket: load('confirmation-ticket.schema.json'),
   glyphError: load('glyph-error.schema.json'),
   controlMessage: load('control-message.schema.json'),
+  updateManifest: load('update-manifest.schema.json'),
 }

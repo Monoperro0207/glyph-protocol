@@ -37,6 +37,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@glyphp/core": "workspace:*",
     "@glyphp/types": "workspace:*"
   }
 }

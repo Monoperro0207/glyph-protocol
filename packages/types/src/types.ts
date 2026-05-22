@@ -134,3 +134,78 @@ export interface Sanitization {
   modified: boolean
   findings: SanitizationFinding[]
 }
+
+/**
+ * One field that differs between an approved card and a newly seen one, with
+ * a triage severity. `field` is a name or dotted path (e.g. "cost.riskTier").
+ * `breaking` — a contract/security-relevant change that must not be trusted
+ * without human re-approval. `review` — descriptive, worth a look, not a gate.
+ */
+export interface CardFieldChange {
+  field: string
+  severity: 'breaking' | 'review'
+  before: unknown
+  after: unknown
+}
+
+/**
+ * The result of comparing an approved card against a newly seen one. The
+ * content-addressed id is the *detector* — any canonical change already flips
+ * it; this diff is the *explainer* a human uses to decide whether to re-approve.
+ */
+export interface CardDiff {
+  changed: boolean
+  /** The content-addressed id differs (any canonical field changed). */
+  idChanged: boolean
+  /** The signing key differs — the protocol id deliberately excludes publicKey. */
+  keyChanged: boolean
+  changes: CardFieldChange[]
+  /** True if any change is 'breaking' — execution must not resume without re-approval. */
+  requiresApproval: boolean
+}
+
+/**
+ * A consumer-side record that a specific card was approved for a tool name.
+ * The stored card's (id, publicKey) pair is the pinned identity: the id covers
+ * content, the key covers provenance. The protocol id deliberately excludes
+ * publicKey, so both must be pinned for "this is the tool I approved" to hold.
+ *
+ * A pin carrying `revokedAt` is a revocation: the consumer has explicitly
+ * distrusted the tool. A revoked pin blocks execution even if the card still
+ * matches, and is cleared only by a deliberate re-approval.
+ */
+export interface Pin {
+  toolName: string
+  approvedAt: string
+  /** The exact card that was approved — kept so a later change can be diffed. */
+  card: GlyphCard
+  /** Set when the consumer has revoked this tool. Its presence blocks execution. */
+  revokedAt?: string
+  /** Optional human-readable reason recorded at revocation time. */
+  revokeReason?: string
+}
+
+/**
+ * A provider's signed, on-the-record statement that a tool changed from one
+ * card to another. Optional and additive: it informs human review of an
+ * update, it does not replace it. Signed by the server key — like a
+ * CallReceipt — so a consumer MUST verify it against the *pinned* key, not
+ * against a key embedded in the new card. See `spec/update-governance.md`.
+ */
+export interface UpdateManifest {
+  /** Wire version of the manifest format (see MANIFEST_VERSION). */
+  manifestVersion: string
+  toolName: string
+  previousCardId: string
+  newCardId: string
+  /** Human-readable description of the change. */
+  reason: string
+  /** The provider's own claim that the change breaks the contract. */
+  breaking: boolean
+  /** The provider's own claim about the security impact of the change. */
+  securityImpact: 'none' | 'low' | 'high'
+  issuedAt: string
+  serverPublicKey: string
+  /** Hex ed25519 signature over the canonical hash of every other field. */
+  signature: string
+}
