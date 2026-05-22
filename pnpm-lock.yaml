@@ -84,6 +84,25 @@ importers:
         specifier: ^4.11.0
         version: 4.22.3
 
+  examples/04-inert-data:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../packages/client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@glyphp/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.11.0
+        version: 4.22.3
+
   packages/adapters/mcp:
     dependencies:
       '@glyphp/core':
