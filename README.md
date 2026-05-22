@@ -9,12 +9,14 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | Package | Description |
 |---|---|
 | `@glyphp/types` | Pure TypeScript interfaces |
-| `@glyphp/core` | Hash, sign, validate |
+| `@glyphp/core` | Hash, sign, validate, sanitize |
 | `@glyphp/server` | GlyphServer (Hono) |
-| `@glyphp/client` | GlyphClient |
+| `@glyphp/client` | GlyphClient + the spotlighting render layer |
 | `@glyphp/resolver` | Intent → glyph resolver (pluggable scorers) |
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
+| `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
+| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `init`) |
 
 ## Quick Start
 
@@ -32,6 +34,9 @@ pnpm client   # terminal 2
   that resolves natural-language intent to the right glyph
 - [`03-mcp-filesystem`](examples/03-mcp-filesystem) — connects to a **real** MCP
   server, adapts its tools into glyphs, and calls one over the Glyph protocol
+- [`04-inert-data`](examples/04-inert-data) — a hostile glyph whose output
+  smuggles a prompt injection, and how Glyph neutralizes it: sanitization, a
+  signed inspection report, and the spotlighting render layer
 
 ## Verify
 
@@ -89,6 +94,44 @@ const server = new GlyphServer({
 Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
 [`spec/trust.md`](spec/trust.md) for what the signatures do and do not prove.
 
+## Inert data
+
+The consumer of a glyph is an LLM, so a tool result is an injection surface:
+hostile output can smuggle instructions. As of protocol `0.2`, Glyph treats
+tool output as **inert data — never instructions** in two layers.
+
+**Server-side sanitization.** Before delivery, the server strips provably
+invisible or dangerous characters from every string in a result — the Unicode
+tag block, zero-width characters, bidirectional overrides, C0/C1 controls —
+and applies NFKC normalization. The `SealedEnvelope` carries an `inspection`
+report of exactly what was removed, and the signed `CallReceipt` commits to it
+via `inspectionHash`, so the cleaning is tamper-evident. `@glyphp/core`
+exports the same step as a pure `sanitize()`.
+
+**Client-side spotlighting.** `@glyphp/client` exports `renderEnvelope()` and
+`dataPreamble()` — the recommended way to put a tool result in front of a
+model. `renderEnvelope` wraps the payload in a per-render, cryptographically
+random boundary nonce that untrusted content cannot predict, so a payload
+cannot forge the closing marker and "break out" of the data channel.
+
+```typescript
+import { GlyphClient, renderEnvelope, dataPreamble } from '@glyphp/client'
+import { verifyReceipt } from '@glyphp/core'
+
+const envelope = await client.call('search', { q: 'glyph protocol' })
+
+// Emit dataPreamble().content ONCE, as a trusted system message.
+// Then hand the model the rendered block as the tool result:
+const block = renderEnvelope(envelope, {
+  verify: (e) => verifyReceipt(e.receipt!), // refuse to render unverified data
+})
+```
+
+This raises the floor against prompt injection; it does not eliminate it. A
+model can still choose to obey a visible instruction inside a clearly
+delimited data block — see [`spec/trust.md`](spec/trust.md) for the limits.
+[`04-inert-data`](examples/04-inert-data) shows both layers end to end.
+
 ## Status
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
@@ -103,13 +146,17 @@ Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
   - `@glyphp/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
     annotations onto the glyph cost/risk model.
   - Server hardening: optional bearer-token auth and fixed-window rate limiting.
+- **Protocol `0.2` — current.** Inert-data hardening: server-side
+  sanitization, a signed inspection report on every envelope, and the
+  `@glyphp/client` spotlighting render layer. This is a breaking wire change —
+  `0.1` peers are rejected at the handshake with `426`.
 
 ## Spec
 
 The wire protocol is documented in [`spec/`](spec):
 
 - [`protocol.md`](spec/protocol.md) — endpoints, handshake, card depth, the
-  confirmation flow, and the error model.
+  confirmation flow, the inert-data inspection report, and the error model.
 - [`schemas/`](spec/schemas) — JSON Schema (draft 2020-12) for every wire message.
 - [`trust.md`](spec/trust.md) — the trust model: what the signatures prove.
 - [`security.md`](spec/security.md) — deploying a server safely.
