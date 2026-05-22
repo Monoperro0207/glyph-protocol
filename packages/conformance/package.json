@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/conformance",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Conformance suite — validate any Glyph server against the protocol spec",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
@@ -9,7 +9,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": ["dist", "src", "schemas"],
+  "files": [
+    "dist",
+    "src",
+    "schemas"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build"
@@ -35,7 +39,12 @@
   },
   "homepage": "https://github.com/Monoperro0207/glyph-protocol#readme",
   "bugs": "https://github.com/Monoperro0207/glyph-protocol/issues",
-  "keywords": ["glyph", "glyph-protocol", "conformance", "testing"],
+  "keywords": [
+    "glyph",
+    "glyph-protocol",
+    "conformance",
+    "testing"
+  ],
   "engines": {
     "node": ">=18"
   },
