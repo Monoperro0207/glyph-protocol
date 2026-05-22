@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CallReceipt",
+  "description": "A signed, tamper-evident record of one successful glyph call.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receiptVersion",
+    "callId",
+    "glyphId",
+    "glyphName",
+    "inputHash",
+    "outputHash",
+    "riskTier",
+    "provider",
+    "latencyMs",
+    "timestamp",
+    "serverPublicKey",
+    "signature"
+  ],
+  "properties": {
+    "receiptVersion": { "type": "string" },
+    "callId": { "type": "string" },
+    "glyphId": { "type": "string" },
+    "glyphName": { "type": "string" },
+    "inputHash": {
+      "type": "string",
+      "description": "Canonical SHA-256 of the call input."
+    },
+    "outputHash": {
+      "type": "string",
+      "description": "Canonical SHA-256 of the call output."
+    },
+    "riskTier": { "enum": ["safe", "caution", "danger"] },
+    "provider": { "type": "string" },
+    "latencyMs": { "type": "number" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "serverPublicKey": {
+      "type": "string",
+      "description": "Hex ed25519 public key the receipt signature verifies against."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex ed25519 signature over the canonical hash of the receipt (all fields except signature)."
+    }
+  }
+}

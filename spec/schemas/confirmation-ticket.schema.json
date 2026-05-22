@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConfirmationTicket",
+  "description": "Response to POST /glyphs/:name/prepare. Carries a single-use token for calling a glyph that requires confirmation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["confirmationToken", "glyphId", "name", "cost", "input", "expiresAt"],
+  "properties": {
+    "confirmationToken": {
+      "type": "string",
+      "description": "Single-use token, bound to this glyph and input, passed back in POST /glyphs/:name/call."
+    },
+    "glyphId": { "type": "string" },
+    "name": { "type": "string" },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latency",
+        "sideEffects",
+        "reversible",
+        "riskTier",
+        "requiresConfirmation"
+      ],
+      "properties": {
+        "latency": { "enum": ["fast", "medium", "slow"] },
+        "sideEffects": { "type": "boolean" },
+        "reversible": { "type": "boolean" },
+        "riskTier": { "enum": ["safe", "caution", "danger"] },
+        "requiresConfirmation": { "type": "boolean" }
+      }
+    },
+    "input": {
+      "description": "The validated input the token is bound to. Calling with any other input invalidates the token."
+    },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -104,6 +104,16 @@ Anyone can verify a receipt with `verifyReceipt()` from `@glyph-protocol/core`. 
     annotations onto the glyph cost/risk model.
   - Server hardening: optional bearer-token auth and fixed-window rate limiting.
 
+## Spec
+
+The wire protocol is documented in [`spec/`](spec):
+
+- [`protocol.md`](spec/protocol.md) — endpoints, handshake, card depth, the
+  confirmation flow, and the error model.
+- [`schemas/`](spec/schemas) — JSON Schema (draft 2020-12) for every wire message.
+- [`trust.md`](spec/trust.md) — the trust model: what the signatures prove.
+- [`security.md`](spec/security.md) — deploying a server safely.
+
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE) — code, SDK, and the

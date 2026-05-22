@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GlyphCard",
+  "description": "A self-describing, signed, content-addressed capability card. Describes the full card (card depth 'rich'); depth-reduced responses are subsets of this shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "name",
+    "intent",
+    "tags",
+    "cost",
+    "idempotent",
+    "input",
+    "output",
+    "examples",
+    "failureModes",
+    "provider",
+    "createdAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "SHA-256 hex digest of the card's canonical content. Content-addressed identity."
+    },
+    "version": {
+      "type": "string",
+      "description": "The card author's own version string for this capability."
+    },
+    "name": { "type": "string" },
+    "intent": {
+      "type": "string",
+      "description": "A natural-language statement of what the glyph does, written for an LLM consumer."
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latency",
+        "sideEffects",
+        "reversible",
+        "riskTier",
+        "requiresConfirmation"
+      ],
+      "properties": {
+        "latency": { "enum": ["fast", "medium", "slow"] },
+        "sideEffects": { "type": "boolean" },
+        "reversible": { "type": "boolean" },
+        "riskTier": { "enum": ["safe", "caution", "danger"] },
+        "requiresConfirmation": {
+          "type": "boolean",
+          "description": "When true, a call is rejected unless it carries a confirmation token from POST /glyphs/:name/prepare."
+        }
+      }
+    },
+    "idempotent": { "type": "boolean" },
+    "input": {
+      "type": "object",
+      "description": "A JSON Schema describing the glyph's input."
+    },
+    "output": {
+      "type": "object",
+      "description": "A JSON Schema describing the glyph's output."
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "input", "output"],
+        "properties": {
+          "description": { "type": "string" },
+          "input": {},
+          "output": {}
+        }
+      }
+    },
+    "failureModes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "description"],
+        "properties": {
+          "code": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "provider": {
+      "type": "string",
+      "description": "Who authored the tool's behavior. A claim, not a proven identity — see spec/trust.md."
+    },
+    "publicKey": {
+      "type": "string",
+      "description": "Hex ed25519 public key of the signing server. Present once the card is signed."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex ed25519 signature over the card id. Present once the card is signed."
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

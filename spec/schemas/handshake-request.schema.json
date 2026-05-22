@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HandshakeRequest",
+  "description": "Body of POST /handshake. The consumer opens a session and declares the protocol version it speaks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "consumerId", "contextBudget", "preferredCardDepth"],
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "description": "The Glyph wire-protocol version the consumer speaks. Must match the server's exactly while the protocol is 0.x."
+    },
+    "consumerId": { "type": "string" },
+    "contextBudget": {
+      "type": "number",
+      "description": "Rough token budget the consumer can spend on glyph metadata."
+    },
+    "preferredCardDepth": { "enum": ["minimal", "standard", "rich"] }
+  }
+}

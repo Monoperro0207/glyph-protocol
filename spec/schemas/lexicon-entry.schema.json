@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LexiconEntry",
+  "description": "A compact glyph summary returned in the handshake and from GET /lexicon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "intent", "tags", "riskTier"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "intent": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "riskTier": { "enum": ["safe", "caution", "danger"] }
+  }
+}
