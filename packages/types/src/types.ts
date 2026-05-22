@@ -74,12 +74,14 @@ export interface ControlMessage {
 }
 
 export interface HandshakeRequest {
+  protocolVersion: string
   consumerId: string
   contextBudget: number
   preferredCardDepth: 'minimal' | 'standard' | 'rich'
 }
 
 export interface HandshakeResponse {
+  protocolVersion: string
   sessionId: string
   lexicon: LexiconEntry[]
   cardDepth: 'minimal' | 'standard' | 'rich'

@@ -10,3 +10,4 @@ export type {
   GlyphError,
   JSONSchema,
 } from './types.js'
+export { PROTOCOL_VERSION } from './protocol.js'

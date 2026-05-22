@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { PROTOCOL_VERSION } from '@glyph-protocol/types'
 import type {
   ConfirmationTicket,
   GlyphCard,
@@ -27,6 +28,7 @@ export class GlyphClient {
     cardDepth?: 'minimal' | 'standard' | 'rich'
   }): Promise<HandshakeResponse> {
     const body: HandshakeRequest = {
+      protocolVersion: PROTOCOL_VERSION,
       consumerId: this.consumerId,
       contextBudget: this.contextBudget,
       preferredCardDepth: options?.cardDepth ?? 'standard',

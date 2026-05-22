@@ -11,6 +11,7 @@ import {
   canonicalHash,
 } from '@glyph-protocol/core'
 import type { GlyphKeyPair } from '@glyph-protocol/core'
+import { PROTOCOL_VERSION } from '@glyph-protocol/types'
 import type {
   CallReceipt,
   ConfirmationTicket,
@@ -98,15 +99,36 @@ export class GlyphServer {
     if (this.auth) app.use('*', authMiddleware(this.auth))
 
     app.get('/health', (c) =>
-      c.json({ ok: true, version: SERVER_VERSION })
+      c.json({
+        ok: true,
+        version: SERVER_VERSION,
+        protocolVersion: PROTOCOL_VERSION,
+      })
     )
 
     app.post('/handshake', async (c) => {
       const body = await c.req.json<HandshakeRequest>()
+
+      // Protocol version negotiation. While Glyph is 0.x, every minor is
+      // potentially breaking — client and server must speak the same version.
+      if (body.protocolVersion !== PROTOCOL_VERSION) {
+        return errorResponse(
+          c,
+          426,
+          'PROTOCOL_VERSION_UNSUPPORTED',
+          `This server speaks Glyph protocol ${PROTOCOL_VERSION}`,
+          {
+            serverProtocolVersion: PROTOCOL_VERSION,
+            clientProtocolVersion: body.protocolVersion ?? null,
+          }
+        )
+      }
+
       const lexicon = Array.from(this.glyphs.values()).map((g) =>
         toLexiconEntry(g.card)
       )
       const response: HandshakeResponse = {
+        protocolVersion: PROTOCOL_VERSION,
         sessionId: randomUUID(),
         lexicon,
         cardDepth: body.preferredCardDepth ?? 'standard',

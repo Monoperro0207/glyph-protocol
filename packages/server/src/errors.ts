@@ -12,8 +12,9 @@ export type GlyphErrorCode =
   | 'HANDLER_TIMEOUT'
   | 'UNAUTHORIZED'
   | 'RATE_LIMITED'
+  | 'PROTOCOL_VERSION_UNSUPPORTED'
 
-type ErrorStatus = 400 | 401 | 403 | 404 | 429 | 500 | 502 | 504
+type ErrorStatus = 400 | 401 | 403 | 404 | 426 | 429 | 500 | 502 | 504
 
 /** Builds a versioned GlyphError response: { error: { code, message, details? } }. */
 export function errorResponse(
