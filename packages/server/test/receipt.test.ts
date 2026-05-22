@@ -56,8 +56,9 @@ test('the onCall audit hook receives the same receipt', async () => {
   assert.equal(captured[captured.length - 1].callId, body.receipt.callId)
 })
 
-test('the receipt records hashes of the input and output', async () => {
+test('the receipt records hashes of the input, output and inspection', async () => {
   const body = await call()
   assert.match(body.receipt.inputHash, /^[0-9a-f]{64}$/)
   assert.match(body.receipt.outputHash, /^[0-9a-f]{64}$/)
+  assert.match(body.receipt.inspectionHash, /^[0-9a-f]{64}$/)
 })

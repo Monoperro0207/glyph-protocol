@@ -158,9 +158,10 @@ export function sealResult(
   callId: string,
   payload: unknown,
   latencyMs: number,
-  provider: string
+  provider: string,
+  inspection?: Sanitization
 ): SealedEnvelope {
-  return {
+  const envelope: SealedEnvelope = {
     type: 'data',
     glyphId,
     callId: callId || randomUUID(),
@@ -171,6 +172,8 @@ export function sealResult(
       timestamp: new Date().toISOString(),
     },
   }
+  if (inspection) envelope.inspection = inspection
+  return envelope
 }
 
 // Code-point ranges that carry no legitimate meaning for an LLM consumer but

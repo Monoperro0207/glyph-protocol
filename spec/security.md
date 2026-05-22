@@ -39,6 +39,17 @@ cards, inputs, outputs, and bearer tokens travel in clear text.
   whose output breaks its own card is rejected with `OUTPUT_VALIDATION_FAILED`,
   so a misbehaving upstream cannot silently return an off-contract payload.
 
+## Inert tool output
+
+Tool output is treated as data, never instructions. The server sanitizes every
+call result before delivery — stripping invisible Unicode (the tag block,
+zero-width characters, bidirectional overrides) and C0/C1 control characters,
+then applying NFKC normalization — and reports what it removed in the
+envelope's `inspection` field. This deterministically defuses
+invisible-character injection vectors. It does **not** stop a model from
+obeying visible instructions embedded in a payload; see [`trust.md`](trust.md)
+for that boundary.
+
 ## Adapted tools
 
 Glyphs produced by `@glyphp/adapter-openapi` and

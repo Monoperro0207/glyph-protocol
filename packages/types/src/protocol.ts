@@ -4,4 +4,4 @@
  * minor is potentially breaking, so client and server must agree on an
  * exact match during the handshake.
  */
-export const PROTOCOL_VERSION = '0.1'
+export const PROTOCOL_VERSION = '0.2'

@@ -9,6 +9,7 @@ import {
   signReceipt,
   generateKeyPair,
   canonicalHash,
+  sanitize,
 } from '@glyphp/core'
 import type { GlyphKeyPair } from '@glyphp/core'
 import { PROTOCOL_VERSION } from '@glyphp/types'
@@ -24,7 +25,7 @@ import type { AuthConfig, RateLimitConfig } from './middleware.js'
 import { errorResponse } from './errors.js'
 
 const SERVER_VERSION = '0.1.0'
-const RECEIPT_VERSION = '0.1'
+const RECEIPT_VERSION = '0.2'
 const CONFIRMATION_TTL_MS = 5 * 60_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
 
@@ -288,6 +289,11 @@ export class GlyphServer {
         )
       }
 
+      // Make "inert data" literal: strip invisible / dangerous characters from
+      // the output before it is delivered or hashed. The receipt commits to
+      // the sanitized payload and to the report of what was removed.
+      const { value: cleanOutput, report: inspection } = sanitize(checked.data)
+
       // Signed audit receipt: a tamper-evident record of this execution.
       const receiptBase: Omit<CallReceipt, 'signature'> = {
         receiptVersion: RECEIPT_VERSION,
@@ -295,7 +301,8 @@ export class GlyphServer {
         glyphId: glyph.card.id,
         glyphName: glyph.card.name,
         inputHash: canonicalHash(parsed.data),
-        outputHash: canonicalHash(checked.data),
+        outputHash: canonicalHash(cleanOutput),
+        inspectionHash: canonicalHash(inspection),
         riskTier: glyph.card.cost.riskTier,
         provider: glyph.card.provider,
         latencyMs,
@@ -317,9 +324,10 @@ export class GlyphServer {
       const envelope = sealResult(
         glyph.card.id,
         callId,
-        checked.data,
+        cleanOutput,
         latencyMs,
-        glyph.card.provider
+        glyph.card.provider,
+        inspection
       )
       return c.json({ ...envelope, receipt })
     })

@@ -10,7 +10,7 @@
     "glyphId": { "type": "string" },
     "callId": { "type": "string" },
     "payload": {
-      "description": "The glyph's output. Shape is defined by the glyph card's output schema."
+      "description": "The glyph's sanitized output. Shape is defined by the glyph card's output schema."
     },
     "meta": {
       "type": "object",
@@ -20,6 +20,36 @@
         "latencyMs": { "type": "number" },
         "provider": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "inspection": {
+      "type": "object",
+      "description": "What sanitize() removed from the payload before delivery — see sanitization.schema.json.",
+      "additionalProperties": false,
+      "required": ["modified", "findings"],
+      "properties": {
+        "modified": { "type": "boolean" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "kind", "count"],
+            "properties": {
+              "path": { "type": "string" },
+              "kind": {
+                "enum": [
+                  "unicode-tags",
+                  "zero-width",
+                  "bidi-override",
+                  "control-char",
+                  "nfkc-normalized"
+                ]
+              },
+              "count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
       }
     },
     "receipt": {
@@ -33,6 +63,7 @@
         "glyphName",
         "inputHash",
         "outputHash",
+        "inspectionHash",
         "riskTier",
         "provider",
         "latencyMs",
@@ -47,6 +78,7 @@
         "glyphName": { "type": "string" },
         "inputHash": { "type": "string" },
         "outputHash": { "type": "string" },
+        "inspectionHash": { "type": "string" },
         "riskTier": { "enum": ["safe", "caution", "danger"] },
         "provider": { "type": "string" },
         "latencyMs": { "type": "number" },

@@ -49,6 +49,8 @@ export interface SealedEnvelope {
     provider: string
     timestamp: string
   }
+  /** What sanitize() removed from `payload` before it was delivered. */
+  inspection?: Sanitization
   receipt?: CallReceipt
 }
 
@@ -59,6 +61,8 @@ export interface CallReceipt {
   glyphName: string
   inputHash: string
   outputHash: string
+  /** Canonical SHA-256 of the envelope's `inspection` report. */
+  inspectionHash: string
   riskTier: 'safe' | 'caution' | 'danger'
   provider: string
   latencyMs: number

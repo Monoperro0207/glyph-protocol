@@ -11,6 +11,7 @@
     "glyphName",
     "inputHash",
     "outputHash",
+    "inspectionHash",
     "riskTier",
     "provider",
     "latencyMs",
@@ -29,7 +30,11 @@
     },
     "outputHash": {
       "type": "string",
-      "description": "Canonical SHA-256 of the call output."
+      "description": "Canonical SHA-256 of the sanitized call output."
+    },
+    "inspectionHash": {
+      "type": "string",
+      "description": "Canonical SHA-256 of the envelope's sanitization report."
     },
     "riskTier": { "enum": ["safe", "caution", "danger"] },
     "provider": { "type": "string" },
