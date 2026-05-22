@@ -4,4 +4,5 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+.npmrc
 .DS_Store
