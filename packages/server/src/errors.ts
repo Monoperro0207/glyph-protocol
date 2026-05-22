@@ -13,6 +13,8 @@ export type GlyphErrorCode =
   | 'UNAUTHORIZED'
   | 'RATE_LIMITED'
   | 'PROTOCOL_VERSION_UNSUPPORTED'
+  | 'MALFORMED_JSON'
+  | 'INTERNAL_ERROR'
 
 type ErrorStatus = 400 | 401 | 403 | 404 | 426 | 429 | 500 | 502 | 504
 

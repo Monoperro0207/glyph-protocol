@@ -65,13 +65,31 @@ test('rateLimitMiddleware returns 429 with Retry-After past the limit', async ()
   assert.ok(res.headers.get('Retry-After'))
 })
 
-test('rateLimitMiddleware keys a separate bucket per bearer token', async () => {
-  const app = appWith(rateLimitMiddleware({ windowMs: 60000, max: 1 }))
-  const a = { headers: { Authorization: 'Bearer aaa' } }
-  const b = { headers: { Authorization: 'Bearer bbb' } }
+test('rateLimitMiddleware keys a separate bucket per verified token', async () => {
+  const verify = (t: string) => t === 'good-a' || t === 'good-b'
+  const app = appWith(rateLimitMiddleware({ windowMs: 60000, max: 1 }, verify))
+  const a = { headers: { Authorization: 'Bearer good-a' } }
+  const b = { headers: { Authorization: 'Bearer good-b' } }
   assert.equal((await app.request('/x', a)).status, 200)
   assert.equal((await app.request('/x', a)).status, 429)
   assert.equal((await app.request('/x', b)).status, 200)
+})
+
+test('rateLimitMiddleware does not let unverified tokens escape the limit', async () => {
+  const verify = (t: string) => t === 'good'
+  const app = appWith(rateLimitMiddleware({ windowMs: 60000, max: 1 }, verify))
+  // An attacker rotates a fresh fake token on every request. Each must land
+  // in the shared IP bucket, not a brand-new per-token bucket.
+  assert.equal(
+    (await app.request('/x', { headers: { Authorization: 'Bearer fake-1' } }))
+      .status,
+    200
+  )
+  assert.equal(
+    (await app.request('/x', { headers: { Authorization: 'Bearer fake-2' } }))
+      .status,
+    429
+  )
 })
 
 test('rateLimitMiddleware never limits /health', async () => {
