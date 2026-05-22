@@ -1,6 +1,6 @@
 # Glyph Protocol — Trust model
 
-Status: draft, tracks the current implementation (v0.1).
+Status: draft, tracks the current implementation (v0.2).
 
 ## Identities
 
@@ -25,10 +25,10 @@ explicit. Today they are only distinguishable by inspection.
    `signature`. `verifyGlyph()` checks both that the content still hashes to
    the `id` and that the signature verifies.
 2. **Call receipts.** Every successful call produces a `CallReceipt` — a
-   record of `{callId, glyphId, inputHash, outputHash, riskTier, latencyMs,
-   timestamp, provider}` signed by the same server key. `verifyReceipt()`
-   verifies it. The receipt rides back in the `SealedEnvelope` and is also
-   emitted to the server's `onCall` audit hook.
+   record of `{callId, glyphId, inputHash, outputHash, inspectionHash,
+   riskTier, latencyMs, timestamp, provider}` signed by the same server key.
+   `verifyReceipt()` verifies it. The receipt rides back in the
+   `SealedEnvelope` and is also emitted to the server's `onCall` audit hook.
 
 ## What is NOT verified (and why it matters)
 
@@ -42,10 +42,25 @@ explicit. Today they are only distinguishable by inspection.
 
 ## Threat posture
 
-Glyph as of v0.1 gives you **tamper-evidence and provenance within one
+Glyph as of v0.2 gives you **tamper-evidence and provenance within one
 server's keyspace**: you can detect a modified card or a forged receipt, and
 prove which server produced a result. It does **not** yet give you a
 cross-organization PKI. Treat `provider` as a claim until trust roots exist.
+
+## Inert data
+
+Glyph's design treats tool output as data, never instructions. The server
+sanitizes every payload (see [`security.md`](security.md)) and the
+`SealedEnvelope` carries a signed `inspection` report of what was removed.
+
+This is a real, deterministic defense against *invisible* injection — Unicode
+tag-block characters, zero-width characters, and bidirectional overrides
+cannot ride along inside a result. It is **not** full prompt-injection
+immunity: a payload can still contain visible text that reads as an
+instruction, and a model is free to obey it. Structurally separating the data
+channel from the control channel so that a *host enforces* the distinction
+requires cooperation from the model runtime, and is out of scope for the SDK
+alone.
 
 ## License
 

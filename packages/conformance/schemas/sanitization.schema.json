@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sanitization",
+  "description": "The deterministic record of what sanitize() removed from a payload before delivery. Carried as `inspection` on a SealedEnvelope and committed by hash into the signed CallReceipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["modified", "findings"],
+  "properties": {
+    "modified": {
+      "type": "boolean",
+      "description": "True if any string in the payload was altered."
+    },
+    "findings": {
+      "type": "array",
+      "description": "One entry per category of neutralization applied to one string field, sorted by path then kind.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "count"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "JSON Pointer (RFC 6901) to the affected string field."
+          },
+          "kind": {
+            "description": "The category of character removed or normalized.",
+            "enum": [
+              "unicode-tags",
+              "zero-width",
+              "bidi-override",
+              "control-char",
+              "nfkc-normalized"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of code points affected."
+          }
+        }
+      }
+    }
+  }
+}

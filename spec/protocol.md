@@ -1,6 +1,6 @@
 # Glyph Protocol
 
-**Protocol version:** `0.1` · **Status:** draft
+**Protocol version:** `0.2` · **Status:** draft
 
 Glyph is a connection protocol whose consumer is an LLM, not a deterministic
 program. A tool publishes a **glyph card**: a self-describing, signed,
@@ -30,7 +30,7 @@ protocol defines no transport encryption of its own.
 
 ## 3. Protocol version negotiation
 
-The protocol version (`0.1`) is the wire contract. It is distinct from any
+The protocol version (`0.2`) is the wire contract. It is distinct from any
 server implementation or package version. While the protocol is `0.x`, every
 minor is potentially breaking.
 
@@ -79,10 +79,10 @@ Executes a glyph. Request body:
 
 The server, in order: resolves the glyph (`404`), validates `input` against the
 card's input schema (`400`), enforces the confirmation gate if required
-(`403`), runs the handler under a timeout, then validates the handler's output
-against the card's output schema. On success it returns a
-[`SealedEnvelope`](schemas/sealed-envelope.schema.json) carrying the result and
-a signed receipt.
+(`403`), runs the handler under a timeout, validates the handler's output
+against the card's output schema, then sanitizes that output (§8). On success
+it returns a [`SealedEnvelope`](schemas/sealed-envelope.schema.json) carrying
+the sanitized result and a signed receipt.
 
 Errors: `404 NOT_FOUND`, `400 VALIDATION_FAILED`, `403 CONFIRMATION_REQUIRED`,
 `403 INVALID_CONFIRMATION`, `504 HANDLER_TIMEOUT`, `502 HANDLER_ERROR`,
@@ -137,13 +137,25 @@ is human-readable and MUST NOT be matched on.
 | `UNAUTHORIZED` | 401 | Missing or invalid bearer token |
 | `RATE_LIMITED` | 429 | Too many requests |
 
-## 8. Integrity and receipts
+## 8. Integrity, receipts, and inert data
 
 On `register()`, a server signs the card's `id` with its ed25519 key and embeds
 `publicKey` and `signature`. Every successful call also produces a signed
 [`CallReceipt`](schemas/call-receipt.schema.json), returned inside the
-`SealedEnvelope`. What these signatures do and do not prove is the subject of
-[`trust.md`](trust.md).
+`SealedEnvelope`.
+
+Tool output is **data, never instructions**. Before delivery the server strips
+provably-invisible and dangerous characters from every string in the payload —
+the Unicode tag block, zero-width characters, bidirectional overrides, and
+C0/C1 control characters — and applies NFKC normalization. The `SealedEnvelope`
+carries an `inspection` report
+([`sanitization.schema.json`](schemas/sanitization.schema.json)) of exactly
+what was removed, and the receipt's `inspectionHash` commits to it, so the
+sanitization is tamper-evident. The receipt's `outputHash` is taken over the
+sanitized payload — the bytes the consumer actually receives.
+
+What these signatures do and do not prove — and the limits of treating tool
+output as inert — is the subject of [`trust.md`](trust.md).
 
 ## 9. Schemas
 

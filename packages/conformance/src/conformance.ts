@@ -190,6 +190,27 @@ export async function runConformance(
     add('error.notFound', false, errMsg(e))
   }
 
+  // 8. the bundled v0.2 inspection schema validates representative samples.
+  // Non-destructive: this exercises the schema set, not a glyph call.
+  try {
+    const ok =
+      valid(validators.sanitization, {
+        modified: true,
+        findings: [{ path: '/msg', kind: 'bidi-override', count: 1 }],
+      }) &&
+      valid(validators.sanitization, { modified: false, findings: [] }) &&
+      !valid(validators.sanitization, { modified: 'yes', findings: [] })
+    add(
+      'schema.sanitization',
+      ok,
+      ok
+        ? 'the Sanitization schema validates representative samples'
+        : 'the bundled Sanitization schema is inconsistent'
+    )
+  } catch (e) {
+    add('schema.sanitization', false, errMsg(e))
+  }
+
   return {
     baseUrl: base,
     protocolVersion: PROTOCOL_VERSION,

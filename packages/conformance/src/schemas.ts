@@ -24,6 +24,7 @@ export const validators = {
   handshakeResponse: load('handshake-response.schema.json'),
   callReceipt: load('call-receipt.schema.json'),
   sealedEnvelope: load('sealed-envelope.schema.json'),
+  sanitization: load('sanitization.schema.json'),
   confirmationTicket: load('confirmation-ticket.schema.json'),
   glyphError: load('glyph-error.schema.json'),
   controlMessage: load('control-message.schema.json'),
