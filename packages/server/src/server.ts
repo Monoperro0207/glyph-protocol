@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { serve } from '@hono/node-server'
 import {
   toLexiconEntry,
@@ -20,7 +21,7 @@ import type {
   HandshakeResponse,
 } from '@glyphp/types'
 import type { GlyphDefinition } from './define.js'
-import { authMiddleware, rateLimitMiddleware } from './middleware.js'
+import { authMiddleware, rateLimitMiddleware, buildVerify } from './middleware.js'
 import type { AuthConfig, RateLimitConfig } from './middleware.js'
 import { errorResponse } from './errors.js'
 
@@ -30,6 +31,18 @@ const CONFIRMATION_TTL_MS = 5 * 60_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
 
 class HandlerTimeoutError extends Error {}
+
+/** Thrown when a request body cannot be parsed as JSON. */
+class MalformedJsonError extends Error {}
+
+/** Reads and parses a JSON request body, normalizing a parse failure. */
+async function readJson<T>(c: Context): Promise<T> {
+  try {
+    return (await c.req.json()) as T
+  } catch {
+    throw new MalformedJsonError()
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined
@@ -79,6 +92,11 @@ export class GlyphServer {
   }
 
   register(glyph: GlyphDefinition<any, any>): this {
+    if (this.glyphs.has(glyph.card.name)) {
+      throw new Error(
+        `A glyph named "${glyph.card.name}" is already registered`
+      )
+    }
     const signedCard = {
       ...glyph.card,
       publicKey: this.keyPair.publicKey,
@@ -96,7 +114,25 @@ export class GlyphServer {
   private setupRoutes() {
     const { app } = this
 
-    if (this.rateLimit) app.use('*', rateLimitMiddleware(this.rateLimit))
+    app.onError((err, c) => {
+      if (err instanceof MalformedJsonError) {
+        return errorResponse(
+          c,
+          400,
+          'MALFORMED_JSON',
+          'Request body is not valid JSON'
+        )
+      }
+      console.error('[glyph] unhandled error:', err)
+      return errorResponse(c, 500, 'INTERNAL_ERROR', 'Internal server error')
+    })
+
+    // The rate limiter runs first, but it is given the auth verifier so an
+    // unverified token cannot escape the limit by rotating fake values.
+    if (this.rateLimit) {
+      const verifyToken = this.auth ? buildVerify(this.auth) : undefined
+      app.use('*', rateLimitMiddleware(this.rateLimit, verifyToken))
+    }
     if (this.auth) app.use('*', authMiddleware(this.auth))
 
     app.get('/health', (c) =>
@@ -108,7 +144,7 @@ export class GlyphServer {
     )
 
     app.post('/handshake', async (c) => {
-      const body = await c.req.json<HandshakeRequest>()
+      const body = await readJson<HandshakeRequest>(c)
 
       // Protocol version negotiation. While Glyph is 0.x, every minor is
       // potentially breaking — client and server must speak the same version.
@@ -158,7 +194,7 @@ export class GlyphServer {
       const glyph = this.glyphs.get(name)
       if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
 
-      const body = await c.req.json<{ input: unknown }>()
+      const body = await readJson<{ input: unknown }>(c)
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
         return errorResponse(
@@ -201,11 +237,11 @@ export class GlyphServer {
       const glyph = this.glyphs.get(name)
       if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
 
-      const body = await c.req.json<{
+      const body = await readJson<{
         input: unknown
         callId?: string
         confirmationToken?: string
-      }>()
+      }>(c)
       const callId = body.callId ?? randomUUID()
 
       const parsed = glyph.inputSchema.safeParse(body.input)

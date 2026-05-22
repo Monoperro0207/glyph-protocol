@@ -107,3 +107,21 @@ test('an unknown glyph → 404 NOT_FOUND', async () => {
   assert.equal(res.status, 404)
   assert.equal(res.body.error.code, 'NOT_FOUND')
 })
+
+test('a malformed JSON body → 400 MALFORMED_JSON', async () => {
+  const res = await server.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{ this is not json',
+    })
+  )
+  assert.equal(res.status, 400)
+  const body = (await res.json()) as any
+  assert.equal(body.error.code, 'MALFORMED_JSON')
+})
+
+test('register() rejects a duplicate glyph name', () => {
+  // `honest` is already registered on the module-level server above.
+  assert.throws(() => server.register(honest), /already registered/)
+})
