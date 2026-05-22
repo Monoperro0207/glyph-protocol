@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
 import type { GlyphCard, HandshakeResponse } from '@glyphp/types'
 import { runVerify } from '../src/commands/verify.js'
+import { runDiffCard } from '../src/commands/diff.js'
 import { runInit } from '../src/commands/init.js'
 import { formatCard, formatOverview } from '../src/commands/inspect.js'
 
@@ -63,6 +64,32 @@ test('verify rejects a tampered card', async () => {
     await writeFile(file, JSON.stringify(card))
     const result = await runVerify(file)
     assert.equal(result.ok, false)
+  })
+})
+
+test('diff-card reports identical cards as a pass', async () => {
+  await withTempDir(async (dir) => {
+    const file = join(dir, 'card.json')
+    await writeFile(file, JSON.stringify(await fetchCard()))
+    const result = await runDiffCard(file, file)
+    assert.equal(result.ok, true, result.report)
+    assert.match(result.report, /identical/)
+  })
+})
+
+test('diff-card flags a breaking change and fails', async () => {
+  await withTempDir(async (dir) => {
+    const oldCard = await fetchCard()
+    const newCard = await fetchCard()
+    newCard.cost = { ...newCard.cost, riskTier: 'danger' }
+    const oldFile = join(dir, 'old.json')
+    const newFile = join(dir, 'new.json')
+    await writeFile(oldFile, JSON.stringify(oldCard))
+    await writeFile(newFile, JSON.stringify(newCard))
+    const result = await runDiffCard(oldFile, newFile)
+    assert.equal(result.ok, false)
+    assert.match(result.report, /cost\.riskTier/)
+    assert.match(result.report, /BREAKING/)
   })
 })
 

@@ -8,17 +8,19 @@ import {
   sealResult,
   signGlyph,
   signReceipt,
+  signManifest,
   generateKeyPair,
   canonicalHash,
   sanitize,
 } from '@glyphp/core'
 import type { GlyphKeyPair } from '@glyphp/core'
-import { PROTOCOL_VERSION } from '@glyphp/types'
+import { PROTOCOL_VERSION, MANIFEST_VERSION } from '@glyphp/types'
 import type {
   CallReceipt,
   ConfirmationTicket,
   HandshakeRequest,
   HandshakeResponse,
+  UpdateManifest,
 } from '@glyphp/types'
 import type { GlyphDefinition } from './define.js'
 import { authMiddleware, rateLimitMiddleware, buildVerify } from './middleware.js'
@@ -62,6 +64,7 @@ function withTimeout<T>(
 export class GlyphServer {
   private app = new Hono()
   private glyphs = new Map<string, GlyphDefinition<any, any>>()
+  private manifests = new Map<string, UpdateManifest>()
   private pendingConfirmations = new Map<
     string,
     { glyphName: string; inputHash: string; expiresAt: number }
@@ -110,6 +113,46 @@ export class GlyphServer {
       signature: signGlyph(glyph.card, this.keyPair.privateKey),
     }
     this.glyphs.set(signedCard.name, { ...glyph, card: signedCard })
+    return this
+  }
+
+  /**
+   * Publishes a signed update manifest for an already-registered glyph: an
+   * on-the-record statement that the tool changed from `previousCardId` to the
+   * glyph's current card. The server fills in `newCardId`, `issuedAt` and the
+   * signature. Served from `GET /glyphs/:name/manifest`. Optional — a server
+   * that never calls this simply has no manifest to serve.
+   */
+  registerManifest(
+    toolName: string,
+    manifest: {
+      previousCardId: string
+      reason: string
+      breaking: boolean
+      securityImpact: 'none' | 'low' | 'high'
+    }
+  ): this {
+    const glyph = this.glyphs.get(toolName)
+    if (!glyph) {
+      throw new Error(
+        `Cannot register a manifest for unknown glyph "${toolName}"`
+      )
+    }
+    const base: Omit<UpdateManifest, 'signature'> = {
+      manifestVersion: MANIFEST_VERSION,
+      toolName,
+      previousCardId: manifest.previousCardId,
+      newCardId: glyph.card.id,
+      reason: manifest.reason,
+      breaking: manifest.breaking,
+      securityImpact: manifest.securityImpact,
+      issuedAt: new Date().toISOString(),
+      serverPublicKey: this.keyPair.publicKey,
+    }
+    this.manifests.set(toolName, {
+      ...base,
+      signature: signManifest(base, this.keyPair.privateKey),
+    })
     return this
   }
 
@@ -194,6 +237,23 @@ export class GlyphServer {
       const glyph = this.glyphs.get(name)
       if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
       return c.json(applyDepth(glyph.card, depth))
+    })
+
+    app.get('/glyphs/:name/manifest', (c) => {
+      const name = c.req.param('name')
+      if (!this.glyphs.has(name)) {
+        return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
+      }
+      const manifest = this.manifests.get(name)
+      if (!manifest) {
+        return errorResponse(
+          c,
+          404,
+          'NOT_FOUND',
+          'No update manifest for this glyph'
+        )
+      }
+      return c.json(manifest)
     })
 
     app.post('/glyphs/:name/prepare', async (c) => {

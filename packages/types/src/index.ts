@@ -11,5 +11,9 @@ export type {
   JSONSchema,
   Sanitization,
   SanitizationFinding,
+  CardFieldChange,
+  CardDiff,
+  Pin,
+  UpdateManifest,
 } from './types.js'
-export { PROTOCOL_VERSION } from './protocol.js'
+export { PROTOCOL_VERSION, MANIFEST_VERSION } from './protocol.js'

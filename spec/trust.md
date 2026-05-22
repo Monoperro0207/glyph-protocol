@@ -33,8 +33,12 @@ explicit. Today they are only distinguishable by inspection.
 ## What is NOT verified (and why it matters)
 
 - **Trust roots.** A card's `publicKey` proves the card was signed by *that*
-  key — not that the key belongs to a provider you trust. Pinning known
-  provider keys / a key registry is future work.
+  key — not that the key belongs to a provider you trust. `@glyphp/client` can
+  pin an approved `(id, publicKey)` pair per tool and refuse a tool that no
+  longer matches its pin (see [`update-governance.md`](update-governance.md)),
+  which turns "internally consistent" into "the exact card I approved". A
+  cross-organization key registry — discovering and trusting keys you have
+  never seen — is still future work.
 - **Key rotation and revocation.** There is no mechanism to rotate or revoke a
   server key yet. A compromised key cannot be invalidated.
 - **Executor integrity.** The protocol does not attest what the handler

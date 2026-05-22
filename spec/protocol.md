@@ -64,6 +64,14 @@ Returns the lexicon: an array of
 Returns one glyph card. The optional `?depth=` query selects the card depth
 (see §5); the default for this endpoint is `rich`. Errors: `404 NOT_FOUND`.
 
+### `GET /glyphs/:name/manifest`
+
+Optional. Returns the [`UpdateManifest`](schemas/update-manifest.schema.json)
+for a glyph: a signed statement of how it changed from a previous card. A
+server that publishes no manifest returns `404 NOT_FOUND` — its absence is not
+an error condition. This endpoint is additive; it changes no other contract.
+See [`update-governance.md §7`](update-governance.md). Errors: `404 NOT_FOUND`.
+
 ### `POST /glyphs/:name/prepare`
 
 Obtains a confirmation ticket for a glyph that requires confirmation (see §6).
@@ -166,3 +174,10 @@ JSON Schema (draft 2020-12) for every wire message lives in
 
 `@glyphp/conformance` is an executable suite that points at any Glyph
 server and checks it against this document.
+
+## 11. Update governance
+
+A card's `id` makes a changed tool *detectable*; it does not, on its own,
+*govern* the update. How a consumer pins an approved card, detects and triages
+a later change, and re-establishes trust — plus the proposed signed update
+manifest — is described in [`update-governance.md`](update-governance.md).

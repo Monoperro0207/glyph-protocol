@@ -2,11 +2,14 @@ import { createHash, randomUUID } from 'node:crypto'
 import * as ed from '@noble/ed25519'
 import type {
   CallReceipt,
+  CardDiff,
+  CardFieldChange,
   GlyphCard,
   LexiconEntry,
   Sanitization,
   SanitizationFinding,
   SealedEnvelope,
+  UpdateManifest,
 } from '@glyphp/types'
 
 // @noble/ed25519 v2 needs a sha512 implementation wired in for synchronous use.
@@ -86,6 +89,81 @@ export function verifyGlyph(card: GlyphCard): boolean {
   }
 }
 
+// How each card field is treated when it changes between an approved card and
+// a new one. 'breaking' fields gate execution (need human re-approval);
+// 'review' fields are descriptive. publicKey is included because the protocol
+// id deliberately excludes it, yet a key swap is provenance-critical.
+const FIELD_SEVERITY: Record<string, CardFieldChange['severity']> = {
+  version: 'breaking',
+  name: 'review',
+  intent: 'review',
+  tags: 'review',
+  'cost.latency': 'review',
+  'cost.sideEffects': 'breaking',
+  'cost.reversible': 'breaking',
+  'cost.riskTier': 'breaking',
+  'cost.requiresConfirmation': 'breaking',
+  idempotent: 'breaking',
+  input: 'breaking',
+  output: 'breaking',
+  examples: 'review',
+  failureModes: 'review',
+  provider: 'breaking',
+  publicKey: 'breaking',
+}
+
+const canonEqual = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b))
+
+/**
+ * Compares an approved card against a newly seen one and classifies every
+ * difference. The content-addressed id is the *detector* — any canonical
+ * change already flips it; this diff is the *explainer* a human uses to triage
+ * whether the change is safe to re-approve. Pure.
+ */
+export function diffCards(approved: GlyphCard, next: GlyphCard): CardDiff {
+  const changes: CardFieldChange[] = []
+  const record = (field: string, before: unknown, after: unknown): void => {
+    if (!canonEqual(before, after)) {
+      changes.push({
+        field,
+        severity: FIELD_SEVERITY[field] ?? 'review',
+        before,
+        after,
+      })
+    }
+  }
+
+  record('version', approved.version, next.version)
+  record('name', approved.name, next.name)
+  record('intent', approved.intent, next.intent)
+  record('tags', approved.tags, next.tags)
+  for (const k of [
+    'latency',
+    'sideEffects',
+    'reversible',
+    'riskTier',
+    'requiresConfirmation',
+  ] as const) {
+    record(`cost.${k}`, approved.cost?.[k], next.cost?.[k])
+  }
+  record('idempotent', approved.idempotent, next.idempotent)
+  record('input', approved.input, next.input)
+  record('output', approved.output, next.output)
+  record('examples', approved.examples, next.examples)
+  record('failureModes', approved.failureModes, next.failureModes)
+  record('provider', approved.provider, next.provider)
+  record('publicKey', approved.publicKey, next.publicKey)
+
+  return {
+    changed: changes.length > 0,
+    idChanged: approved.id !== next.id,
+    keyChanged: approved.publicKey !== next.publicKey,
+    changes,
+    requiresApproval: changes.some((c) => c.severity === 'breaking'),
+  }
+}
+
 /** Canonical SHA-256 of any JSON value — order-independent. */
 export function canonicalHash(value: unknown): string {
   return createHash('sha256')
@@ -112,6 +190,31 @@ export function verifyReceipt(receipt: CallReceipt): boolean {
       fromHex(signature),
       message,
       fromHex(receipt.serverPublicKey)
+    )
+  } catch {
+    return false
+  }
+}
+
+/** Signs an update manifest with the server's ed25519 private key. */
+export function signManifest(
+  manifest: Omit<UpdateManifest, 'signature'>,
+  privateKey: string
+): string {
+  const message = new TextEncoder().encode(canonicalHash(manifest))
+  return toHex(ed.sign(message, fromHex(privateKey)))
+}
+
+/** Verifies a manifest's signature against its embedded serverPublicKey. */
+export function verifyManifest(manifest: UpdateManifest): boolean {
+  if (!manifest.signature || !manifest.serverPublicKey) return false
+  const { signature, ...rest } = manifest
+  try {
+    const message = new TextEncoder().encode(canonicalHash(rest))
+    return ed.verify(
+      fromHex(signature),
+      message,
+      fromHex(manifest.serverPublicKey)
     )
   } catch {
     return false

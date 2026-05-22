@@ -28,7 +28,8 @@ export async function runVerify(source: string): Promise<VerifyResult> {
   return { ok, report }
 }
 
-async function loadCard(source: string): Promise<GlyphCard> {
+/** Loads a glyph card from a file path or an `http(s)` URL. */
+export async function loadCard(source: string): Promise<GlyphCard> {
   let raw: string
   if (/^https?:\/\//.test(source)) {
     const res = await fetch(source)

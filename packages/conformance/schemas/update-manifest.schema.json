@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UpdateManifest",
+  "description": "A provider's signed statement that a tool changed from one card to another. Optional and additive.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestVersion",
+    "toolName",
+    "previousCardId",
+    "newCardId",
+    "reason",
+    "breaking",
+    "securityImpact",
+    "issuedAt",
+    "serverPublicKey",
+    "signature"
+  ],
+  "properties": {
+    "manifestVersion": { "type": "string" },
+    "toolName": { "type": "string" },
+    "previousCardId": {
+      "type": "string",
+      "description": "The id of the card this update replaces."
+    },
+    "newCardId": {
+      "type": "string",
+      "description": "The id of the card this update introduces."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Human-readable description of the change."
+    },
+    "breaking": {
+      "type": "boolean",
+      "description": "The provider's own claim that the change breaks the contract."
+    },
+    "securityImpact": {
+      "enum": ["none", "low", "high"],
+      "description": "The provider's own claim about the security impact of the change."
+    },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "serverPublicKey": {
+      "type": "string",
+      "description": "Hex ed25519 public key the manifest signature verifies against."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex ed25519 signature over the canonical hash of the manifest (all fields except signature)."
+    }
+  }
+}
