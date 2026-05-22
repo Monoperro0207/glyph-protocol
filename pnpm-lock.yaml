@@ -114,6 +114,25 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
+  packages/cli:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@glyphp/server':
+        specifier: workspace:*
+        version: link:../server
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
   packages/client:
     dependencies:
       '@glyphp/types':
