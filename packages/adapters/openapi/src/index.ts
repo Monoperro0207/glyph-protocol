@@ -54,7 +54,7 @@ export function glyphsFromOpenApi(
       }
       glyphs.push({
         card,
-        inputSchema: buildZodInput(op),
+        inputSchema: buildZodInput(op, doc),
         // External API responses are not trustworthy enough to validate
         // strictly; the precise JSON Schema still lives on the card.
         outputSchema: z.unknown(),
@@ -117,33 +117,83 @@ function buildOutputSchema(op: Operation, doc: OpenApiDoc): JsonSchema {
   return schema ? (resolveRefs(schema, doc) as JsonSchema) : {}
 }
 
-function buildZodInput(op: Operation): z.ZodTypeAny {
+function buildZodInput(op: Operation, doc: OpenApiDoc): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const param of op.parameters ?? []) {
-    const field = jsonTypeToZod(param.schema)
+    const resolved = param.schema
+      ? (resolveRefs(param.schema, doc) as JsonSchema)
+      : undefined
+    const field = jsonTypeToZod(resolved)
     shape[param.name] = param.required ? field : field.optional()
   }
+  const bodySchema = op.requestBody?.content?.['application/json']?.schema
   if (op.requestBody) {
-    shape.body = op.requestBody.required
-      ? z.unknown()
-      : z.unknown().optional()
+    const body = bodySchema
+      ? jsonTypeToZod(resolveRefs(bodySchema, doc) as JsonSchema)
+      : z.unknown()
+    shape.body = op.requestBody.required ? body : body.optional()
   }
   return z.object(shape).passthrough()
 }
 
+/**
+ * Converts a JSON Schema node into a Zod validator. Recursive: enums, typed
+ * arrays, nested objects and common string formats all survive the conversion,
+ * so an adapted glyph validates more than a value's top-level type.
+ */
 function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
-  switch (schema?.type) {
-    case 'string':
-      return z.string()
-    case 'number':
+  if (!schema || typeof schema !== 'object') return z.unknown()
+
+  const enumValues = schema.enum
+  if (Array.isArray(enumValues) && enumValues.length > 0) {
+    const literals = enumValues.map((v) => z.literal(v as never))
+    return literals.length === 1
+      ? literals[0]
+      : z.union(
+          literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
+        )
+  }
+
+  switch (schema.type) {
+    case 'string': {
+      let s = z.string()
+      if (schema.format === 'email') s = s.email()
+      else if (schema.format === 'uri' || schema.format === 'url') s = s.url()
+      else if (schema.format === 'uuid') s = s.uuid()
+      else if (schema.format === 'date-time') s = s.datetime()
+      return s
+    }
     case 'integer':
+      return z.number().int()
+    case 'number':
       return z.number()
     case 'boolean':
       return z.boolean()
-    case 'array':
-      return z.array(z.unknown())
-    case 'object':
+    case 'array': {
+      const items = schema.items
+      return z.array(
+        items && typeof items === 'object'
+          ? jsonTypeToZod(items as JsonSchema)
+          : z.unknown()
+      )
+    }
+    case 'object': {
+      const props = schema.properties
+      if (props && typeof props === 'object') {
+        const required = new Set(
+          Array.isArray(schema.required) ? (schema.required as string[]) : []
+        )
+        const shape: Record<string, z.ZodTypeAny> = {}
+        for (const [key, prop] of Object.entries(
+          props as Record<string, JsonSchema>
+        )) {
+          const field = jsonTypeToZod(prop)
+          shape[key] = required.has(key) ? field : field.optional()
+        }
+        return z.object(shape).passthrough()
+      }
       return z.record(z.unknown())
+    }
     default:
       return z.unknown()
   }
