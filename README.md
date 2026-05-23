@@ -16,7 +16,7 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
 | `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
-| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `init`) |
+| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init`) |
 
 > **Versioning** — the npm packages are versioned independently of the wire
 > protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
@@ -174,12 +174,17 @@ verifies every card signature, pins the approved `(id, publicKey)` pair per
 tool, and `call()` refuses any tool that is new, changed, or revoked — before
 the handler ever runs.
 
+The recommended production setup is **`secureMode: true` + `FilePinStore`** —
+the client refuses to construct without a persistent pin store, so a tool that
+has not been deliberately approved can never run:
+
 ```typescript
-import { GlyphClient, MemoryPinStore } from '@glyphp/client'
+import { GlyphClient, FilePinStore } from '@glyphp/client'
 
 const client = new GlyphClient({
   baseUrl: 'http://localhost:3100',
-  pins: new MemoryPinStore(), // swap in a persistent store for production
+  pins: new FilePinStore(`${process.env.HOME}/.glyph/pins.json`),
+  secureMode: true, // refuses to construct without a PinStore
 })
 
 const card = await client.getCard('refund-payment') // signature verified here
@@ -187,13 +192,17 @@ const { status, diff } = await client.inspectCard(card)
 
 if (status !== 'unchanged') {
   // 'new'     — never approved
-  // 'changed' — the card moved since approval; `diff` says what and how severely
+  // 'changed' — the card moved since approval; `diff` says what moved
   // 'revoked' — the consumer has explicitly distrusted this tool
   await client.approveCard(card) // the deliberate human-approval step
 }
 
 await client.call('refund-payment', input) // refused unless 'unchanged'
 ```
+
+`MemoryPinStore` is fine for tests; for any deployed agent use
+`FilePinStore` (atomic writes, JSON on disk) or implement the two-method
+`PinStore` interface against your own database.
 
 **Revocation.** `client.revokeTool(name, reason?)` blocks a tool for good; a
 revoked tool is cleared only by an explicit
@@ -204,6 +213,19 @@ accident.
 differ — `breaking` (cost/risk, schemas, provider, key) vs `review` (intent,
 tags, examples). The CLI wraps it: `glyph diff-card <old> <new>` exits
 non-zero on a breaking change, so CI can gate un-reviewed updates.
+
+**Operating from the CLI.** Day-2 ops happen with `glyph`:
+
+```bash
+glyph pins list                          # show every pinned tool + status
+glyph approve ./refund-payment.json      # write a pin after review
+glyph approve ./card.json --reinstate    # clear a revocation deliberately
+glyph revoke refund-payment --reason "rotation"
+glyph manifest verify ./manifest.json    # check a signed UpdateManifest
+```
+
+Pins live at `~/.glyph/pins.json` by default; pass `--file <path>` for a
+project-local store.
 
 **Signed update manifests.** A provider can publish a signed `UpdateManifest`
 with `server.registerManifest()` — an on-the-record statement of what

@@ -17,6 +17,7 @@ import type { PinStore } from './pins.js'
 export { renderEnvelope, dataPreamble } from './render.js'
 export type { RenderOptions } from './render.js'
 export { MemoryPinStore } from './pins.js'
+export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
 export type { Pin, CardDiff, UpdateManifest } from '@glyphp/types'
 
@@ -113,7 +114,19 @@ export class GlyphClient {
      * client behaves as before — no pin gate.
      */
     pins?: PinStore
+    /**
+     * Refuses to construct without a PinStore. Use this for production
+     * agents that should never accidentally run a tool the user has not
+     * approved — `secureMode: true` + a persistent {@link FilePinStore} is
+     * the recommended posture.
+     */
+    secureMode?: boolean
   }) {
+    if (options.secureMode && !options.pins) {
+      throw new Error(
+        'GlyphClient: secureMode requires a PinStore (use FilePinStore for persistence)'
+      )
+    }
     this.baseUrl = options.baseUrl.replace(/\/$/, '')
     this.consumerId = options.consumerId ?? randomUUID()
     this.contextBudget = options.contextBudget ?? 50000
