@@ -6,3 +6,7 @@ dist/
 .env.local
 .npmrc
 .DS_Store
+
+# Integration test run artifacts (the empty results/ dir is kept via .gitkeep)
+examples/05-hermes-integration/results/*
+!examples/05-hermes-integration/results/.gitkeep

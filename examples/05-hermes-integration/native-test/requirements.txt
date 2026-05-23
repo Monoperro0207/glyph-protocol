@@ -1,0 +1,3 @@
+requests>=2.32
+cryptography>=42.0
+tiktoken>=0.7

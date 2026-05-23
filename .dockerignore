@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+.github
+**/dist
+**/.changeset/.tmp
+**/coverage
+**/.DS_Store
+examples/05-hermes-integration/results/*
+!examples/05-hermes-integration/results/.gitkeep

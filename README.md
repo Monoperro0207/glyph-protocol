@@ -15,6 +15,7 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/resolver` | Intent → glyph resolver (pluggable scorers) |
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
+| `@glyphp/adapter-mcp-server` | Expose a Glyph server's tools to any MCP client |
 | `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
 | `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init`) |
 
@@ -42,6 +43,10 @@ pnpm client   # terminal 2
 - [`04-inert-data`](examples/04-inert-data) — a hostile glyph whose output
   smuggles a prompt injection, and how Glyph neutralizes it: sanitization, a
   signed inspection report, and the spotlighting render layer
+- [`05-hermes-integration`](examples/05-hermes-integration) — full
+  integration sandbox: Glyph→MCP bridge + DeepSeek-V4 Flash agent loop +
+  native Python protocol test. Reproducible in Docker. See the audit report
+  at [`spec/tests/hermes-deepseek.md`](spec/tests/hermes-deepseek.md)
 
 ## Verify
 
