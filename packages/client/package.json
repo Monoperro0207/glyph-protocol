@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Glyph Protocol client — discover and call glyphs",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
