@@ -54,11 +54,17 @@ explicit. Today they are only distinguishable by inspection.
   keeps a card byte-identical and silently changes what the handler does
   produces **the same `id` and the same `signature`**: card pinning,
   `diffCards()`, and update manifests are all blind to it. Output schema
-  validation catches shape violations, not intent. Closing this requires
-  *execution attestation* — a signed build digest, source commit, or container
-  digest — and cooperation from build systems and runtimes. It is the
-  honest, structural limit of the protocol; see
-  [`update-governance.md §8`](update-governance.md).
+  validation catches shape violations, not intent.
+
+  Closing this requires *execution attestation* — a signed build digest,
+  source commit, container digest, or formal provenance produced by an
+  authority **outside the provider's process**. A card may carry an optional
+  `attestation` envelope (`{type, payload}`) that the SDK commits to via the
+  card id; `verifyAttestation()` checks the envelope is well-formed, but
+  verifying the payload requires a trust root the consumer already trusts
+  (Sigstore registry, GitHub OIDC, SLSA verifier, etc.). The SDK can never
+  attest to its own host: a program cannot certify its own integrity, only
+  an external authority can. See [`update-governance.md §8`](update-governance.md).
 
 ## Threat posture
 

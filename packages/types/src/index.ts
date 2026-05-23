@@ -1,5 +1,6 @@
 export type {
   GlyphCard,
+  CardAttestation,
   LexiconEntry,
   SealedEnvelope,
   ControlMessage,

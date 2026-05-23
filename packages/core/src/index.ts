@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import * as ed from '@noble/ed25519'
 import type {
   CallReceipt,
+  CardAttestation,
   CardDiff,
   CardFieldChange,
   GlyphCard,
@@ -24,7 +25,11 @@ const fromHex = (hex: string): Uint8Array => new Uint8Array(Buffer.from(hex, 'he
 
 // The fields that make up a glyph's identity. publicKey/signature are
 // provenance, not behavior, so they are excluded — rotating keys must not
-// change the id. id/createdAt are excluded by definition.
+// change the id. id/createdAt are excluded by definition. `attestation` is
+// behavior-defining (it commits to a specific build), so it enters the id;
+// when absent (the common case today) JSON.stringify drops the undefined
+// value, so a card without an attestation hashes identically to a 0.2-era
+// card — the addition is backwards-compatible.
 const CANONICAL_FIELDS = [
   'version',
   'name',
@@ -37,6 +42,7 @@ const CANONICAL_FIELDS = [
   'examples',
   'failureModes',
   'provider',
+  'attestation',
 ] as const
 
 export function canonicalize(value: unknown): unknown {
@@ -110,6 +116,7 @@ const FIELD_SEVERITY: Record<string, CardFieldChange['severity']> = {
   failureModes: 'review',
   provider: 'breaking',
   publicKey: 'breaking',
+  attestation: 'breaking',
 }
 
 const canonEqual = (a: unknown, b: unknown): boolean =>
@@ -154,6 +161,7 @@ export function diffCards(approved: GlyphCard, next: GlyphCard): CardDiff {
   record('failureModes', approved.failureModes, next.failureModes)
   record('provider', approved.provider, next.provider)
   record('publicKey', approved.publicKey, next.publicKey)
+  record('attestation', approved.attestation, next.attestation)
 
   return {
     changed: changes.length > 0,
@@ -219,6 +227,39 @@ export function verifyManifest(manifest: UpdateManifest): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Verifies an attestation envelope is *well-formed*. This is deliberately
+ * limited: a real attestation must be checked against an external trust root
+ * (Sigstore registry, GitHub OIDC, SLSA verifier, etc.) that the consumer
+ * already trusts. The SDK cannot certify its own host, so it cannot produce
+ * or fully verify an attestation on its own. A consumer that has a verifier
+ * for a particular `type` should plug it in by inspecting `attestation` and
+ * calling its own logic — this function checks only the shape and signals
+ * which formats are recognised.
+ *
+ * Returns `{ ok, recognized }`:
+ *   - `ok` — the envelope has the required fields and non-empty payload.
+ *   - `recognized` — whether the `type` is one the SDK has a known schema
+ *     for. `false` is not a failure; it means the consumer must bring its
+ *     own verifier for that format.
+ */
+export function verifyAttestation(
+  attestation: CardAttestation | undefined
+): { ok: boolean; recognized: boolean } {
+  if (!attestation) return { ok: false, recognized: false }
+  const ok =
+    typeof attestation.type === 'string' &&
+    attestation.type.length > 0 &&
+    typeof attestation.payload === 'string' &&
+    attestation.payload.length > 0
+  const KNOWN_TYPES = new Set([
+    'sigstore-bundle',
+    'slsa-provenance',
+    'in-toto',
+  ])
+  return { ok, recognized: ok && KNOWN_TYPES.has(attestation.type) }
 }
 
 export function toLexiconEntry(card: GlyphCard): LexiconEntry {

@@ -198,11 +198,17 @@ Closing that gap requires *execution attestation*: evidence of which code ran
 (a signed build digest, a source commit, a container digest, or formal
 provenance). That is a distinct, larger effort that needs cooperation from
 build systems and runtimes — the same class of problem as host-enforced inert
-data. It is out of scope for this document; see [`trust.md`](trust.md). A
-future card revision MAY carry an optional, provider-signed `attestation`
-claim, which — being a canonical field — would fold into the `id` and so into
-everything above. The SDK could verify such a claim's *signature*; it can never
-verify the claim's *truth*.
+data; see [`trust.md`](trust.md).
+
+A card MAY carry an optional `attestation` envelope (a `{type, payload}` pair,
+opaque to the SDK). Because it is canonical, any change to it changes the
+`id`, and `diffCards()` classifies a change as `breaking` — so an attestation
+that moves cannot ride past a pin. The SDK ships `verifyAttestation()`, which
+only checks the envelope is well-formed; verifying the payload against a
+trust root (Sigstore, SLSA verifier, an in-toto policy, a private registry)
+is the consumer's responsibility, because the SDK cannot certify its own
+host process. This is the structural limit: a program cannot attest to its
+own integrity — only an external authority can.
 
 ## 9. Consumer obligations (summary)
 
