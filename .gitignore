@@ -10,3 +10,7 @@ dist/
 # Integration test run artifacts (the empty results/ dir is kept via .gitkeep)
 examples/05-hermes-integration/results/*
 !examples/05-hermes-integration/results/.gitkeep
+examples/05-hermes-integration/workspace/landing/
+
+# Local-only scratch (user-provided PDFs etc.)
+.tmp-landings.*

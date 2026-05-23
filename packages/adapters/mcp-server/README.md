@@ -22,6 +22,28 @@ await runStdioBridge(client) // MCP stdio server now serving Glyph tools
 
 Point any MCP client at the resulting process — `claude_desktop_config.json`, Hermes Agent's `mcp_servers` block, Cursor's MCP setting — and the Glyph server's tools appear as native MCP tools.
 
+## Two modes: eager vs lazy
+
+The example above uses **eager mode** — every Glyph card is surfaced as its own MCP tool. Simple, works with any MCP client, but every `tools/list` carries every schema.
+
+For large catalogs (dozens of tools), use **lazy mode**. It exposes only three meta-tools — `glyph_index`, `glyph_describe`, `glyph_invoke` — and lets the model navigate on demand. Cards the agent never touches never enter context.
+
+```ts
+import { runStdioBridgeLazy } from '@glyphp/adapter-mcp-server'
+await runStdioBridgeLazy(client)
+```
+
+Measured trade-off (`spec/tests/hermes-comparative-deepseek.md` — same prompt, same 49 tools, `deepseek-v4-pro`):
+
+| Metric | Eager | Lazy | Δ |
+|---:|---:|---:|---:|
+| Tools visible in `tools/list` | 49 | 3 | — |
+| Listing tokens (per turn) | 4,129 | 256 | **−93.8%** |
+| Total tokens (full task) | 168,971 | 77,576 | **−54.1%** |
+| Cost (DeepSeek rates) | $0.0227 | $0.0137 | −40% |
+
+The honest catch: lazy mode pays two extra round-trips at the start of a session for discovery. For very small catalogs (<10 tools) or one-shot tasks, eager is preferable. The two modes are exported side-by-side — pick the right one for your shape of problem.
+
 ## Honest mapping
 
 MCP and Glyph are not isomorphic. The bridge preserves what MCP can carry and consumes the rest server-side:

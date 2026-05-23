@@ -2,6 +2,13 @@
  * @glyphp/adapter-mcp-server — expose a Glyph Protocol server's tools to any
  * MCP client.
  *
+ * Two modes:
+ *   - **Eager** (this file): every Glyph card surfaced as an MCP tool. Simple,
+ *     works with any MCP client, but every `tools/list` carries every schema.
+ *   - **Lazy** (`./lazy.ts`): only three meta-tools (`glyph_index`,
+ *     `glyph_describe`, `glyph_invoke`). The model navigates on demand.
+ *     Tokens spent on tool descriptions drop ~80-95% on multi-tool servers.
+ *
  * This is the inverse direction of `@glyphp/adapter-mcp`. Together they let
  * Glyph and MCP ecosystems consume each other.
  *
@@ -240,3 +247,9 @@ export async function runStdioBridge(
   await server.connect(new StdioServerTransport())
   return server
 }
+
+export {
+  mcpServerFromGlyphLazy,
+  runStdioBridgeLazy,
+  type LazyBridgeOptions,
+} from './lazy.js'

@@ -7,9 +7,10 @@
  * Anything we write to stderr ends up in Hermes' MCP server log.
  */
 import { GlyphClient } from '@glyphp/client'
-import { runStdioBridge } from '@glyphp/adapter-mcp-server'
+import { runStdioBridge, runStdioBridgeLazy } from '@glyphp/adapter-mcp-server'
 
 const baseUrl = process.env.GLYPH_SERVER_URL ?? 'http://127.0.0.1:3199'
+const mode = (process.env.BRIDGE_MODE ?? 'eager').toLowerCase()
 const client = new GlyphClient({ baseUrl })
 
 // Block until the Glyph server is reachable. Docker may start us before the
@@ -25,8 +26,17 @@ while (true) {
   }
 }
 
-process.stderr.write(`[bridge] connected to ${baseUrl} — serving MCP over stdio\n`)
-await runStdioBridge(client, {
-  serverName: 'glyph-bridge',
-  serverVersion: '0.1.0',
-})
+process.stderr.write(
+  `[bridge] connected to ${baseUrl} — serving MCP over stdio (mode=${mode})\n`
+)
+if (mode === 'lazy') {
+  await runStdioBridgeLazy(client, {
+    serverName: 'glyph-bridge-lazy',
+    serverVersion: '0.1.0',
+  })
+} else {
+  await runStdioBridge(client, {
+    serverName: 'glyph-bridge',
+    serverVersion: '0.1.0',
+  })
+}
