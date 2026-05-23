@@ -93,6 +93,26 @@
       "type": "string",
       "description": "Who authored the tool's behavior. A claim, not a proven identity — see spec/trust.md."
     },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "payload"],
+      "description": "Optional external evidence of what code is actually running behind the declared contract. The SDK never produces an attestation; it can only verify one against a trust root the consumer already trusts. Enters the canonical content, so a change to it produces a new card id.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Identifier of the attestation format — conventional: sigstore-bundle, slsa-provenance, in-toto, or a vendor-specific value."
+        },
+        "payload": {
+          "type": "string",
+          "description": "The attestation payload, format-specific. Opaque to the SDK."
+        },
+        "reference": {
+          "type": "string",
+          "description": "Optional URL or identifier for an external transparency log / store."
+        }
+      }
+    },
     "publicKey": {
       "type": "string",
       "description": "Hex ed25519 public key of the signing server. Present once the card is signed."

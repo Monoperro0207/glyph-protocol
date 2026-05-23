@@ -26,9 +26,41 @@ export interface GlyphCard {
     description: string
   }>
   provider: string
+  /**
+   * Optional execution attestation: external evidence — produced outside the
+   * SDK's trust boundary — of what code is actually running behind this
+   * declared contract. The SDK never *produces* an attestation (it cannot
+   * certify its own host process); it can only *verify* one against trust
+   * roots the consumer already trusts. The payload is opaque to the SDK and
+   * format-specific (Sigstore bundle, SLSA provenance, in-toto, etc.). When
+   * present, the attestation enters the card's canonical content, so a
+   * change to it produces a new card id — and is treated as a breaking
+   * change by `diffCards`. See `spec/trust.md` and `spec/update-governance.md`.
+   */
+  attestation?: CardAttestation
   publicKey?: string
   signature?: string
   createdAt: string
+}
+
+/**
+ * An opaque attestation envelope. The SDK commits to it (via the card id) but
+ * does not interpret the payload — verification against a trust root is the
+ * consumer's responsibility (or a future helper that knows the chosen format).
+ */
+export interface CardAttestation {
+  /**
+   * Identifier of the attestation format. Conventional values:
+   * - `sigstore-bundle` — Sigstore bundle.v0.3 (cosign/rekor)
+   * - `slsa-provenance` — SLSA Provenance v1.0
+   * - `in-toto` — generic in-toto statement
+   * - or any vendor-specific value the consumer recognizes
+   */
+  type: string
+  /** The attestation payload, format-specific. Base64 or hex by convention. */
+  payload: string
+  /** Optional URL or identifier for an external transparency log / store. */
+  reference?: string
 }
 
 export interface LexiconEntry {
