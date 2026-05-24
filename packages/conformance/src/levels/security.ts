@@ -1,11 +1,15 @@
 import type { CheckResult, LevelRunner } from '../types.js'
 
 /**
- * Security level — confirmation gate, auth, rate limit and handler timeout.
+ * Security level — confirmation gate, auth and handler timeout.
  *
- * Confirmation tests require `fixtures.requiresConfirmation`; rate limit and
- * timeout checks require the corresponding fixtures or server config and are
- * skipped when absent.
+ * Confirmation tests require `fixtures.requiresConfirmation`; the timeout
+ * check requires `fixtures.slow` and is skipped when absent.
+ *
+ * Note: `security.rateLimit` is **not** run here. It lives in
+ * `./rate-limit-final.ts` and runs as the very last check across the whole
+ * suite, because the burst it sends drains the server's rate-limit bucket
+ * and would otherwise contaminate every check that runs after it.
  */
 export const securityLevel: LevelRunner = async (ctx) => {
   const checks: CheckResult[] = []
@@ -149,42 +153,7 @@ export const securityLevel: LevelRunner = async (ctx) => {
     }
   }
 
-  // 5. Rate limit — burst until the server responds 429. Skipped if echo not
-  //    exposed (we need a cheap endpoint to hammer that is not /health).
-  const echo = ctx.fixtures.echo
-  if (!echo || !ctx.lexiconNames.includes(echo)) {
-    add(
-      'security.rateLimit',
-      'skipped',
-      'fixtures.echo required for a rate-limit burst'
-    )
-  } else {
-    try {
-      let sawLimit = false
-      for (let i = 0; i < 200; i++) {
-        const { status } = await ctx.http(
-          'POST',
-          `/glyphs/${encodeURIComponent(echo)}/call`,
-          { input: { value: 'x' } }
-        )
-        if (status === 429) {
-          sawLimit = true
-          break
-        }
-      }
-      add(
-        'security.rateLimit',
-        sawLimit ? 'passed' : 'skipped',
-        sawLimit
-          ? 'burst eventually produced 429'
-          : 'no 429 within 200 calls — server may have rate limit disabled'
-      )
-    } catch (e) {
-      add('security.rateLimit', 'failed', errMsg(e))
-    }
-  }
-
-  // 6. Timeout — fixture handler that exceeds the timeout must produce 504.
+  // 5. Timeout — fixture handler that exceeds the timeout must produce 504.
   const slow = ctx.fixtures.slow
   if (!slow || !ctx.lexiconNames.includes(slow)) {
     add('security.timeout', 'skipped', 'fixtures.slow not declared')

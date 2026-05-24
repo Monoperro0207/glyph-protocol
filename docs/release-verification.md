@@ -28,16 +28,23 @@ Actions" badge with the commit SHA the build was anchored at.
 
 ## Verifying a cosign signature
 
+The tarball that cosign signs is byte-identical to the one npm serves:
+the workflow runs `npm pack <name>@<version>` and signs the result.
+A verifier rebuilds the same tarball with `npm pack` and pulls only the
+signature bundle from the GitHub Release.
+
 ```bash
-# 1. Download the tarball and the signature bundle.
+# 1. Fetch the tarball from npm — same bytes the workflow signed.
 TAG="@glyphp/core@1.1.0"
-PKG=$(node -p "require('path').basename('@glyphp/core').replace('@','')")  # → glyphp-core
 VERSION="1.1.0"
+npm pack @glyphp/core@${VERSION}   # → glyphp-core-1.1.0.tgz
+PKG="glyphp-core"
+
+# 2. Download just the signature bundle from the release.
 gh release download "$TAG" \
-  --pattern "${PKG}-${VERSION}.tgz" \
   --pattern "${PKG}-${VERSION}.cosign.bundle"
 
-# 2. Verify against the workflow's OIDC identity.
+# 3. Verify against the workflow's OIDC identity.
 cosign verify-blob \
   --certificate-identity=https://github.com/Monoperro0207/glyph-protocol/.github/workflows/release.yml@refs/heads/main \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
@@ -46,6 +53,11 @@ cosign verify-blob \
 ```
 
 A successful verification prints `Verified OK` and exits zero.
+
+> The `.tgz` itself is not uploaded as a release asset — duplicating
+> bytes the registry already serves would only add drift risk. The SBOM
+> and the cosign bundle *are* uploaded because they are derivatives the
+> workflow produced and the registry does not host.
 
 ## Inspecting the SBOM
 

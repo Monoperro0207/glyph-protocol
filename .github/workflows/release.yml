@@ -1,14 +1,16 @@
-# Release workflow — versions and publishes the @glyph-protocol/* packages.
+# Release workflow — versions and publishes the @glyphp/* packages.
 #
 # On every push to main, the Changesets action either:
 #   - opens/updates a "Version Packages" PR when changesets are pending, or
 #   - publishes to npm when that PR is merged (no changesets pending).
 #
 # Prerequisites (one-time, done by the maintainer):
-#   1. The @glyph-protocol org exists on npm and you are an owner.
-#   2. The first publish of each package is done manually (`pnpm -r publish`)
-#      — npm trusted publishing can only be configured for packages that
-#      already exist.
+#   1. The @glyphp scope exists on npm and you are an owner.
+#   2. The first publish of every *new* package in the scope is done
+#      manually (`npm publish --access=public` from a local clone) —
+#      npm trusted publishing can only be configured for packages that
+#      already exist. This is per-package, not per-scope: adding a brand
+#      new @glyphp/<thing> later requires the same manual first publish.
 #   3. On npmjs.com, each package: Settings -> Trusted Publisher -> GitHub
 #      Actions, pointing at this repo and `.github/workflows/release.yml`.
 # After that, this workflow publishes every subsequent release with no

@@ -4,6 +4,7 @@ import { discoveryLevel } from './levels/discovery.js'
 import { executionLevel } from './levels/execution.js'
 import { securityLevel } from './levels/security.js'
 import { governanceLevel } from './levels/governance.js'
+import { rateLimitFinalCheck } from './levels/rate-limit-final.js'
 import {
   ALL_LEVELS,
   type CheckResult,
@@ -81,6 +82,16 @@ export async function runConformance(
     const runner = RUNNERS[level]
     const levelChecks = await runner(ctx)
     checks.push(...levelChecks)
+  }
+
+  // The rate-limit burst is run last across the entire suite: it drains the
+  // server's rate-limit bucket, so any check that runs after it would land in
+  // the same window and receive 429s. Only emitted when `security` was
+  // requested — its CheckResult is reported under `level: 'security'` and the
+  // historic name `security.rateLimit`, so consumers see no schema change.
+  if (requested.includes('security')) {
+    const finalChecks = await rateLimitFinalCheck(ctx)
+    checks.push(...finalChecks)
   }
 
   const levels: LevelSummary[] = []
