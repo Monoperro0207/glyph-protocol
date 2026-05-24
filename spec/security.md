@@ -1,7 +1,9 @@
 # Glyph — operational security
 
 How to deploy a Glyph server safely. This is operational guidance; for what the
-protocol's signatures do and do not *prove*, see [`trust.md`](trust.md).
+protocol's signatures do and do not *prove*, see [`trust.md`](trust.md). For the
+STRIDE-style threat model the spec was designed against (assets, trust
+boundaries, what is explicitly out of scope), see [`threat-model.md`](threat-model.md).
 
 ## Server keys
 
