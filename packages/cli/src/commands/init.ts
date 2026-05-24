@@ -196,7 +196,10 @@ export async function runInit(
   dir: string,
   options: { profile?: InitProfile } = {}
 ): Promise<string> {
-  const profile = options.profile ?? 'local-dev'
+  // Production-server is the default since v1.0 so a fresh scaffold uses
+  // stable keys, auth, rate limiting and a pin store out of the box. Pass
+  // `--profile local-dev` to opt into the ephemeral-key prototype scaffold.
+  const profile = options.profile ?? 'production-server'
   const cfg = PROFILES[profile]
   if (!cfg) {
     throw new Error(
