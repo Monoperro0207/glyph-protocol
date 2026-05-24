@@ -2,6 +2,7 @@ export {
   runConformance,
   formatReport,
   formatReportMarkdown,
+  formatBadgeJson,
   ALL_LEVELS,
 } from './conformance.js'
 export type {
