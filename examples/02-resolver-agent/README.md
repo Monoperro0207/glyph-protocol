@@ -11,11 +11,11 @@ pnpm install
 
 # Terminal 1 — start the server (5 glyphs)
 cd examples/02-resolver-agent
-pnpm server
+pnpm run server
 
 # Terminal 2 — run the agent
 cd examples/02-resolver-agent
-pnpm client
+pnpm run client
 ```
 
 ## What it shows

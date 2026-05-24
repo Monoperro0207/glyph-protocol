@@ -41,7 +41,7 @@ signed or sanitised in one SDK verifies byte-identically in any of the
 others.
 
 > **Versioning** — the npm packages are versioned independently of the wire
-> protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
+> protocol. Package `1.x` releases implement **wire protocol `1.0`** (the
 > `PROTOCOL_VERSION` constant). A client and server must agree on the *wire*
 > version at the handshake, not on the package version.
 
@@ -61,8 +61,8 @@ Then run the hello-world example:
 
 ```bash
 cd examples/01-hello-glyph
-pnpm server   # terminal 1
-pnpm client   # terminal 2
+pnpm run server   # terminal 1
+pnpm run client   # terminal 2
 ```
 
 If you also have Python and Go installed, `pnpm verify:full` additionally
@@ -168,7 +168,7 @@ See [`spec/security.md`](spec/security.md) for the full operational guide.
 ## Inert data
 
 The consumer of a glyph is an LLM, so a tool result is an injection surface:
-hostile output can smuggle instructions. As of protocol `0.2`, Glyph treats
+hostile output can smuggle instructions. As of protocol `1.0`, Glyph treats
 tool output as **inert data — never instructions** in two layers.
 
 **Server-side sanitization.** Before delivery, the server strips provably
@@ -272,8 +272,8 @@ project-local store.
 with `server.registerManifest()` — an on-the-record statement of what
 changed and why. `client.getManifest()` fetches and verifies it against the
 *pinned* key (a manifest signed by a key the consumer never approved is
-rejected). The endpoint is **optional and additive** — `PROTOCOL_VERSION`
-stays `0.2`.
+rejected). The endpoint is **optional and additive** under `PROTOCOL_VERSION`
+`1.0`.
 
 This governs the **card** — the declared contract. It cannot catch a provider
 that keeps the card byte-identical and silently changes the handler's
@@ -296,13 +296,21 @@ which is a separate, larger effort.
   - `@glyphp/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
     annotations onto the glyph cost/risk model.
   - Server hardening: optional bearer-token auth and fixed-window rate limiting.
-- **Protocol `0.2` — current.** Inert-data hardening: server-side
-  sanitization, a signed inspection report on every envelope, and the
-  `@glyphp/client` spotlighting render layer. This is a breaking wire change —
-  `0.1` peers are rejected at the handshake with `426`.
+- **Protocol `1.0` — current, stable.** First stable wire-protocol line.
+  Inert-data hardening (server-side sanitization + signed inspection report +
+  spotlighting render layer), strict `depth` enum, distinct
+  `CONFIRMATION_REQUIRED` / `INVALID_CONFIRMATION` codes, new
+  `MALFORMED_JSON` / `INTERNAL_ERROR` / `KEY_REVOKED` error codes, optional
+  `GET /keys` key registry endpoint, and adapter output validation by default
+  in `@glyphp/adapter-mcp` and `@glyphp/adapter-openapi`. Earlier `0.x` peers
+  are rejected at the handshake with `426`.
 - **Update governance — current.** Consumer-side card pinning, a tool
   lifecycle (approve / review on change / revoke), `diffCards`, and an optional
   signed `UpdateManifest`. Additive — no wire-protocol change.
+- **Key rotation & revocation — current.** Optional `GET /keys` endpoint and
+  `KeyRegistry` (file or HTTP) verify cards and receipts across rotation, and
+  reject keys flagged in the revocation list with `401 KEY_REVOKED`. See
+  [`spec/rfcs/RFC-0001-key-registry.md`](spec/rfcs/RFC-0001-key-registry.md).
 
 ## Conformance
 

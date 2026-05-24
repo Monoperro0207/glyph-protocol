@@ -1,6 +1,6 @@
 # Glyph Protocol — Trust model
 
-Status: draft, tracks the current implementation (v0.2).
+Status: stable, tracks the current implementation (v1.0).
 
 ## Identities
 
@@ -68,7 +68,7 @@ explicit. Today they are only distinguishable by inspection.
 
 ## Threat posture
 
-Glyph as of v0.2 gives you **tamper-evidence and provenance within one
+Glyph as of v1.0 gives you **tamper-evidence and provenance within one
 server's keyspace**: you can detect a modified card or a forged receipt, and
 prove which server produced a result. It does **not** yet give you a
 cross-organization PKI. Treat `provider` as a claim until trust roots exist.

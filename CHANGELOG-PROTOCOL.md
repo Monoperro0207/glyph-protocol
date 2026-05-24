@@ -5,10 +5,10 @@ CHANGELOGs in each `packages/*/CHANGELOG.md`. The wire version is the
 `PROTOCOL_VERSION` constant in `@glyphp/types` — clients and servers must
 agree on it at the handshake.
 
-## 1.0 — pending
+## 1.0 — 2026-05-24
 
-Pending wire-protocol bump to be released alongside the v1.0 stable SDK
-line.
+First stable wire-protocol line. Released with the v1.0 stable SDK line
+(tag `v1.0.0`, commit `5da0f87`).
 
 Additive on top of 0.2 (all existing 0.2 endpoints remain), plus:
 

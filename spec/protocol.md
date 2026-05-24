@@ -1,6 +1,6 @@
 # Glyph Protocol
 
-**Protocol version:** `0.2` · **Status:** draft
+**Protocol version:** `1.0` · **Status:** stable
 
 Glyph is a connection protocol whose consumer is an LLM, not a deterministic
 program. A tool publishes a **glyph card**: a self-describing, signed,
@@ -30,9 +30,11 @@ protocol defines no transport encryption of its own.
 
 ## 3. Protocol version negotiation
 
-The protocol version (`0.2`) is the wire contract. It is distinct from any
-server implementation or package version. While the protocol is `0.x`, every
-minor is potentially breaking.
+The protocol version (`1.0`) is the wire contract. It is distinct from any
+server implementation or package version. From `1.0` onwards the wire
+protocol follows semver: a new minor is additive (existing clients keep
+working), a new major may break the contract. Prior to `1.0` the wire
+moved through `0.1` and `0.2`; `1.0` is the first stable line.
 
 A consumer MUST send `protocolVersion` in the handshake. A server MUST reject
 a handshake whose `protocolVersion` does not exactly match its own, with
@@ -142,6 +144,9 @@ is human-readable and MUST NOT be matched on.
 | `HANDLER_TIMEOUT` | 504 | Handler exceeded the call timeout |
 | `HANDLER_ERROR` | 502 | Handler threw |
 | `OUTPUT_VALIDATION_FAILED` | 502 | Handler output failed the card's output schema |
+| `MALFORMED_JSON` | 400 | Request body was not valid JSON |
+| `INTERNAL_ERROR` | 500 | Unexpected server error (no other code applies) |
+| `KEY_REVOKED` | 401 | Card or receipt was signed by a revoked key (see §12) |
 | `UNAUTHORIZED` | 401 | Missing or invalid bearer token |
 | `RATE_LIMITED` | 429 | Too many requests |
 
@@ -175,7 +180,18 @@ JSON Schema (draft 2020-12) for every wire message lives in
 `@glyphp/conformance` is an executable suite that points at any Glyph
 server and checks it against this document.
 
-## 11. Update governance
+## 11. Key registry (optional)
+
+A server MAY publish a signed key registry at `GET /keys` so consumers can
+verify cards and receipts across **key rotation** and **revocation** without
+re-pinning every tool. The registry is a chain of trust: each new key is
+signed by the previous active key. Cards signed by a key that is in the
+registry and not revoked verify normally; cards signed by a `KEY_REVOKED`
+key fail with `401 KEY_REVOKED` even if the signature is otherwise valid.
+The full protocol — schemas, rotation rules, TTLs — is normative in
+[RFC-0001 — Key Registry, Rotation and Revocation](rfcs/RFC-0001-key-registry.md).
+
+## 12. Update governance
 
 A card's `id` makes a changed tool *detectable*; it does not, on its own,
 *govern* the update. How a consumer pins an approved card, detects and triages
