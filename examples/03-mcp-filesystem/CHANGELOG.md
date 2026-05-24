@@ -1,5 +1,15 @@
 # 03-mcp-filesystem
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [94c1b17]
+  - @glyphp/server@1.1.0
+  - @glyphp/adapter-mcp@1.0.1
+  - @glyphp/client@1.0.1
+  - @glyphp/resolver@1.0.1
+
 ## 0.1.3
 
 ### Patch Changes
