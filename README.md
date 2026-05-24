@@ -1,5 +1,13 @@
 # Glyph Protocol SDK
 
+[![wire protocol](https://img.shields.io/badge/wire%20protocol-1.0%20stable-2ea44f)](spec/protocol.md)
+[![npm core](https://img.shields.io/badge/%40glyphp%2F*-1.0.0-blue)](https://www.npmjs.com/org/glyphp)
+[![npm integrations](https://img.shields.io/badge/%40glyphp%2Fintegration--*-1.1.0-blue)](https://www.npmjs.com/org/glyphp)
+[![Python SDK](https://img.shields.io/pypi/v/glyph-protocol?label=pypi%20glyph-protocol)](https://pypi.org/project/glyph-protocol/)
+[![Go SDK](https://img.shields.io/badge/go%20sdk-v1.0.0-00ADD8)](sdks/go/glyphprotocol)
+[![conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMonoperro0207%2Fglyph-protocol%2Fmain%2Fdocs%2Fconformance-badge.json)](packages/conformance)
+[![CI](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml)
+
 > A connection protocol designed from the ground up for LLM consumers.
 
 Each tool publishes a **glyph** — a self-describing, signed, content-addressed card that carries not just the schema but also intent, cost, risk, and reversibility.
@@ -57,7 +65,20 @@ pnpm install
 pnpm verify         # typecheck + test + build + smoke + conformance
 ```
 
-Then run the hello-world example:
+### Scaffold a new project
+
+The `glyph init` CLI scaffolds with the `production-server` profile by
+default — stable key pair, bearer-token auth, rate limiting and a pin
+store baked in. That's the recommended starting point for anything you
+plan to deploy:
+
+```bash
+pnpm exec glyph init my-server
+cd my-server && pnpm install && pnpm start
+```
+
+For a 2-minute tour with no setup (ephemeral key, no auth — prototyping
+only) run the `01-hello-glyph` example instead:
 
 ```bash
 cd examples/01-hello-glyph
@@ -286,13 +307,10 @@ which is a separate, larger effort.
 
 ### Version matrix
 
-| Layer | Current version |
-|---|---|
-| Wire protocol | `1.0` (stable) |
-| `@glyphp/core`, `@glyphp/client`, `@glyphp/server`, `@glyphp/resolver`, `@glyphp/types`, `@glyphp/conformance`, `@glyphp/adapter-mcp`, `@glyphp/adapter-mcp-server`, `@glyphp/adapter-openapi`, `@glyphp/cli` | `1.0.0` |
-| `@glyphp/integration-vercel-ai`, `@glyphp/integration-langchain`, `@glyphp/integration-llamaindex`, `@glyphp/integration-openai-agents` | `1.1.0` |
-| `glyph-protocol` (PyPI) | `1.0.0` |
-| `github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol` | `v1.0.0` |
+Wire protocol `1.0` (stable) interoperates with npm `@glyphp/* 1.x`, Python
+`glyph-protocol 1.0.x`, and Go `glyphprotocol v1.0.x`. See
+[`docs/versioning.md`](docs/versioning.md) for the full matrix and
+compatibility policy.
 
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
 - **Phase 2 — complete.**

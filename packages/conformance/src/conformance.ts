@@ -170,6 +170,28 @@ export function formatReportMarkdown(report: ConformanceReport): string {
   return lines.join('\n')
 }
 
+/**
+ * Shields.io endpoint-format badge for a conformance report. Drop the
+ * returned JSON at a public URL and reference it with
+ * `https://img.shields.io/endpoint?url=<URL>`.
+ */
+export function formatBadgeJson(report: ConformanceReport): {
+  schemaVersion: 1
+  label: string
+  message: string
+  color: string
+} {
+  const passing = report.passed
+  return {
+    schemaVersion: 1,
+    label: `glyph conformance ${report.protocolVersion}`,
+    message: passing
+      ? report.compatibility.join(', ') || 'passing'
+      : 'failing',
+    color: passing ? 'brightgreen' : 'red',
+  }
+}
+
 function buildHttp(
   base: string,
   doFetch: FetchLike,

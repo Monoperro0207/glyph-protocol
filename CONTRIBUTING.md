@@ -55,6 +55,18 @@ sdks/                        # non-TypeScript SDKs
 
 Open a PR, link the issue (if any), and make sure `pnpm verify` passes.
 
+## Required CI checks
+
+PRs to `main` must show these jobs green before merging:
+
+- `verify (20)` and `verify (22)` — Node typecheck + test + build + smoke + conformance.
+- `python-sdk` — `pytest` against the Python SDK.
+- `go-sdk` — `go test ./...` against the Go SDK.
+
+Together these reproduce `pnpm verify:full` across all three toolchains.
+Maintainers configure branch protection in the repository settings to
+enforce them.
+
 ## Patches that need an RFC
 
 See [`GOVERNANCE.md` — RFC process](GOVERNANCE.md#rfc-process).
