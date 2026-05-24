@@ -4,6 +4,11 @@
   "description": "Expose Glyph Protocol glyphs as LangChain StructuredTools",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Monoperro0207/glyph-protocol.git",
+    "directory": "packages/integrations/langchain"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
