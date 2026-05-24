@@ -10,8 +10,10 @@ interoperate.
 | Layer | Current version | Source |
 |---|---|---|
 | Wire protocol | **1.0** (stable) | [`spec/protocol.md`](../spec/protocol.md) |
-| `@glyphp/core`, `@glyphp/client`, `@glyphp/server`, `@glyphp/resolver`, `@glyphp/types`, `@glyphp/conformance`, `@glyphp/adapter-mcp`, `@glyphp/adapter-mcp-server`, `@glyphp/adapter-openapi`, `@glyphp/cli` | **1.0.0** | [npm](https://www.npmjs.com/org/glyphp) |
-| `@glyphp/integration-vercel-ai`, `@glyphp/integration-langchain`, `@glyphp/integration-llamaindex`, `@glyphp/integration-openai-agents` | **1.1.0** | [npm](https://www.npmjs.com/org/glyphp) |
+| `@glyphp/core`, `@glyphp/server`, `@glyphp/types`, `@glyphp/cli` | **1.1.0** | [npm](https://www.npmjs.com/org/glyphp) |
+| `@glyphp/client`, `@glyphp/conformance`, `@glyphp/resolver`, `@glyphp/adapter-mcp`, `@glyphp/adapter-mcp-server`, `@glyphp/adapter-openapi` | **1.0.1** | [npm](https://www.npmjs.com/org/glyphp) |
+| `@glyphp/integration-vercel-ai`, `@glyphp/integration-langchain`, `@glyphp/integration-llamaindex`, `@glyphp/integration-openai-agents` | **1.1.1** | [npm](https://www.npmjs.com/org/glyphp) |
+| `@glyphp/exporter-otel` | **0.2.0** | [npm](https://www.npmjs.com/package/@glyphp/exporter-otel) |
 | `glyph-protocol` (Python) | **1.0.0** | [PyPI](https://pypi.org/project/glyph-protocol/) |
 | `github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol` | **v1.0.0** | [git tag](https://github.com/Monoperro0207/glyph-protocol/releases/tag/sdks%2Fgo%2Fglyphprotocol%2Fv1.0.0) |
 
@@ -20,6 +22,7 @@ interoperate.
 A consumer using **wire protocol 1.0** can talk to:
 - any npm package on the **1.x** line of `@glyphp/*`,
 - any `@glyphp/integration-*` package on the **1.x** line,
+- `@glyphp/exporter-otel` on the **0.x** line (additive, peer to the rest),
 - the Python SDK on the **1.0.x** line,
 - the Go SDK on the **v1.0.x** line.
 
