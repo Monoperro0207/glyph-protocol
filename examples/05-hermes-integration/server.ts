@@ -10,11 +10,12 @@
  */
 import { createHash, randomUUID } from 'node:crypto'
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises'
-import { resolve, sep } from 'node:path'
+import { resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 import Database from 'better-sqlite3'
 import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { createJail } from './jail.js'
 
 const WORKSPACE_ROOT = resolve(
   process.env.WORKSPACE_ROOT ?? resolve(import.meta.dirname ?? '.', 'workspace')
@@ -23,14 +24,7 @@ const HTTP_WHITELIST = new Set(
   (process.env.HTTP_WHITELIST ?? 'example.org,example.com').split(',')
 )
 
-/** Refuses any path outside WORKSPACE_ROOT — basic jailing. */
-function jailedPath(input: string): string {
-  const abs = resolve(WORKSPACE_ROOT, input)
-  if (!abs.startsWith(WORKSPACE_ROOT + sep) && abs !== WORKSPACE_ROOT) {
-    throw new Error(`path escapes workspace: ${input}`)
-  }
-  return abs
-}
+const { jailedReadPath, jailedWritePath } = createJail({ root: WORKSPACE_ROOT })
 
 const server = new GlyphServer({
   port: Number(process.env.PORT ?? 3199),
@@ -57,7 +51,7 @@ server.register(
     }),
     provider: 'hermes-test.fs',
     handler: async ({ path }) => {
-      const abs = jailedPath(path)
+      const abs = await jailedReadPath(path)
       const content = await readFile(abs, 'utf8')
       return { path, bytes: content.length, content }
     },
@@ -84,7 +78,7 @@ server.register(
     }),
     provider: 'hermes-test.fs',
     handler: async ({ path }) => {
-      const abs = jailedPath(path)
+      const abs = await jailedReadPath(path)
       const names = await readdir(abs)
       const entries = await Promise.all(
         names.map(async (name) => {
@@ -118,7 +112,7 @@ server.register(
     output: z.object({ path: z.string(), bytes: z.number() }),
     provider: 'hermes-test.fs',
     handler: async ({ path, content }) => {
-      const abs = jailedPath(path)
+      const abs = await jailedWritePath(path)
       await writeFile(abs, content, 'utf8')
       return { path, bytes: content.length }
     },

@@ -158,9 +158,12 @@ def main() -> int:
         f"HTTP {r.status_code}",
     )
 
-    # 2. Lexicon
+    # 2. Lexicon — the server registers a canonical set of 8 glyphs plus
+    # any number of bulk "smallTools" used by the comparative benchmark.
+    # We assert the canonical set is present (subset check); extras are
+    # fine and intentionally not enforced here.
     lexicon = handshake["lexicon"]
-    expected_tools = {
+    canonical_tools = {
         "fs.read",
         "fs.list",
         "fs.write",
@@ -171,10 +174,11 @@ def main() -> int:
         "util.uuid",
     }
     actual_tools = {entry["name"] for entry in lexicon}
+    missing = canonical_tools - actual_tools
     suite.add(
-        "lexicon lists every registered tool",
-        actual_tools == expected_tools,
-        f"missing: {expected_tools - actual_tools or 'none'}; extra: {actual_tools - expected_tools or 'none'}",
+        "lexicon includes the canonical Hermes tool set",
+        not missing,
+        f"missing: {missing or 'none'}; total registered: {len(actual_tools)}",
     )
 
     # 3. Card signatures

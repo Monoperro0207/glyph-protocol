@@ -17,7 +17,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts",
+    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts examples/05-hermes-integration/test/*.test.ts",
     "smoke": "node scripts/smoke-test.mjs",
     "conformance:self": "tsx scripts/conformance-self.mjs",
     "verify": "node scripts/verify.mjs",
