@@ -19,6 +19,30 @@ function escapes(real: string, root: string): boolean {
   return real !== root && !real.startsWith(root + sep)
 }
 
+/**
+ * Walk a symlink chain manually until we hit a non-symlink, a missing
+ * link target, or the max depth. Used as a fallback for `realpath` when
+ * the chain dangles (ENOENT) — we still need to know whether the *would-
+ * be* final target lives outside the workspace before we let a write
+ * recreate it.
+ */
+async function walkChain(start: string, max = 40): Promise<string> {
+  let cur = start
+  for (let i = 0; i < max; i++) {
+    let st
+    try {
+      st = await lstat(cur)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return cur
+      throw e
+    }
+    if (!st.isSymbolicLink()) return cur
+    const next = await readlink(cur)
+    cur = isAbsolute(next) ? next : resolve(dirname(cur), next)
+  }
+  throw new Error('symlink chain too deep')
+}
+
 export function createJail({ root }: JailOptions) {
   const ROOT = resolve(root)
   let realRoot: string | null = null
@@ -63,12 +87,19 @@ export function createJail({ root }: JailOptions) {
     try {
       const s = await lstat(final)
       if (s.isSymbolicLink()) {
-        const linkTarget = await readlink(final)
-        const resolved = isAbsolute(linkTarget)
-          ? linkTarget
-          : resolve(dirname(final), linkTarget)
+        // Follow the entire symlink chain. realpath() resolves the chain
+        // in one go; if any link in the chain dangles we fall back to a
+        // manual walk so we still catch the case where the final target
+        // lives outside the workspace (audit 3: chain bypass).
+        let resolved: string
+        try {
+          resolved = await realpath(final)
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+          resolved = await walkChain(final)
+        }
         if (escapes(resolved, rr)) {
-          throw new Error(`path escapes workspace via existing symlink: ${input}`)
+          throw new Error(`path escapes workspace via symlink chain: ${input}`)
         }
       } else {
         // Regular file or dir — fall back to realpath for the existing case.
