@@ -1,11 +1,17 @@
 ---
-'@glyphp/integration-vercel-ai': major
-'@glyphp/integration-langchain': major
-'@glyphp/integration-llamaindex': major
-'@glyphp/integration-openai-agents': major
+'@glyphp/integration-vercel-ai': minor
+'@glyphp/integration-langchain': minor
+'@glyphp/integration-llamaindex': minor
+'@glyphp/integration-openai-agents': minor
 ---
 
-**Breaking + Safety fix.** Two changes to all four framework integrations
+**Safety fix + DX improvement.** Stays on the 1.x line because the
+behavioural change is strictly safer (a hook that used to authorize
+incorrectly now rejects) and a misbehaving hook would not crash — it
+just falls back to refusing the confirmed call, matching the
+documented intent.
+
+ Two changes to all four framework integrations
 (Vercel AI, LangChain, LlamaIndex, OpenAI Agents):
 
 1. **Real input schemas.** `glyphsAs*Tools(client)` now fetches each glyph's
