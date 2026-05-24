@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "glyph": {
+      "command": "pnpm",
+      "args": ["exec", "tsx", "bridge.ts"],
+      "cwd": "/abs/path/to/glyph-protocol/examples/05-hermes-integration",
+      "env": {
+        "GLYPH_SERVER_URL": "http://127.0.0.1:3199"
+      }
+    }
+  }
+}

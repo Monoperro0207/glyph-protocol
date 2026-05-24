@@ -4,24 +4,42 @@
   "version": "0.1.0",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "packages/*",
     "packages/adapters/*",
+    "packages/integrations/*",
     "examples/*"
   ],
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts",
+    "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts",
     "smoke": "node scripts/smoke-test.mjs",
+    "conformance:self": "tsx scripts/conformance-self.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:full": "node scripts/verify.mjs --full",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
+    "@glyphp/conformance": "workspace:*",
+    "@glyphp/core": "workspace:*",
+    "@glyphp/server": "workspace:*",
+    "@noble/ed25519": "^2.1.0",
     "@types/node": "^20.12.12",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
   }
 }

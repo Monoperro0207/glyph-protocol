@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/core",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Glyph Protocol core — content hashing, ed25519 signing, validation, and signed call receipts",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
@@ -48,6 +48,8 @@
   "dependencies": {
     "@glyphp/types": "workspace:*",
     "@noble/ed25519": "^2.1.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "zod": "^3.23.8"
   }
 }

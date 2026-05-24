@@ -218,3 +218,213 @@ test('input schema enforces enums, typed arrays and nested objects', () => {
     false
   )
 })
+
+// ---- output validation against the declared response schema ----------------
+
+const typedDoc: OpenApiDoc = {
+  openapi: '3.0.0',
+  info: { title: 'typed', version: '1' },
+  paths: {
+    '/widgets/{id}': {
+      get: {
+        operationId: 'getWidget',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'ok',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    weight: { type: 'integer' },
+                  },
+                  required: ['id', 'weight'],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+}
+
+test('output matching the declared response schema passes', () => {
+  const [glyph] = glyphsFromOpenApi(typedDoc, { baseUrl: 'https://x.test' })
+  const checked = glyph.outputSchema.safeParse({ id: 'a', weight: 3 })
+  assert.equal(checked.success, true)
+})
+
+test('output violating the declared response schema is rejected', () => {
+  const [glyph] = glyphsFromOpenApi(typedDoc, { baseUrl: 'https://x.test' })
+  const checked = glyph.outputSchema.safeParse({ id: 'a', weight: 'heavy' })
+  assert.equal(checked.success, false)
+})
+
+test("outputValidation: 'none' is opt-out", () => {
+  const [glyph] = glyphsFromOpenApi(typedDoc, {
+    baseUrl: 'https://x.test',
+    outputValidation: 'none',
+  })
+  const checked = glyph.outputSchema.safeParse({ anything: 'goes' })
+  assert.equal(checked.success, true)
+})
+
+// ---- header / cookie params + security schemes ----------------------------
+
+const headerDoc: OpenApiDoc = {
+  openapi: '3.0.0',
+  info: { title: 't', version: '1' },
+  paths: {
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'X-Tenant',
+            in: 'header',
+            required: true,
+            schema: { type: 'string' },
+          },
+          {
+            name: 'session',
+            in: 'cookie',
+            required: false,
+            schema: { type: 'string' },
+          },
+          {
+            name: 'tag',
+            in: 'query',
+            required: false,
+            schema: { type: 'array', items: { type: 'string' } },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  },
+}
+
+test('header params are forwarded to fetch', async () => {
+  const [glyph] = glyphsFromOpenApi(headerDoc, { baseUrl: 'https://x.test' })
+  let observed: { url: string; init: any } | null = null
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async (url: string, init: any) => {
+    observed = { url, init }
+    return { ok: true, status: 200, text: async () => '' } as any
+  }) as any
+  try {
+    await glyph.handler({ 'X-Tenant': 'acme', session: 'abc', tag: ['a', 'b'] }, {
+      signal: new AbortController().signal,
+    })
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  assert.ok(observed)
+  assert.equal((observed as any).init.headers['X-Tenant'], 'acme')
+  assert.equal((observed as any).init.headers['Cookie'], 'session=abc')
+  // array query expanded into repeated keys
+  assert.match((observed as any).url, /tag=a&tag=b/)
+})
+
+test('security: bearer scheme adds Authorization header', async () => {
+  const secDoc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 't', version: '1' },
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: 'http', scheme: 'bearer' },
+      },
+    },
+    security: [{ bearerAuth: [] }],
+    paths: {
+      '/me': {
+        get: {
+          operationId: 'me',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    },
+  }
+  const [glyph] = glyphsFromOpenApi(secDoc, {
+    baseUrl: 'https://x.test',
+    security: { schemes: { bearerAuth: { type: 'bearer', token: 'tok123' } } },
+  })
+  let observed: any = null
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async (_url: string, init: any) => {
+    observed = init
+    return { ok: true, status: 200, text: async () => '' } as any
+  }) as any
+  try {
+    await glyph.handler({}, { signal: new AbortController().signal })
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  assert.equal(observed.headers['Authorization'], 'Bearer tok123')
+})
+
+test('security: apiKey-in-header scheme adds custom header', async () => {
+  const secDoc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 't', version: '1' },
+    components: {
+      securitySchemes: {
+        apiKey: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
+      },
+    },
+    security: [{ apiKey: [] }],
+    paths: {
+      '/x': {
+        get: { operationId: 'x', responses: { '200': { description: 'ok' } } },
+      },
+    },
+  }
+  const [glyph] = glyphsFromOpenApi(secDoc, {
+    baseUrl: 'https://x.test',
+    security: { schemes: { apiKey: { type: 'apiKey', value: 'k-1' } } },
+  })
+  let observed: any = null
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async (_url: string, init: any) => {
+    observed = init
+    return { ok: true, status: 200, text: async () => '' } as any
+  }) as any
+  try {
+    await glyph.handler({}, { signal: new AbortController().signal })
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  assert.equal(observed.headers['X-Api-Key'], 'k-1')
+})
+
+test('baseUrl falls back to doc.servers[0].url when not provided', () => {
+  const doc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 't', version: '1' },
+    servers: [{ url: 'https://from-servers.test' }],
+    paths: {
+      '/x': {
+        get: { operationId: 'x', responses: { '200': { description: 'ok' } } },
+      },
+    },
+  }
+  // Does not throw — the fallback resolves.
+  const glyphs = glyphsFromOpenApi(doc, {} as any)
+  assert.equal(glyphs.length, 1)
+})
+
+test('missing baseUrl and missing servers[] throws at adapt time', () => {
+  const doc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 't', version: '1' },
+    paths: {
+      '/x': {
+        get: { operationId: 'x', responses: { '200': { description: 'ok' } } },
+      },
+    },
+  }
+  assert.throws(() => glyphsFromOpenApi(doc, {} as any))
+})

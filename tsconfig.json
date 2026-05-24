@@ -8,6 +8,8 @@
     "packages/*/test",
     "packages/adapters/*/src",
     "packages/adapters/*/test",
+    "packages/integrations/*/src",
+    "packages/integrations/*/test",
     "examples/*/*.ts"
   ]
 }

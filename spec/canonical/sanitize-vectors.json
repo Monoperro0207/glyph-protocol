@@ -1,0 +1,119 @@
+{
+  "generated": "2026-05-23T23:56:46.028Z",
+  "cases": [
+    {
+      "name": "clean-string",
+      "input": "hello world",
+      "output": "hello world",
+      "report": {
+        "modified": false,
+        "findings": []
+      }
+    },
+    {
+      "name": "zero-width-removed",
+      "input": "hi​bye",
+      "output": "hibye",
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "",
+            "kind": "zero-width",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "tag-block-removed",
+      "input": "tag0here",
+      "output": "tag0here",
+      "report": {
+        "modified": false,
+        "findings": []
+      }
+    },
+    {
+      "name": "bidi-override",
+      "input": "norm‮olam",
+      "output": "normolam",
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "",
+            "kind": "bidi-override",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "nfkc-fold",
+      "input": "ﬁle",
+      "output": "file",
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "",
+            "kind": "nfkc-normalized",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "nested-object",
+      "input": {
+        "msg": "pure​text",
+        "n": 5
+      },
+      "output": {
+        "msg": "puretext",
+        "n": 5
+      },
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "/msg",
+            "kind": "zero-width",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "array-with-control",
+      "input": [
+        "one\u0007two",
+        {
+          "k": "three​"
+        }
+      ],
+      "output": [
+        "onetwo",
+        {
+          "k": "three"
+        }
+      ],
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "/0",
+            "kind": "control-char",
+            "count": 1
+          },
+          {
+            "path": "/1/k",
+            "kind": "zero-width",
+            "count": 1
+          }
+        ]
+      }
+    }
+  ]
+}

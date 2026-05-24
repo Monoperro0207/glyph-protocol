@@ -79,7 +79,7 @@ test('a valid token unlocks the call', async () => {
   assert.equal(res.body.type, 'data')
 })
 
-test('a confirmation token is single-use', async () => {
+test('a confirmation token is single-use → second use → INVALID_CONFIRMATION', async () => {
   const prep = await post('/glyphs/risky-op/prepare', { input: { x: 7 } })
   const token = prep.body.confirmationToken
   const first = await post('/glyphs/risky-op/call', {
@@ -92,23 +92,26 @@ test('a confirmation token is single-use', async () => {
   })
   assert.equal(first.status, 200)
   assert.equal(second.status, 403)
+  assert.equal(second.body.error.code, 'INVALID_CONFIRMATION')
 })
 
-test('a bogus token is rejected', async () => {
+test('a bogus token is rejected with INVALID_CONFIRMATION (not CONFIRMATION_REQUIRED)', async () => {
   const res = await post('/glyphs/risky-op/call', {
     input: { x: 1 },
     confirmationToken: 'not-a-real-token',
   })
   assert.equal(res.status, 403)
+  assert.equal(res.body.error.code, 'INVALID_CONFIRMATION')
 })
 
-test('a token does not transfer to a different input', async () => {
+test('a token bound to a different input → INVALID_CONFIRMATION', async () => {
   const prep = await post('/glyphs/risky-op/prepare', { input: { x: 1 } })
   const res = await post('/glyphs/risky-op/call', {
     input: { x: 999 },
     confirmationToken: prep.body.confirmationToken,
   })
   assert.equal(res.status, 403)
+  assert.equal(res.body.error.code, 'INVALID_CONFIRMATION')
 })
 
 test('prepare rejects invalid input', async () => {

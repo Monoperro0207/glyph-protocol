@@ -10,7 +10,11 @@ export interface OpenApiDoc {
   info: { title: string; version: string; description?: string }
   servers?: Array<{ url: string }>
   paths: Record<string, PathItem>
-  components?: { schemas?: Record<string, JsonSchema> }
+  components?: {
+    schemas?: Record<string, JsonSchema>
+    securitySchemes?: Record<string, SecurityScheme>
+  }
+  security?: Array<Record<string, string[]>>
 }
 
 export type PathItem = Partial<Record<HttpMethod, Operation>>
@@ -23,6 +27,15 @@ export interface Operation {
   parameters?: Parameter[]
   requestBody?: RequestBody
   responses?: Record<string, ResponseObject>
+  security?: Array<Record<string, string[]>>
+}
+
+export interface SecurityScheme {
+  type: 'apiKey' | 'http' | 'oauth2' | 'openIdConnect'
+  scheme?: string
+  in?: 'header' | 'query' | 'cookie'
+  name?: string
+  bearerFormat?: string
 }
 
 export interface Parameter {
