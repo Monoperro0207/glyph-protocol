@@ -28,6 +28,8 @@ import type {
 import type { GlyphDefinition } from './define.js'
 import { authMiddleware, rateLimitMiddleware, buildVerify } from './middleware.js'
 import type { AuthConfig, RateLimitConfig } from './middleware.js'
+import { missingScopes } from './policy.js'
+import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { errorResponse } from './errors.js'
 
 const SERVER_VERSION = '0.1.0'
@@ -79,6 +81,7 @@ export class GlyphServer {
   private callTimeoutMs: number
   private onCall?: (receipt: CallReceipt) => void
   private keyRegistry?: KeyRegistrySource
+  private policy?: PolicyResolver
 
   constructor(options?: {
     port?: number
@@ -93,6 +96,14 @@ export class GlyphServer {
      * See `spec/rfcs/RFC-0001-key-registry.md`.
      */
     keyRegistry?: KeyRegistrySource
+    /**
+     * Optional principal resolver. Called per request to decide which
+     * scopes/tenant the caller carries. When set, glyphs that declare
+     * `requiredScopes` are enforced; when unset, any glyph that declares
+     * scopes is rejected with `403 INSUFFICIENT_SCOPE`. See
+     * `spec/rfcs/RFC-0002-policy-layer.md`.
+     */
+    policy?: PolicyResolver
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
@@ -100,6 +111,7 @@ export class GlyphServer {
     this.callTimeoutMs = options?.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS
     this.onCall = options?.onCall
     this.keyRegistry = options?.keyRegistry
+    this.policy = options?.policy
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -170,6 +182,21 @@ export class GlyphServer {
   /** The request handler — usable in any fetch-based runtime, or for tests. */
   get fetch() {
     return this.app.fetch
+  }
+
+  /**
+   * Resolve the caller principal for a request. Returns `undefined` when no
+   * policy resolver is configured or it returns nothing — `missingScopes`
+   * then treats the caller as having no scopes.
+   */
+  private async resolvePrincipal(c: Context): Promise<CallerPrincipal | undefined> {
+    if (!this.policy) return undefined
+    try {
+      return await this.policy(c)
+    } catch (err) {
+      console.error('[glyph] policy resolver threw:', err)
+      return undefined
+    }
   }
 
   private setupRoutes() {
@@ -318,6 +345,20 @@ export class GlyphServer {
         )
       }
 
+      // Same scope gate as /call: refuse to mint a confirmation token for a
+      // caller that policy would reject at call time.
+      const callerPrep = await this.resolvePrincipal(c)
+      const missingPrep = missingScopes(glyph.card.requiredScopes, callerPrep)
+      if (missingPrep.length > 0) {
+        return errorResponse(
+          c,
+          403,
+          'INSUFFICIENT_SCOPE',
+          'Caller is missing one or more required scopes',
+          { glyph: name, missing: missingPrep }
+        )
+      }
+
       const now = Date.now()
       if (this.pendingConfirmations.size > 1000) {
         for (const [token, pending] of this.pendingConfirmations) {
@@ -364,6 +405,22 @@ export class GlyphServer {
           'VALIDATION_FAILED',
           'Input validation failed',
           parsed.error.issues
+        )
+      }
+
+      // RFC-0002 scope gate: a glyph that declares requiredScopes can only
+      // be invoked by a caller whose principal carries every listed scope.
+      // Resolved BEFORE the confirmation gate so we never burn a single-use
+      // confirmation token on a request that policy would have rejected.
+      const caller = await this.resolvePrincipal(c)
+      const missing = missingScopes(glyph.card.requiredScopes, caller)
+      if (missing.length > 0) {
+        return errorResponse(
+          c,
+          403,
+          'INSUFFICIENT_SCOPE',
+          'Caller is missing one or more required scopes',
+          { glyph: name, missing }
         )
       }
 

@@ -273,6 +273,12 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
+  packages/exporter-otel:
+    dependencies:
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../types
+
   packages/integrations/langchain:
     dependencies:
       '@glyphp/client':
