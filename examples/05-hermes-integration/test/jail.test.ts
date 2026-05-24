@@ -76,3 +76,25 @@ test('jailedWritePath allows fresh file creation inside the workspace', async ()
   const content = await readFile(p, 'utf8')
   assert.equal(content, 'hello')
 })
+
+test('jailedWritePath rejects writes through a symlink CHAIN escaping (audit 3)', async () => {
+  // outer-link -> subdir/inner-link -> outside/target.txt
+  await symlink(join(outside, 'target.txt'), join(root, 'subdir', 'inner-link'))
+  await symlink(join(root, 'subdir', 'inner-link'), join(root, 'outer-link'))
+  const { jailedWritePath } = createJail({ root })
+  await assert.rejects(
+    () => jailedWritePath('outer-link'),
+    /escapes workspace/
+  )
+})
+
+test('jailedWritePath rejects dangling symlink chain escaping (audit 3)', async () => {
+  // outer-link2 -> subdir/inner-link2 -> outside/nonexistent.txt (dangling)
+  await symlink(join(outside, 'nonexistent.txt'), join(root, 'subdir', 'inner-link2'))
+  await symlink(join(root, 'subdir', 'inner-link2'), join(root, 'outer-link2'))
+  const { jailedWritePath } = createJail({ root })
+  await assert.rejects(
+    () => jailedWritePath('outer-link2'),
+    /escapes workspace/
+  )
+})

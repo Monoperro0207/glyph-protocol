@@ -284,6 +284,16 @@ which is a separate, larger effort.
 
 ## Status
 
+### Version matrix
+
+| Layer | Current version |
+|---|---|
+| Wire protocol | `1.0` (stable) |
+| `@glyphp/core`, `@glyphp/client`, `@glyphp/server`, `@glyphp/resolver`, `@glyphp/types`, `@glyphp/conformance`, `@glyphp/adapter-mcp`, `@glyphp/adapter-mcp-server`, `@glyphp/adapter-openapi`, `@glyphp/cli` | `1.0.0` |
+| `@glyphp/integration-vercel-ai`, `@glyphp/integration-langchain`, `@glyphp/integration-llamaindex`, `@glyphp/integration-openai-agents` | `1.1.0` |
+| `glyph-protocol` (PyPI) | `1.0.0` |
+| `github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol` | `v1.0.0` |
+
 - **Phase 1 — complete.** Four packages + the `01-hello-glyph` example, typechecked and tested.
 - **Phase 2 — complete.**
   - ed25519 signing: glyph cards carry an embedded public key and an ed25519
