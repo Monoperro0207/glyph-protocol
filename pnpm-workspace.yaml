@@ -3,3 +3,4 @@ packages:
   - 'packages/adapters/*'
   - 'packages/integrations/*'
   - 'examples/*'
+  - 'bench'
