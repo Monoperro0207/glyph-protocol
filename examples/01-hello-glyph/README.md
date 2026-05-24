@@ -2,6 +2,12 @@
 
 Minimal end-to-end example. Runs in under 2 minutes.
 
+> **Prototyping only.** This example uses an ephemeral key, no auth, no
+> rate limit and no pin store. For a deployable starting point see
+> [`examples/11-production-deploy`](../11-production-deploy) or scaffold
+> with `glyph init my-server` (which defaults to the `production-server`
+> profile).
+
 ## Commands
 
 ```bash
