@@ -148,6 +148,7 @@ is human-readable and MUST NOT be matched on.
 | `INTERNAL_ERROR` | 500 | Unexpected server error (no other code applies) |
 | `KEY_REVOKED` | 401 | Card or receipt was signed by a revoked key (see §12) |
 | `UNAUTHORIZED` | 401 | Missing or invalid bearer token |
+| `INSUFFICIENT_SCOPE` | 403 | Caller principal lacks one or more `requiredScopes` (see RFC-0002) |
 | `RATE_LIMITED` | 429 | Too many requests |
 
 ## 8. Integrity, receipts, and inert data

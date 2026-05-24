@@ -1,0 +1,50 @@
+{
+  "name": "@glyphp/exporter-otel",
+  "version": "0.1.0",
+  "description": "Map Glyph Protocol receipts to OpenTelemetry spans and/or SIEM JSONL",
+  "license": "Apache-2.0",
+  "author": "Patrick Espino",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Monoperro0207/glyph-protocol.git",
+    "directory": "packages/exporter-otel"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "keywords": [
+    "glyph",
+    "glyph-protocol",
+    "opentelemetry",
+    "otel",
+    "siem",
+    "observability"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@glyphp/types": "workspace:*"
+  }
+}
