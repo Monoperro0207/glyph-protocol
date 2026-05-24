@@ -6,3 +6,20 @@ dist/
 .env.local
 .npmrc
 .DS_Store
+
+# Python SDK virtualenvs and build artifacts
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+
+# Go SDK build cache
+sdks/go/**/vendor/
+
+# Integration test run artifacts (the empty results/ dir is kept via .gitkeep)
+examples/05-hermes-integration/results/*
+!examples/05-hermes-integration/results/.gitkeep
+examples/05-hermes-integration/workspace/landing/
+
+# Local-only scratch (user-provided PDFs etc.)
+.tmp-landings.*

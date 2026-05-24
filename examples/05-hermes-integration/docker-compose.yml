@@ -1,0 +1,21 @@
+# Integration test orchestration: one image, multiple commands.
+#
+#   docker compose run --rm sandbox native       # native Python protocol test
+#   docker compose run --rm sandbox hermes       # full agent flow with DeepSeek
+#   docker compose up                            # alias for `hermes`
+services:
+  sandbox:
+    build:
+      context: ../..              # repo root — Dockerfile copies the monorepo
+      dockerfile: examples/05-hermes-integration/Dockerfile
+    image: glyph-hermes-sandbox
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?Please set DEEPSEEK_API_KEY in your env or .env file}
+      GLYPH_SERVER_URL: http://127.0.0.1:3199
+    volumes:
+      # Persist results (token logs, conversation transcripts) to the host
+      - ./results:/app/examples/05-hermes-integration/results
+    # The sandbox writes to results/ from inside; tty=true keeps Hermes happy
+    # even when its prompts are scripted via stdin redirection.
+    tty: true
+    stdin_open: true

@@ -1,0 +1,11 @@
+Meeting notes — Q2 planning session.
+
+Attendees: Alice, Bob, Carla.
+
+Discussed roadmap for the customer dashboard. Bob to follow up on
+the analytics integration by next Friday.
+
+Action items:
+  - Alice: spec review for the new export feature.
+  - Bob: schedule sync with the data team.
+  - Carla: draft pricing page mockups.

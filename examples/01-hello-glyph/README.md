@@ -10,11 +10,11 @@ pnpm install
 
 # Terminal 1 — start the server
 cd examples/01-hello-glyph
-pnpm server
+pnpm run server
 
 # Terminal 2 — run the client
 cd examples/01-hello-glyph
-pnpm client
+pnpm run client
 ```
 
 ## What it does

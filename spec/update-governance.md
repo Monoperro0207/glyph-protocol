@@ -4,7 +4,7 @@
 `@glyphp/client`; §7 (the signed update manifest) is realized by
 `@glyphp/server` and `@glyphp/client` as an **optional, additive** endpoint —
 it does not change the handshake-negotiated protocol contract, so
-`PROTOCOL_VERSION` stays `0.2`. The key words MUST, SHOULD, and MAY are used in
+`PROTOCOL_VERSION` is `1.0`. The key words MUST, SHOULD, and MAY are used in
 their RFC 2119 sense.
 
 This document covers what happens *after* a tool a consumer once trusted
@@ -20,7 +20,7 @@ if and only if behavior-defining content changes. The protocol therefore
 A consumer that approved `refund-payment` once will, on the next handshake,
 silently receive whatever `refund-payment` now resolves to. If the provider
 re-deployed the tool with a wider blast radius — `riskTier` `safe` → `danger`,
-a new `input` field, a different `provider` — nothing in protocol `0.2` stops
+a new `input` field, a different `provider` — nothing in the wire protocol stops
 the agent from calling it. "Same name" is being treated as "same tool". It is
 not.
 

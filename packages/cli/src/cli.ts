@@ -9,6 +9,12 @@ import {
   runPinsRevoke,
 } from './commands/pins.js'
 import { runManifestVerify } from './commands/manifest.js'
+import {
+  runKeysInit,
+  runKeysList,
+  runKeysRevoke,
+  runKeysRotate,
+} from './commands/keys.js'
 
 const HELP = `glyph — Glyph Protocol CLI
 
@@ -23,10 +29,22 @@ usage:
                                  flags: --reason <text>, --file <pin-store-path>
   glyph manifest verify <src>    verify an update manifest's signature
   glyph init [dir]               scaffold a new Glyph project
+                                 flags: --profile <local-dev|production-server|consumer-agent>
+  glyph keys init                generate the first keypair + registry
+                                 flags: --file <path> (defaults to keys.json),
+                                        --server-id <id>
+  glyph keys rotate              rotate the active key — requires the previous
+                                 private key via --previous-private-key <hex>
+  glyph keys revoke <fingerprint>
+                                 revoke a key (cannot be the active one)
+                                 flags: --active-private-key <hex>, --reason <text>
+  glyph keys list                show the registry contents
   glyph --help
 
 Pins are stored at ~/.glyph/pins.json by default. Use --file to keep a
-project-local store.`
+project-local store.
+
+Key registry is stored at ./keys.json by default. See RFC-0001 for details.`
 
 const argv = process.argv.slice(2)
 const [command, ...args] = argv
@@ -122,7 +140,71 @@ try {
       break
     }
     case 'init': {
-      console.log(await runInit(args[0] ?? '.'))
+      const { rest, flags } = parseFlags(args, ['profile'])
+      const dir = rest[0] ?? '.'
+      const profile = flags.profile as
+        | 'local-dev'
+        | 'production-server'
+        | 'consumer-agent'
+        | undefined
+      console.log(await runInit(dir, { profile }))
+      break
+    }
+    case 'keys': {
+      const { rest, flags } = parseFlags(args, [
+        'file',
+        'server-id',
+        'previous-private-key',
+        'active-private-key',
+        'reason',
+      ])
+      const sub = rest[0]
+      const file = (flags.file as string | undefined) ?? './keys.json'
+      if (sub === 'init') {
+        const { ok, report } = await runKeysInit({
+          file,
+          serverId: flags['server-id'] as string | undefined,
+        })
+        console.log(report)
+        process.exit(ok ? 0 : 1)
+      }
+      if (sub === 'rotate') {
+        const previousPrivateKey = flags['previous-private-key'] as
+          | string
+          | undefined
+        if (!previousPrivateKey) {
+          fail('keys rotate requires --previous-private-key <hex>')
+        }
+        const { ok, report } = await runKeysRotate({
+          file,
+          previousPrivateKey,
+        })
+        console.log(report)
+        process.exit(ok ? 0 : 1)
+      }
+      if (sub === 'revoke') {
+        const fingerprint = rest[1]
+        if (!fingerprint) fail('keys revoke requires a fingerprint')
+        const activePrivateKey = flags['active-private-key'] as
+          | string
+          | undefined
+        if (!activePrivateKey) {
+          fail('keys revoke requires --active-private-key <hex>')
+        }
+        const { ok, report } = await runKeysRevoke(fingerprint, {
+          file,
+          activePrivateKey,
+          reason: flags.reason as string | undefined,
+        })
+        console.log(report)
+        process.exit(ok ? 0 : 1)
+      }
+      if (sub === 'list') {
+        const { ok, report } = await runKeysList({ file })
+        console.log(report)
+        process.exit(ok ? 0 : 1)
+      }
+      fail('keys <init|rotate|revoke|list>')
       break
     }
     case '--help':

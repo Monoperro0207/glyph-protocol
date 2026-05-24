@@ -199,3 +199,62 @@ test('a benign tool name keeps its honest readOnlyHint', () => {
   )
   assert.equal(glyph.card.cost.riskTier, 'safe')
 })
+
+// ---- output validation against the declared MCP outputSchema ---------------
+
+const typedSearch: McpTool = {
+  name: 'typed_search',
+  description: 'Search returning typed results',
+  inputSchema: {
+    type: 'object',
+    properties: { q: { type: 'string' } },
+    required: ['q'],
+  },
+  outputSchema: {
+    type: 'object',
+    properties: {
+      ok: { type: 'boolean' },
+      count: { type: 'integer' },
+    },
+    required: ['ok', 'count'],
+  },
+}
+
+test('output matching the declared MCP outputSchema validates successfully', () => {
+  const callOk: McpCallFn = async () => ({
+    structuredContent: { ok: true, count: 3 },
+  })
+  const [glyph] = glyphsFromMcpTools([typedSearch], callOk)
+  const checked = glyph.outputSchema.safeParse({ ok: true, count: 3 })
+  assert.equal(checked.success, true)
+})
+
+test('output violating the declared MCP outputSchema is rejected', () => {
+  const [glyph] = glyphsFromMcpTools([typedSearch], noopCall)
+  // ok is supposed to be boolean — this is what the audit caught.
+  const checked = glyph.outputSchema.safeParse({ ok: 'not boolean', count: 1 })
+  assert.equal(checked.success, false)
+})
+
+test('output missing a required field is rejected', () => {
+  const [glyph] = glyphsFromMcpTools([typedSearch], noopCall)
+  const checked = glyph.outputSchema.safeParse({ ok: true })
+  assert.equal(checked.success, false)
+})
+
+test("outputValidation: 'none' opts out — any output passes", () => {
+  const [glyph] = glyphsFromMcpTools([typedSearch], noopCall, {
+    outputValidation: 'none',
+  })
+  const checked = glyph.outputSchema.safeParse({ literally: 'anything' })
+  assert.equal(checked.success, true)
+})
+
+test('the card still publishes the declared outputSchema regardless of mode', () => {
+  const [strict] = glyphsFromMcpTools([typedSearch], noopCall)
+  const [lax] = glyphsFromMcpTools([typedSearch], noopCall, {
+    outputValidation: 'none',
+  })
+  assert.deepEqual(strict.card.output, typedSearch.outputSchema)
+  assert.deepEqual(lax.card.output, typedSearch.outputSchema)
+})

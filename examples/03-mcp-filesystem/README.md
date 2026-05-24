@@ -15,11 +15,11 @@ pnpm install
 
 # Terminal 1 — adapt the MCP server and serve it as glyphs
 cd examples/03-mcp-filesystem
-pnpm server
+pnpm run server
 
 # Terminal 2 — discover and call a glyph
 cd examples/03-mcp-filesystem
-pnpm client
+pnpm run client
 ```
 
 The first run downloads the MCP filesystem server via `npx` — needs network.

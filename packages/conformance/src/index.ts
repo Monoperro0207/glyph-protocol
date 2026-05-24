@@ -1,8 +1,21 @@
-export { runConformance, formatReport } from './conformance.js'
+export {
+  runConformance,
+  formatReport,
+  formatReportMarkdown,
+  ALL_LEVELS,
+} from './conformance.js'
 export type {
   CheckResult,
-  ConformanceReport,
+  ConformanceLevel,
   ConformanceOptions,
+  ConformanceReport,
   FetchLike,
-} from './conformance.js'
+  FixtureGlyphs,
+  LevelSummary,
+} from './types.js'
 export { validators } from './schemas.js'
+export {
+  FIXTURE_NAMES,
+  buildFixtureGlyphs,
+  registerFixtures,
+} from './fixtures.js'

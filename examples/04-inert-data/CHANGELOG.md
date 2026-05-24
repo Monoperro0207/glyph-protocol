@@ -5,9 +5,10 @@
 ### Patch Changes
 
 - Updated dependencies [704a89f]
-  - @glyphp/core@0.3.0
-  - @glyphp/client@0.3.1
-  - @glyphp/server@0.2.1
+- Updated dependencies [a703d69]
+  - @glyphp/core@1.0.0
+  - @glyphp/server@1.0.0
+  - @glyphp/client@1.0.0
 
 ## 0.1.2
 

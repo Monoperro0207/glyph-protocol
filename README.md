@@ -15,22 +15,59 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/resolver` | Intent → glyph resolver (pluggable scorers) |
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
-| `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
-| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init`) |
+| `@glyphp/adapter-mcp-server` | Expose a Glyph server's tools to any MCP client |
+| `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) — 4 levels |
+| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init` / `keys`) |
+
+### Framework integrations
+
+| Package | Description |
+|---|---|
+| `@glyphp/integration-vercel-ai` | Expose glyphs as tools for the Vercel AI SDK |
+| `@glyphp/integration-langchain` | Expose glyphs as LangChain `StructuredTool`s |
+| `@glyphp/integration-llamaindex` | Expose glyphs as LlamaIndex.TS `FunctionTool`s |
+| `@glyphp/integration-openai-agents` | Expose glyphs as OpenAI Agents SDK tools |
+
+### Non-TypeScript SDKs
+
+| SDK | Status | Path |
+|---|---|---|
+| Python (verify + client) | 1.0 | [`sdks/python/`](sdks/python/) — `pip install glyph-protocol` |
+| Go (verify + client) | 1.0 | [`sdks/go/glyphprotocol/`](sdks/go/glyphprotocol/) |
+
+All SDKs are tested against the **canonical test vectors** under
+[`spec/canonical/`](spec/canonical/), so a card canonicalised, hashed,
+signed or sanitised in one SDK verifies byte-identically in any of the
+others.
 
 > **Versioning** — the npm packages are versioned independently of the wire
-> protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
+> protocol. Package `1.x` releases implement **wire protocol `1.0`** (the
 > `PROTOCOL_VERSION` constant). A client and server must agree on the *wire*
 > version at the handshake, not on the package version.
 
 ## Quick Start
 
+Requirements: Node `>=20` and pnpm pinned via Corepack (see `packageManager`
+in `package.json`). One command sets up the toolchain and validates the
+entire repo end-to-end:
+
 ```bash
+corepack enable
 pnpm install
-cd examples/01-hello-glyph
-pnpm server   # terminal 1
-pnpm client   # terminal 2
+pnpm verify         # typecheck + test + build + smoke + conformance
 ```
+
+Then run the hello-world example:
+
+```bash
+cd examples/01-hello-glyph
+pnpm run server   # terminal 1
+pnpm run client   # terminal 2
+```
+
+If you also have Python and Go installed, `pnpm verify:full` additionally
+exercises the Python and Go SDKs against the canonical test vectors in
+`spec/canonical/`.
 
 ## Examples
 
@@ -42,6 +79,10 @@ pnpm client   # terminal 2
 - [`04-inert-data`](examples/04-inert-data) — a hostile glyph whose output
   smuggles a prompt injection, and how Glyph neutralizes it: sanitization, a
   signed inspection report, and the spotlighting render layer
+- [`05-hermes-integration`](examples/05-hermes-integration) — full
+  integration sandbox: Glyph→MCP bridge + DeepSeek-V4 Flash agent loop +
+  native Python protocol test. Reproducible in Docker. See the audit report
+  at [`spec/tests/hermes-deepseek.md`](spec/tests/hermes-deepseek.md)
 
 ## Verify
 
@@ -127,7 +168,7 @@ See [`spec/security.md`](spec/security.md) for the full operational guide.
 ## Inert data
 
 The consumer of a glyph is an LLM, so a tool result is an injection surface:
-hostile output can smuggle instructions. As of protocol `0.2`, Glyph treats
+hostile output can smuggle instructions. As of protocol `1.0`, Glyph treats
 tool output as **inert data — never instructions** in two layers.
 
 **Server-side sanitization.** Before delivery, the server strips provably
@@ -231,8 +272,8 @@ project-local store.
 with `server.registerManifest()` — an on-the-record statement of what
 changed and why. `client.getManifest()` fetches and verifies it against the
 *pinned* key (a manifest signed by a key the consumer never approved is
-rejected). The endpoint is **optional and additive** — `PROTOCOL_VERSION`
-stays `0.2`.
+rejected). The endpoint is **optional and additive** under `PROTOCOL_VERSION`
+`1.0`.
 
 This governs the **card** — the declared contract. It cannot catch a provider
 that keeps the card byte-identical and silently changes the handler's
@@ -255,13 +296,43 @@ which is a separate, larger effort.
   - `@glyphp/adapter-mcp`: turn any MCP server's tools into glyphs, mapping MCP
     annotations onto the glyph cost/risk model.
   - Server hardening: optional bearer-token auth and fixed-window rate limiting.
-- **Protocol `0.2` — current.** Inert-data hardening: server-side
-  sanitization, a signed inspection report on every envelope, and the
-  `@glyphp/client` spotlighting render layer. This is a breaking wire change —
-  `0.1` peers are rejected at the handshake with `426`.
+- **Protocol `1.0` — current, stable.** First stable wire-protocol line.
+  Inert-data hardening (server-side sanitization + signed inspection report +
+  spotlighting render layer), strict `depth` enum, distinct
+  `CONFIRMATION_REQUIRED` / `INVALID_CONFIRMATION` codes, new
+  `MALFORMED_JSON` / `INTERNAL_ERROR` / `KEY_REVOKED` error codes, optional
+  `GET /keys` key registry endpoint, and adapter output validation by default
+  in `@glyphp/adapter-mcp` and `@glyphp/adapter-openapi`. Earlier `0.x` peers
+  are rejected at the handshake with `426`.
 - **Update governance — current.** Consumer-side card pinning, a tool
   lifecycle (approve / review on change / revoke), `diffCards`, and an optional
   signed `UpdateManifest`. Additive — no wire-protocol change.
+- **Key rotation & revocation — current.** Optional `GET /keys` endpoint and
+  `KeyRegistry` (file or HTTP) verify cards and receipts across rotation, and
+  reject keys flagged in the revocation list with `401 KEY_REVOKED`. See
+  [`spec/rfcs/RFC-0001-key-registry.md`](spec/rfcs/RFC-0001-key-registry.md).
+
+## Conformance
+
+`@glyphp/conformance` ships a four-level executable suite — `discovery`,
+`execution`, `security`, `governance` — that produces a versioned JSON
+badge a server can publish:
+
+```bash
+pnpm exec glyph-conformance https://your-server.example \
+  --level all \
+  --fixture-echo conformance-echo \
+  --fixture-requires-confirmation conformance-requires-confirmation \
+  --fixture-slow conformance-slow \
+  --fixture-invalid-output conformance-invalid-output \
+  --output report.json --markdown report.md
+```
+
+`@glyphp/conformance` also exposes `registerFixtures(server)` —
+register the standard fixture glyphs and external auditors can exercise
+all four levels against your deployment. See
+[`scripts/conformance-self.mjs`](scripts/conformance-self.mjs) for a
+worked example.
 
 ## Spec
 
@@ -274,6 +345,21 @@ The wire protocol is documented in [`spec/`](spec):
 - [`update-governance.md`](spec/update-governance.md) — pinning, the tool
   lifecycle, and signed update manifests.
 - [`security.md`](spec/security.md) — deploying a server safely.
+- [`canonical/`](spec/canonical) — cross-SDK test vectors (hashing,
+  canonicalisation, signatures, sanitization).
+- [`rfcs/`](spec/rfcs) — protocol RFCs (starting with
+  [RFC-0001 — Key Registry, Rotation and Revocation](spec/rfcs/RFC-0001-key-registry.md)).
+
+## Project documentation
+
+- [`CHANGELOG-PROTOCOL.md`](CHANGELOG-PROTOCOL.md) — wire-protocol changelog.
+- [`GOVERNANCE.md`](GOVERNANCE.md) — roles, versioning, RFC process.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, where things live, conventions.
+- [`SECURITY.md`](SECURITY.md) — supported versions, disclosure policy.
+- [`docs/why-glyph.md`](docs/why-glyph.md) — when to use Glyph vs MCP /
+  OpenAPI / function-calling.
+- [`docs/deployment.md`](docs/deployment.md) — operational checklist,
+  Docker, secrets, observability.
 
 ## License
 

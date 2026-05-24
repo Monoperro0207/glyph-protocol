@@ -4,10 +4,11 @@
 
 ### Patch Changes
 
-- @glyphp/adapter-mcp@0.2.1
-- @glyphp/client@0.3.1
-- @glyphp/resolver@0.1.2
-- @glyphp/server@0.2.1
+- Updated dependencies [a703d69]
+  - @glyphp/server@1.0.0
+  - @glyphp/client@1.0.0
+  - @glyphp/resolver@1.0.0
+  - @glyphp/adapter-mcp@1.0.0
 
 ## 0.1.2
 

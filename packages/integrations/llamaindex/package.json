@@ -1,0 +1,45 @@
+{
+  "name": "@glyphp/integration-llamaindex",
+  "version": "1.0.0",
+  "description": "Expose Glyph Protocol glyphs as LlamaIndex.TS FunctionTools",
+  "license": "Apache-2.0",
+  "author": "Patrick Espino",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "keywords": [
+    "glyph",
+    "glyph-protocol",
+    "llamaindex",
+    "tools"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@glyphp/client": "workspace:*",
+    "@glyphp/core": "workspace:*",
+    "@glyphp/types": "workspace:*"
+  }
+}

@@ -24,7 +24,10 @@
             "HANDLER_TIMEOUT",
             "UNAUTHORIZED",
             "RATE_LIMITED",
-            "PROTOCOL_VERSION_UNSUPPORTED"
+            "PROTOCOL_VERSION_UNSUPPORTED",
+            "MALFORMED_JSON",
+            "INTERNAL_ERROR",
+            "KEY_REVOKED"
           ]
         },
         "message": {

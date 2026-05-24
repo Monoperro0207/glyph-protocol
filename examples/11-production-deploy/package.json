@@ -1,0 +1,17 @@
+{
+  "name": "glyph-production-template",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "dependencies": {
+    "@glyphp/server": "workspace:*",
+    "@glyphp/core": "workspace:*",
+    "@glyphp/conformance": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0"
+  }
+}

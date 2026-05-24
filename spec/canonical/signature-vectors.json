@@ -1,0 +1,68 @@
+{
+  "generated": "2026-05-23T23:56:46.028Z",
+  "cases": [
+    {
+      "name": "empty-9d4b26a1",
+      "privateKey": "4c8b7c0d2e7d4f6a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c",
+      "publicKey": "9d4b26a1093271cb92dda443acd2c1b4f58c22a2ac84a2a2742baf3a028f99cb",
+      "message": "",
+      "signature": "37dc63efd0e1b53bac4e52ade99642eb0e5a7488f8e816412e20667aaf5c41ee7e1653ff0353f402376e9396c5d778e045f0ede3f989175a481143e3e291c009"
+    },
+    {
+      "name": "simple-9d4b26a1",
+      "privateKey": "4c8b7c0d2e7d4f6a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c",
+      "publicKey": "9d4b26a1093271cb92dda443acd2c1b4f58c22a2ac84a2a2742baf3a028f99cb",
+      "message": "hello, glyph",
+      "signature": "574663d2dff53a48f8f5ab9520605aea8f463295c4c1eca06143c9b597febb35d0e5e1432c8ea049c42956887ab10a4134c585371f6572f8c2d31a5fdf4abe0f"
+    },
+    {
+      "name": "canonical-object-9d4b26a1",
+      "privateKey": "4c8b7c0d2e7d4f6a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c",
+      "publicKey": "9d4b26a1093271cb92dda443acd2c1b4f58c22a2ac84a2a2742baf3a028f99cb",
+      "message": "f15bfc93d70801047473922f67fed863ecc7f82f0677ebb7122923aee81e0f97",
+      "signature": "f813875c3da26ced2938124f8ad18be4244a22691f288e2309447cbf32ec71988e607cbba263ced4a734a89b46b75176a8044da23666eac2183681f04df66907"
+    },
+    {
+      "name": "empty-4cb5abf6",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000001",
+      "publicKey": "4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29",
+      "message": "",
+      "signature": "7e1b9dc1e332c4238edcd07a68101474b640fdcb1b7b84fb711ac4bfbc85eb85a77480950d69398dcd19f61e1ea74d0f183cfbf34df8f6e7733ebfb9f944f106"
+    },
+    {
+      "name": "simple-4cb5abf6",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000001",
+      "publicKey": "4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29",
+      "message": "hello, glyph",
+      "signature": "22c3cbebee5bfff1898536349e5b8edde203f8b4eadcc29fef5b70a8d9ad69803d8175b99e8ac33d5b6ad0d3401a43c049bb0967fcdf83091a4342c8fe21960d"
+    },
+    {
+      "name": "canonical-object-4cb5abf6",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000001",
+      "publicKey": "4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29",
+      "message": "f15bfc93d70801047473922f67fed863ecc7f82f0677ebb7122923aee81e0f97",
+      "signature": "32e35e4705d62b1615fbebdd6db721a1d13e688983293077ca6869e6f8e9e425272a97951ad87cc167eeba489b64c5ac4c2bf0846eb211b772ce2493800d9402"
+    },
+    {
+      "name": "empty-cce0ca9a",
+      "privateKey": "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      "publicKey": "cce0ca9ad24b8cba903f4c73c79fd50aa90953bc05d67c4299f72f071b672d5a",
+      "message": "",
+      "signature": "827dc5aeb231d827dc1d5dea67aaf907d12fe4028f904e8cca0e0a146214c6b9edf9ae04f895ee55398118cc6b33d92efb77471a0768cf3f6d262ea0b7a73907"
+    },
+    {
+      "name": "simple-cce0ca9a",
+      "privateKey": "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      "publicKey": "cce0ca9ad24b8cba903f4c73c79fd50aa90953bc05d67c4299f72f071b672d5a",
+      "message": "hello, glyph",
+      "signature": "50d32fc911bbc52f680d208b2c1763d5cf25f53f07daabb7a07e2e78b31427091d57a35c5c7b89b31e19049d142ebcd118f12ce27a6a0927f7ac021105d0b002"
+    },
+    {
+      "name": "canonical-object-cce0ca9a",
+      "privateKey": "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      "publicKey": "cce0ca9ad24b8cba903f4c73c79fd50aa90953bc05d67c4299f72f071b672d5a",
+      "message": "f15bfc93d70801047473922f67fed863ecc7f82f0677ebb7122923aee81e0f97",
+      "signature": "681b26fbba5c8037a89607797594d79248e722933c7f3d4a4b8a480897330d2eba432aa321ecd4e7488c35f7e76b8ececbf7f618a3b532298371641b025fa007"
+    }
+  ]
+}
