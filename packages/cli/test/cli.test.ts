@@ -105,6 +105,64 @@ test('init scaffolds a project and refuses to overwrite', async () => {
   })
 })
 
+test('init mcp-bridge profile scaffolds an MCP-aware server', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'mcp')
+    await runInit(target, { profile: 'mcp-bridge' })
+    const files = await readdir(target)
+    assert.ok(files.includes('server.ts'))
+    assert.ok(files.includes('package.json'))
+    const { readFile } = await import('node:fs/promises')
+    const server = await readFile(join(target, 'server.ts'), 'utf8')
+    assert.match(server, /adapter-mcp/)
+    assert.match(server, /connectMcpServer/)
+  })
+})
+
+test('init openapi-wrapper profile scaffolds an OpenAPI-aware server', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'oas')
+    await runInit(target, { profile: 'openapi-wrapper' })
+    const { readFile } = await import('node:fs/promises')
+    const server = await readFile(join(target, 'server.ts'), 'utf8')
+    assert.match(server, /adapter-openapi/)
+    assert.match(server, /openapiToGlyphs/)
+  })
+})
+
+test('init python-client profile scaffolds a Python project', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'py')
+    await runInit(target, { profile: 'python-client' })
+    const files = await readdir(target)
+    assert.ok(files.includes('agent.py'))
+    assert.ok(files.includes('requirements.txt'))
+    // No TypeScript config for a Python project.
+    assert.ok(!files.includes('tsconfig.json'))
+    const { readFile } = await import('node:fs/promises')
+    const reqs = await readFile(join(target, 'requirements.txt'), 'utf8')
+    assert.match(reqs, /glyph-protocol/)
+  })
+})
+
+test('init agent-ts profile scaffolds a TypeScript consumer (rename of consumer-agent)', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'agent')
+    await runInit(target, { profile: 'agent-ts' })
+    const files = await readdir(target)
+    assert.ok(files.includes('agent.ts'))
+  })
+})
+
+test('init keeps consumer-agent working as a legacy alias', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'legacy')
+    await runInit(target, { profile: 'consumer-agent' })
+    const files = await readdir(target)
+    assert.ok(files.includes('agent.ts'))
+  })
+})
+
 test('formatOverview renders the lexicon', () => {
   const handshake: HandshakeResponse = {
     protocolVersion: '0.1',

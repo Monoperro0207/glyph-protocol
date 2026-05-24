@@ -27,6 +27,17 @@ export interface GlyphCard {
   }>
   provider: string
   /**
+   * Optional policy scopes the caller MUST present (via the auth principal)
+   * to invoke this glyph. When omitted, the glyph carries no scope
+   * requirement and is callable by any authenticated caller (or anonymously
+   * when the server has no auth gate). When non-empty, the server requires
+   * every listed scope before executing — missing scopes return
+   * `403 INSUFFICIENT_SCOPE`. The field is part of the canonical card
+   * content, so changing it produces a new card id and forces consumer
+   * re-approval. See `spec/rfcs/RFC-0002-policy-layer.md`.
+   */
+  requiredScopes?: string[]
+  /**
    * Optional execution attestation: external evidence — produced outside the
    * SDK's trust boundary — of what code is actually running behind this
    * declared contract. The SDK never *produces* an attestation (it cannot

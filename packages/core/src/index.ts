@@ -42,6 +42,7 @@ const CANONICAL_FIELDS = [
   'examples',
   'failureModes',
   'provider',
+  'requiredScopes',
   'attestation',
 ] as const
 

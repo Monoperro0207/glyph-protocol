@@ -29,7 +29,9 @@ usage:
                                  flags: --reason <text>, --file <pin-store-path>
   glyph manifest verify <src>    verify an update manifest's signature
   glyph init [dir]               scaffold a new Glyph project
-                                 flags: --profile <local-dev|production-server|consumer-agent>
+                                 flags: --profile <production-server|agent-ts|mcp-bridge|
+                                                   openapi-wrapper|python-client|local-dev>
+                                 (prompts interactively on a TTY when --profile is omitted)
   glyph keys init                generate the first keypair + registry
                                  flags: --file <path> (defaults to keys.json),
                                         --server-id <id>
@@ -142,11 +144,21 @@ try {
     case 'init': {
       const { rest, flags } = parseFlags(args, ['profile'])
       const dir = rest[0] ?? '.'
-      const profile = flags.profile as
+      let profile = flags.profile as
         | 'local-dev'
         | 'production-server'
+        | 'agent-ts'
+        | 'mcp-bridge'
+        | 'openapi-wrapper'
+        | 'python-client'
         | 'consumer-agent'
         | undefined
+      // Interactive picker — only when the caller didn't pass --profile
+      // AND stdin is an actual TTY (so CI/scripted use keeps the default).
+      if (!profile && process.stdin.isTTY) {
+        const { promptInitProfile } = await import('./commands/init.js')
+        profile = await promptInitProfile()
+      }
       console.log(await runInit(dir, { profile }))
       break
     }

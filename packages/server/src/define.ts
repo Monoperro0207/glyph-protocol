@@ -31,9 +31,22 @@ export function defineGlyph<TInput, TOutput>(config: {
   examples?: GlyphCard['examples']
   failureModes?: GlyphCard['failureModes']
   provider: string
+  /**
+   * Optional scopes that the caller must present to invoke this glyph. When
+   * non-empty, the server enforces every listed scope before executing.
+   * Omit entirely (or pass an empty array → omitted at canonicalize time)
+   * to leave the glyph open to any authenticated caller.
+   * See `spec/rfcs/RFC-0002-policy-layer.md`.
+   */
+  requiredScopes?: string[]
   handler: (input: TInput, ctx?: GlyphHandlerContext) => Promise<TOutput>
 }): GlyphDefinition<TInput, TOutput> {
-  const partial = {
+  // An empty array would change the card id and feel weird; treat it as
+  // "no scopes declared" so the canonical content omits the field.
+  const scopes = config.requiredScopes && config.requiredScopes.length > 0
+    ? [...config.requiredScopes]
+    : undefined
+  const partial: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'> = {
     version: '1.0.0',
     name: config.name,
     intent: config.intent,
@@ -45,6 +58,7 @@ export function defineGlyph<TInput, TOutput>(config: {
     examples: config.examples ?? [],
     failureModes: config.failureModes ?? [],
     provider: config.provider,
+    ...(scopes ? { requiredScopes: scopes } : {}),
   }
 
   const id = computeGlyphId(partial)

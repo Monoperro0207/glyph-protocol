@@ -1,9 +1,16 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
+import { createInterface } from 'node:readline/promises'
+import { stdin, stdout } from 'node:process'
 import { join } from 'node:path'
 
 export type InitProfile =
   | 'local-dev'
   | 'production-server'
+  | 'agent-ts'
+  | 'mcp-bridge'
+  | 'openapi-wrapper'
+  | 'python-client'
+  // Legacy alias for agent-ts kept so older invocations keep working.
   | 'consumer-agent'
 
 const TSCONFIG =
@@ -142,9 +149,71 @@ if (lexicon.length > 0) {
 }
 `
 
+// ---- mcp-bridge (Glyph server that re-exports an MCP server) -------------
+
+const MCP_BRIDGE_SERVER = `import { GlyphServer } from '@glyphp/server'
+import { connectMcpServer, mcpToolToGlyph } from '@glyphp/adapter-mcp'
+
+// Point this at any MCP server (filesystem, github, custom, …). The bridge
+// pulls the MCP tool list, signs each as a Glyph card and re-exports them.
+const mcp = await connectMcpServer({
+  command: process.env.MCP_COMMAND ?? 'npx',
+  args: (process.env.MCP_ARGS ?? '@modelcontextprotocol/server-filesystem ./workspace').split(' '),
+})
+
+const server = new GlyphServer({ port: Number(process.env.PORT ?? 3100) })
+for (const tool of await mcp.listTools()) {
+  server.register(mcpToolToGlyph(tool, mcp))
+}
+console.log(\`[mcp-bridge] re-exporting \${server.glyphs?.size ?? '?'} MCP tools\`)
+await server.start()
+`
+
+// ---- openapi-wrapper (Glyph server that re-exports an OpenAPI 3.x spec) --
+
+const OPENAPI_WRAPPER_SERVER = `import { GlyphServer } from '@glyphp/server'
+import { openapiToGlyphs } from '@glyphp/adapter-openapi'
+import { readFile } from 'node:fs/promises'
+
+// Drop your OpenAPI 3.x spec at ./openapi.json (or set OPENAPI_PATH).
+const spec = JSON.parse(
+  await readFile(process.env.OPENAPI_PATH ?? './openapi.json', 'utf8')
+)
+const server = new GlyphServer({ port: Number(process.env.PORT ?? 3100) })
+for (const glyph of openapiToGlyphs(spec, { baseUrl: process.env.UPSTREAM_BASE_URL })) {
+  server.register(glyph)
+}
+console.log('[openapi-wrapper] exposing OpenAPI operations as glyphs')
+await server.start()
+`
+
+// ---- python-client (PyPI glyph-protocol client) ---------------------------
+
+const PYTHON_CLIENT = `import os
+from glyph_protocol import GlyphClient, verify_card
+
+base_url = os.environ.get("GLYPH_SERVER_URL", "http://localhost:3100")
+auth_token = os.environ.get("GLYPH_AUTH_TOKEN")
+
+client = GlyphClient(base_url, auth_token=auth_token)
+client.connect()
+
+for entry in client.get_lexicon():
+    print(f"- {entry['name']}: {entry['intent']}")
+
+# Approve a card before calling it:
+# card = client.get_card("my-tool")
+# verify_card(card)
+# result = client.call("my-tool", {"...": "..."})
+# print(result)
+`
+
+const PYTHON_REQUIREMENTS = `glyph-protocol>=1.0.0,<2.0.0
+`
+
 const PROFILES: Record<
   InitProfile,
-  { entry: string; entryFile: string; pkg: Record<string, unknown> }
+  { entry: string; entryFile: string; pkg: Record<string, unknown>; extras?: Record<string, string> }
 > = {
   'local-dev': {
     entry: LOCAL_DEV_SERVER,
@@ -174,6 +243,22 @@ const PROFILES: Record<
       devDependencies: { tsx: '^4.11.0' },
     },
   },
+  'agent-ts': {
+    entry: CONSUMER_AGENT,
+    entryFile: 'agent.ts',
+    pkg: {
+      name: 'my-glyph-agent',
+      private: true,
+      type: 'module',
+      scripts: { start: 'tsx agent.ts' },
+      dependencies: {
+        '@glyphp/client': 'latest',
+        '@glyphp/core': 'latest',
+      },
+      devDependencies: { tsx: '^4.11.0' },
+    },
+  },
+  // Legacy alias — kept so older invocations keep working.
   'consumer-agent': {
     entry: CONSUMER_AGENT,
     entryFile: 'agent.ts',
@@ -188,6 +273,46 @@ const PROFILES: Record<
       },
       devDependencies: { tsx: '^4.11.0' },
     },
+  },
+  'mcp-bridge': {
+    entry: MCP_BRIDGE_SERVER,
+    entryFile: 'server.ts',
+    pkg: {
+      name: 'my-mcp-bridge',
+      private: true,
+      type: 'module',
+      scripts: { start: 'tsx server.ts' },
+      dependencies: {
+        '@glyphp/server': 'latest',
+        '@glyphp/adapter-mcp': 'latest',
+      },
+      devDependencies: { tsx: '^4.11.0' },
+    },
+  },
+  'openapi-wrapper': {
+    entry: OPENAPI_WRAPPER_SERVER,
+    entryFile: 'server.ts',
+    pkg: {
+      name: 'my-openapi-wrapper',
+      private: true,
+      type: 'module',
+      scripts: { start: 'tsx server.ts' },
+      dependencies: {
+        '@glyphp/server': 'latest',
+        '@glyphp/adapter-openapi': 'latest',
+      },
+      devDependencies: { tsx: '^4.11.0' },
+    },
+  },
+  'python-client': {
+    entry: PYTHON_CLIENT,
+    entryFile: 'agent.py',
+    pkg: {
+      name: 'my-glyph-python-client',
+      private: true,
+      type: 'module',
+    },
+    extras: { 'requirements.txt': PYTHON_REQUIREMENTS },
   },
 }
 
@@ -215,8 +340,20 @@ export async function runInit(
 
   await writeFile(join(dir, 'package.json'), JSON.stringify(cfg.pkg, null, 2) + '\n')
   await writeFile(join(dir, cfg.entryFile), cfg.entry)
-  await writeFile(join(dir, 'tsconfig.json'), TSCONFIG)
-  await writeFile(join(dir, '.gitignore'), 'node_modules\n')
+  if (profile !== 'python-client') {
+    await writeFile(join(dir, 'tsconfig.json'), TSCONFIG)
+  }
+  await writeFile(
+    join(dir, '.gitignore'),
+    profile === 'python-client'
+      ? 'venv\n__pycache__\n*.pyc\n'
+      : 'node_modules\n'
+  )
+  if (cfg.extras) {
+    for (const [name, body] of Object.entries(cfg.extras)) {
+      await writeFile(join(dir, name), body)
+    }
+  }
 
   const nextSteps =
     profile === 'production-server'
@@ -226,14 +363,36 @@ export async function runInit(
           '  # Set GLYPH_PUBLIC_KEY, GLYPH_PRIVATE_KEY, GLYPH_AUTH_TOKEN in your env',
           '  pnpm start',
         ]
-      : profile === 'consumer-agent'
+      : profile === 'agent-ts' || profile === 'consumer-agent'
         ? [
             '  cd ' + dir,
             '  pnpm install',
             '  # Set GLYPH_SERVER_URL (and optionally GLYPH_AUTH_TOKEN)',
             '  pnpm start',
           ]
-        : [`  cd ${dir}`, '  pnpm install', '  pnpm dev']
+        : profile === 'mcp-bridge'
+          ? [
+              '  cd ' + dir,
+              '  pnpm install',
+              '  # Point MCP_COMMAND/MCP_ARGS at the MCP server you want to re-export',
+              '  pnpm start',
+            ]
+          : profile === 'openapi-wrapper'
+            ? [
+                '  cd ' + dir,
+                '  pnpm install',
+                '  # Drop your OpenAPI 3.x spec at ./openapi.json and set UPSTREAM_BASE_URL',
+                '  pnpm start',
+              ]
+            : profile === 'python-client'
+              ? [
+                  '  cd ' + dir,
+                  '  python -m venv venv && source venv/bin/activate',
+                  '  pip install -r requirements.txt',
+                  '  # Set GLYPH_SERVER_URL (and optionally GLYPH_AUTH_TOKEN)',
+                  '  python agent.py',
+                ]
+              : [`  cd ${dir}`, '  pnpm install', '  pnpm dev']
 
   return [
     `Scaffolded a Glyph project (profile: ${profile}) in ${dir}`,
@@ -242,4 +401,40 @@ export async function runInit(
     'next steps:',
     ...nextSteps,
   ].join('\n')
+}
+
+/** Profiles offered in the interactive picker, in display order. */
+const PROMPT_CHOICES: Array<{ key: string; profile: InitProfile; label: string }> = [
+  { key: '1', profile: 'production-server', label: 'production-server  (recommended — stable key, auth, rate limit, pin store)' },
+  { key: '2', profile: 'agent-ts', label: 'agent-ts             (TypeScript consumer with pin store)' },
+  { key: '3', profile: 'mcp-bridge', label: 'mcp-bridge           (re-export an MCP server as glyphs)' },
+  { key: '4', profile: 'openapi-wrapper', label: 'openapi-wrapper      (re-export an OpenAPI 3.x spec as glyphs)' },
+  { key: '5', profile: 'python-client', label: 'python-client        (Python script using glyph-protocol on PyPI)' },
+  { key: '6', profile: 'local-dev', label: 'local-dev            (ephemeral key, no auth — prototyping only)' },
+]
+
+/**
+ * Interactive profile picker — only used by the CLI when stdin is a TTY
+ * and no `--profile` flag was given. Press Enter to accept the
+ * recommended default (`production-server`).
+ */
+export async function promptInitProfile(): Promise<InitProfile> {
+  const rl = createInterface({ input: stdin, output: stdout })
+  try {
+    stdout.write('\nChoose a starting profile:\n')
+    for (const c of PROMPT_CHOICES) {
+      stdout.write(`  ${c.key}) ${c.label}\n`)
+    }
+    const answer = (await rl.question('> [1] ')).trim() || '1'
+    const match = PROMPT_CHOICES.find(
+      (c) => c.key === answer || c.profile === answer
+    )
+    if (!match) {
+      stdout.write(`Unknown choice "${answer}" — falling back to production-server.\n`)
+      return 'production-server'
+    }
+    return match.profile
+  } finally {
+    rl.close()
+  }
 }
