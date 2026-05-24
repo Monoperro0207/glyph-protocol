@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/adapter-openapi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Convert an OpenAPI 3.x document into registerable Glyph Protocol glyphs",
   "license": "Apache-2.0",
   "author": "Patrick Espino",

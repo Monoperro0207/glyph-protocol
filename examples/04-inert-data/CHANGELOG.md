@@ -1,5 +1,14 @@
 # 04-inert-data
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [94c1b17]
+  - @glyphp/core@1.1.0
+  - @glyphp/server@1.1.0
+  - @glyphp/client@1.0.1
+
 ## 0.1.3
 
 ### Patch Changes
