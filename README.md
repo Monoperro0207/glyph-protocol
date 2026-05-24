@@ -373,10 +373,14 @@ The wire protocol is documented in [`spec/`](spec):
 - [`update-governance.md`](spec/update-governance.md) — pinning, the tool
   lifecycle, and signed update manifests.
 - [`security.md`](spec/security.md) — deploying a server safely.
+- [`threat-model.md`](spec/threat-model.md) — STRIDE threat model: assets,
+  trust boundaries, abuse cases, and what is explicitly out of scope.
 - [`canonical/`](spec/canonical) — cross-SDK test vectors (hashing,
   canonicalisation, signatures, sanitization).
-- [`rfcs/`](spec/rfcs) — protocol RFCs (starting with
-  [RFC-0001 — Key Registry, Rotation and Revocation](spec/rfcs/RFC-0001-key-registry.md)).
+- [`rfcs/`](spec/rfcs) — protocol RFCs:
+  [RFC-0001 — Key Registry, Rotation and Revocation](spec/rfcs/RFC-0001-key-registry.md),
+  [RFC-0002 — Scope-based Policy Layer](spec/rfcs/RFC-0002-policy-layer.md),
+  [RFC-0003 — Public Providers Registry](spec/rfcs/RFC-0003-public-registry.md).
 
 ## Project documentation
 
@@ -388,6 +392,11 @@ The wire protocol is documented in [`spec/`](spec):
   OpenAPI / function-calling.
 - [`docs/deployment.md`](docs/deployment.md) — operational checklist,
   Docker, secrets, observability.
+- [`docs/release-verification.md`](docs/release-verification.md) — verifying
+  npm provenance, cosign signatures and SBOMs for `@glyphp/*` releases.
+- [`docs/versioning.md`](docs/versioning.md) — wire/SDK version matrix and
+  compatibility policy.
+- [`bench/`](bench) — reproducible multi-model benchmark (maintainer-run).
 
 ## License
 

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PublicProvidersRegistry",
+  "description": "RFC-0003 — a signed directory of Glyph providers, distributable as a single JSON file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registryVersion",
+    "registryId",
+    "issuedAt",
+    "ttlSeconds",
+    "providers",
+    "signedBy",
+    "signature"
+  ],
+  "properties": {
+    "registryVersion": {
+      "type": "string",
+      "description": "Wire version of the registry format.",
+      "const": "1.0"
+    },
+    "registryId": {
+      "type": "string",
+      "description": "Opaque identifier of who issued this registry. Not a globally-unique name.",
+      "minLength": 1
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this registry document was signed."
+    },
+    "ttlSeconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 31536000,
+      "description": "How long the client may cache before re-fetching."
+    },
+    "providers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProviderEntry" }
+    },
+    "signedBy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "publicKey", "fingerprint"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable label for the signer."
+        },
+        "publicKey": {
+          "type": "string",
+          "description": "Hex-encoded ed25519 public key of the signer.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "description": "sha-256 fingerprint of the signer public key.",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex-encoded ed25519 signature over the canonical hash of every other field.",
+      "pattern": "^[0-9a-f]+$"
+    }
+  },
+  "$defs": {
+    "ProviderEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "endpoint", "publicKey", "status"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stable human-friendly identifier for this provider in the registry.",
+          "minLength": 1
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "HTTPS base URL of the Glyph server. The consumer connects here."
+        },
+        "publicKey": {
+          "type": "string",
+          "description": "Hex-encoded ed25519 public key the provider signs cards/receipts with.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "intent": {
+          "type": "string",
+          "description": "One-line description of what this provider is for."
+        },
+        "conformanceBadge": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the shields.io endpoint JSON for this provider."
+        },
+        "lastVerifiedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the registry maintainers last re-verified this entry."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "revoked"]
+        },
+        "revokedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revocationReason": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "revoked" } } },
+          "then": { "required": ["status", "revokedAt"] }
+        }
+      ]
+    }
+  }
+}

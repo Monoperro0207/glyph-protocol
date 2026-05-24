@@ -33,6 +33,28 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  bench:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../packages/client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@glyphp/server':
+        specifier: workspace:*
+        version: link:../packages/server
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.12
+        version: 20.19.41
+      tsx:
+        specifier: ^4.11.0
+        version: 4.22.3
+
   examples/01-hello-glyph:
     dependencies:
       '@glyphp/client':
