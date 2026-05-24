@@ -1,0 +1,80 @@
+{
+  "generated": "2026-05-23T23:56:46.012Z",
+  "cases": [
+    {
+      "name": "primitive-null",
+      "input": null,
+      "canonical": "null"
+    },
+    {
+      "name": "primitive-true",
+      "input": true,
+      "canonical": "true"
+    },
+    {
+      "name": "primitive-number",
+      "input": 42,
+      "canonical": "42"
+    },
+    {
+      "name": "primitive-string",
+      "input": "hello",
+      "canonical": "\"hello\""
+    },
+    {
+      "name": "empty-object",
+      "input": {},
+      "canonical": "{}"
+    },
+    {
+      "name": "empty-array",
+      "input": [],
+      "canonical": "[]"
+    },
+    {
+      "name": "flat-object-sorted",
+      "input": {
+        "b": 1,
+        "a": 2,
+        "c": 3
+      },
+      "canonical": "{\"a\":2,\"b\":1,\"c\":3}"
+    },
+    {
+      "name": "nested-object-sorted",
+      "input": {
+        "x": {
+          "z": 1,
+          "y": 2
+        },
+        "a": [
+          {
+            "b": 1,
+            "a": 2
+          }
+        ]
+      },
+      "canonical": "{\"a\":[{\"a\":2,\"b\":1}],\"x\":{\"y\":2,\"z\":1}}"
+    },
+    {
+      "name": "unicode-string",
+      "input": {
+        "msg": "héllo wörld 🚀"
+      },
+      "canonical": "{\"msg\":\"héllo wörld 🚀\"}"
+    },
+    {
+      "name": "mixed-array",
+      "input": [
+        1,
+        "two",
+        true,
+        null,
+        {
+          "k": "v"
+        }
+      ],
+      "canonical": "[1,\"two\",true,null,{\"k\":\"v\"}]"
+    }
+  ]
+}

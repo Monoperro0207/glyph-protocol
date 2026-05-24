@@ -1,10 +1,11 @@
 /**
  * The Glyph wire-protocol version — the contract between client and server.
- * Distinct from any npm package version. While the protocol is 0.x, every
- * minor is potentially breaking, so client and server must agree on an
- * exact match during the handshake.
+ * Distinct from any npm package version. Client and server must agree on an
+ * exact match during the handshake (`426 PROTOCOL_VERSION_UNSUPPORTED` on
+ * mismatch). 1.0 is the first stable line — see CHANGELOG-PROTOCOL.md for
+ * what changed since 0.2.
  */
-export const PROTOCOL_VERSION = '0.2'
+export const PROTOCOL_VERSION = '1.0'
 
 /**
  * The wire version of the optional UpdateManifest format. Independent of

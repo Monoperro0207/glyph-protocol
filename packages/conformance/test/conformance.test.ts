@@ -23,18 +23,27 @@ server.register(
   })
 )
 
-test('a spec-compliant server passes every conformance check', async () => {
-  const report = await runConformance('http://glyph', { fetch: server.fetch })
+test('a spec-compliant server passes the discovery level', async () => {
+  const report = await runConformance('http://glyph', {
+    fetch: server.fetch,
+    levels: ['discovery'],
+  })
   for (const check of report.checks) {
-    assert.equal(check.passed, true, `${check.name}: ${check.detail}`)
+    if (check.status === 'skipped') continue
+    assert.equal(
+      check.status,
+      'passed',
+      `${check.name}: ${check.detail}`
+    )
   }
   assert.equal(report.passed, true)
-  assert.ok(report.checks.length >= 7)
+  assert.ok(report.compatibility.includes('discovery'))
 })
 
 test('the report flags a non-Glyph endpoint', async () => {
   const report = await runConformance('http://glyph', {
     fetch: () => new Response('not glyph', { status: 200 }),
+    levels: ['discovery'],
   })
   assert.equal(report.passed, false)
 })

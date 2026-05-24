@@ -14,6 +14,8 @@ export type {
   SanitizationFinding,
   CardFieldChange,
   CardDiff,
+  KeyEntry,
+  KeyRegistry,
   Pin,
   UpdateManifest,
 } from './types.js'

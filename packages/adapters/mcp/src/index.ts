@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { computeGlyphId } from '@glyphp/core'
+import { compileJsonSchema, computeGlyphId } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
 import type { GlyphDefinition } from '@glyphp/server'
 import type {
@@ -19,6 +19,14 @@ export type {
 
 export interface McpAdapterOptions {
   provider?: string
+  /**
+   * Controls validation of MCP tool output against the declared `outputSchema`.
+   * - `'schema'` (default): compile the JSON Schema and reject mismatched
+   *   output with `OUTPUT_VALIDATION_FAILED` — the card and the runtime agree.
+   * - `'none'`: accept any output. Use only when the upstream MCP server is
+   *   trusted to honor its own schema; the card still publishes the schema.
+   */
+  outputValidation?: 'schema' | 'none'
 }
 
 /**
@@ -31,6 +39,7 @@ export function glyphsFromMcpTools(
   options?: McpAdapterOptions
 ): GlyphDefinition<any, any>[] {
   const provider = options?.provider ?? 'mcp'
+  const outputValidation = options?.outputValidation ?? 'schema'
 
   return tools.map((tool) => {
     const cardBase = {
@@ -56,9 +65,13 @@ export function glyphsFromMcpTools(
     return {
       card,
       inputSchema: buildZodInput(tool.inputSchema),
-      // External MCP tool output is not trustworthy enough to validate
-      // strictly; the declared outputSchema still lives on the card.
-      outputSchema: z.unknown(),
+      // Honor the declared outputSchema by default. The server validates
+      // upstream output against it; a mismatch becomes OUTPUT_VALIDATION_FAILED
+      // rather than silently passing through a contract violation.
+      outputSchema:
+        outputValidation === 'schema' && tool.outputSchema
+          ? compileJsonSchema(tool.outputSchema)
+          : z.unknown(),
       // The handler uses the original (non-kebab) MCP tool name.
       handler: buildHandler(tool.name, callTool),
     }
@@ -78,6 +91,10 @@ export async function glyphsFromMcpClient(
     client.callTool({ name, arguments: args })
   return glyphsFromMcpTools(tools, callTool, options)
 }
+
+// Re-export for tests and downstream consumers that want to validate raw
+// JSON Schema output without taking a direct dep on @glyphp/core.
+export { compileJsonSchema } from '@glyphp/core'
 
 // Words that, when they appear in a tool name, mark it as risky regardless of
 // what the MCP server's annotations claim.

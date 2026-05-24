@@ -13,7 +13,10 @@ import {
   canonicalHash,
   sanitize,
 } from '@glyphp/core'
-import type { GlyphKeyPair } from '@glyphp/core'
+import type {
+  GlyphKeyPair,
+  KeyRegistrySource,
+} from '@glyphp/core'
 import { PROTOCOL_VERSION, MANIFEST_VERSION } from '@glyphp/types'
 import type {
   CallReceipt,
@@ -75,6 +78,7 @@ export class GlyphServer {
   private rateLimit?: RateLimitConfig
   private callTimeoutMs: number
   private onCall?: (receipt: CallReceipt) => void
+  private keyRegistry?: KeyRegistrySource
 
   constructor(options?: {
     port?: number
@@ -83,12 +87,19 @@ export class GlyphServer {
     rateLimit?: RateLimitConfig
     callTimeoutMs?: number
     onCall?: (receipt: CallReceipt) => void
+    /**
+     * Optional KeyRegistry source — when provided, served from `GET /keys`
+     * so clients can verify which keys this server currently signs with.
+     * See `spec/rfcs/RFC-0001-key-registry.md`.
+     */
+    keyRegistry?: KeyRegistrySource
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
     this.rateLimit = options?.rateLimit
     this.callTimeoutMs = options?.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS
     this.onCall = options?.onCall
+    this.keyRegistry = options?.keyRegistry
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -193,6 +204,26 @@ export class GlyphServer {
       })
     )
 
+    // RFC-0001 Key Registry endpoint. Returns 404 when the server has not
+    // been configured with one — clients fall back to per-card publicKey.
+    app.get('/keys', async (c) => {
+      if (!this.keyRegistry) {
+        return errorResponse(c, 404, 'NOT_FOUND', 'No KeyRegistry published')
+      }
+      try {
+        const registry = await this.keyRegistry.registry()
+        return c.json(registry)
+      } catch (err) {
+        console.error('[glyph] /keys failed:', err)
+        return errorResponse(
+          c,
+          500,
+          'INTERNAL_ERROR',
+          err instanceof Error ? err.message : 'KeyRegistry failed'
+        )
+      }
+    })
+
     app.post('/handshake', async (c) => {
       const body = await readJson<HandshakeRequest>(c)
 
@@ -233,7 +264,21 @@ export class GlyphServer {
 
     app.get('/glyphs/:name', (c) => {
       const name = c.req.param('name')
-      const depth = (c.req.query('depth') as 'minimal' | 'standard' | 'rich') ?? 'rich'
+      const depthRaw = c.req.query('depth')
+      const VALID_DEPTHS = ['minimal', 'standard', 'rich'] as const
+      if (
+        depthRaw !== undefined &&
+        !(VALID_DEPTHS as readonly string[]).includes(depthRaw)
+      ) {
+        return errorResponse(
+          c,
+          400,
+          'VALIDATION_FAILED',
+          'Invalid depth value',
+          { field: 'depth', expected: VALID_DEPTHS, got: depthRaw }
+        )
+      }
+      const depth = (depthRaw as (typeof VALID_DEPTHS)[number] | undefined) ?? 'rich'
       const glyph = this.glyphs.get(name)
       if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
       return c.json(applyDepth(glyph.card, depth))
@@ -327,8 +372,10 @@ export class GlyphServer {
       // and input, obtained from POST /glyphs/:name/prepare.
       if (glyph.card.cost.requiresConfirmation) {
         const token = body.confirmationToken
-        const pending = token ? this.pendingConfirmations.get(token) : undefined
-        if (!token || !pending) {
+        // Spec distinguishes "missing token" from "token present but unknown/
+        // expired/mismatched" — they are different failure modes for clients
+        // and conformance tests to reason about.
+        if (!token) {
           return errorResponse(
             c,
             403,
@@ -341,6 +388,15 @@ export class GlyphServer {
             }
           )
         }
+        const pending = this.pendingConfirmations.get(token)
+        if (!pending) {
+          return errorResponse(
+            c,
+            403,
+            'INVALID_CONFIRMATION',
+            'Unknown or already-consumed confirmation token'
+          )
+        }
         this.pendingConfirmations.delete(token) // single-use
         const valid =
           Date.now() < pending.expiresAt &&
@@ -351,7 +407,7 @@ export class GlyphServer {
             c,
             403,
             'INVALID_CONFIRMATION',
-            'Invalid, expired, or mismatched confirmation token'
+            'Expired or mismatched confirmation token'
           )
         }
       }

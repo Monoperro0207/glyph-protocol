@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 
 GLYPH_URL = os.environ.get("GLYPH_SERVER_URL", "http://127.0.0.1:3199")
-PROTOCOL_VERSION = "0.2"
+PROTOCOL_VERSION = "1.0"
 
 # ── Canonical hashing (mirror of @glyphp/core.canonicalize) ────────────────
 CANONICAL_FIELDS = (

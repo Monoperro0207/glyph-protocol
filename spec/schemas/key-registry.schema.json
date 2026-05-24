@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KeyRegistry",
+  "description": "A Glyph server's published list of signing keys, their validity windows, and the chain-of-trust links between rotations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registryVersion",
+    "serverId",
+    "active",
+    "keys",
+    "issuedAt",
+    "ttlSeconds",
+    "signature"
+  ],
+  "properties": {
+    "registryVersion": {
+      "type": "string",
+      "description": "Wire version of the registry format.",
+      "const": "1.0"
+    },
+    "serverId": {
+      "type": "string",
+      "description": "An opaque identifier the server chose for itself (e.g. a domain)."
+    },
+    "active": {
+      "type": "string",
+      "description": "Fingerprint (hex) of the currently active key — the one that signs the outer signature and any new cards/receipts."
+    },
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/KeyEntry" }
+    },
+    "issuedAt": {
+      "type": "string",
+      "description": "RFC 3339 timestamp when this registry was published."
+    },
+    "ttlSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Recommended max-age (seconds) for client-side caching."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex ed25519 signature, produced by the active key, over the canonical hash of every other field."
+    }
+  },
+  "$defs": {
+    "KeyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fingerprint", "publicKey", "validFrom"],
+      "properties": {
+        "fingerprint": {
+          "type": "string",
+          "description": "SHA-256 of publicKey (hex). Stable identifier across rotations."
+        },
+        "publicKey": {
+          "type": "string",
+          "description": "Hex ed25519 public key."
+        },
+        "validFrom": {
+          "type": "string",
+          "description": "RFC 3339 timestamp when this key became active."
+        },
+        "validUntil": {
+          "type": "string",
+          "description": "RFC 3339 timestamp when this key was rotated out. Absent on the active key."
+        },
+        "revokedAt": {
+          "type": "string",
+          "description": "RFC 3339 timestamp when this key was explicitly revoked."
+        },
+        "revocationReason": {
+          "type": "string"
+        },
+        "signedBy": {
+          "type": "string",
+          "description": "Fingerprint of the key that authorised this entry. Absent on the genesis entry."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Hex ed25519 signature over canonical hash of (fingerprint, publicKey, validFrom, signedBy). Absent on the genesis entry."
+        }
+      }
+    }
+  }
+}

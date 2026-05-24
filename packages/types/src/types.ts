@@ -218,6 +218,43 @@ export interface Pin {
 }
 
 /**
+ * One key in a server's published KeyRegistry (RFC-0001). The protocol-id
+ * field is `fingerprint` (sha-256 of publicKey), which stays stable across
+ * representations and rotations.
+ */
+export interface KeyEntry {
+  fingerprint: string
+  publicKey: string
+  validFrom: string
+  /** When this key was rotated out — absent on the active key. */
+  validUntil?: string
+  /** When this key was explicitly revoked. Mutually exclusive with active. */
+  revokedAt?: string
+  revocationReason?: string
+  /** Fingerprint of the key that authorised this entry. Absent on the genesis. */
+  signedBy?: string
+  /** ed25519 signature by the signedBy key. Absent on the genesis. */
+  signature?: string
+}
+
+/**
+ * A Glyph server's published trust state — the keys it signs with right now,
+ * the keys it has rotated out or revoked, and the chain-of-trust between
+ * rotations. Served from `GET /keys`. See `spec/rfcs/RFC-0001-key-registry.md`.
+ */
+export interface KeyRegistry {
+  registryVersion: '1.0'
+  serverId: string
+  /** Fingerprint of the active key. */
+  active: string
+  keys: KeyEntry[]
+  issuedAt: string
+  ttlSeconds: number
+  /** ed25519 signature by the active key over the canonical hash of the rest. */
+  signature: string
+}
+
+/**
  * A provider's signed, on-the-record statement that a tool changed from one
  * card to another. Optional and additive: it informs human review of an
  * update, it does not replace it. Signed by the server key — like a

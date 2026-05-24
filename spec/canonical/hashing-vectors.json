@@ -1,0 +1,80 @@
+{
+  "generated": "2026-05-23T23:56:46.013Z",
+  "cases": [
+    {
+      "name": "primitive-null",
+      "input": null,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "name": "primitive-true",
+      "input": true,
+      "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+    },
+    {
+      "name": "primitive-number",
+      "input": 42,
+      "sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049"
+    },
+    {
+      "name": "primitive-string",
+      "input": "hello",
+      "sha256": "5aa762ae383fbb727af3c7a36d4940a5b8c40a989452d2304fc958ff3f354e7a"
+    },
+    {
+      "name": "empty-object",
+      "input": {},
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "name": "empty-array",
+      "input": [],
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "flat-object-sorted",
+      "input": {
+        "b": 1,
+        "a": 2,
+        "c": 3
+      },
+      "sha256": "e145110e712e3ed0a6b233551b27a90aa39b4c93ed67e111ba2002d16e5ed1fa"
+    },
+    {
+      "name": "nested-object-sorted",
+      "input": {
+        "x": {
+          "z": 1,
+          "y": 2
+        },
+        "a": [
+          {
+            "b": 1,
+            "a": 2
+          }
+        ]
+      },
+      "sha256": "eda195a6d398b85703baed951891467ba5481ce68ae593e852646d2de18b1dbe"
+    },
+    {
+      "name": "unicode-string",
+      "input": {
+        "msg": "héllo wörld 🚀"
+      },
+      "sha256": "62a7d0e51dad08109ebe49a658e713e4927922cc09364681808e3af853cb5dd2"
+    },
+    {
+      "name": "mixed-array",
+      "input": [
+        1,
+        "two",
+        true,
+        null,
+        {
+          "k": "v"
+        }
+      ],
+      "sha256": "ecb97e20cb3047c7c6aa7f58a8ccc31c1efb6c565a5c2e4fc62524571f37ed6b"
+    }
+  ]
+}

@@ -16,8 +16,29 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
 | `@glyphp/adapter-mcp-server` | Expose a Glyph server's tools to any MCP client |
-| `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) |
-| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init`) |
+| `@glyphp/conformance` | Executable spec conformance suite (`glyph-conformance`) — 4 levels |
+| `@glyphp/cli` | Command-line tool (`glyph inspect` / `verify` / `diff-card` / `pins` / `approve` / `revoke` / `manifest` / `init` / `keys`) |
+
+### Framework integrations
+
+| Package | Description |
+|---|---|
+| `@glyphp/integration-vercel-ai` | Expose glyphs as tools for the Vercel AI SDK |
+| `@glyphp/integration-langchain` | Expose glyphs as LangChain `StructuredTool`s |
+| `@glyphp/integration-llamaindex` | Expose glyphs as LlamaIndex.TS `FunctionTool`s |
+| `@glyphp/integration-openai-agents` | Expose glyphs as OpenAI Agents SDK tools |
+
+### Non-TypeScript SDKs
+
+| SDK | Status | Path |
+|---|---|---|
+| Python (verify + client) | 1.0 | [`sdks/python/`](sdks/python/) — `pip install glyph-protocol` |
+| Go (verify + client) | 1.0 | [`sdks/go/glyphprotocol/`](sdks/go/glyphprotocol/) |
+
+All SDKs are tested against the **canonical test vectors** under
+[`spec/canonical/`](spec/canonical/), so a card canonicalised, hashed,
+signed or sanitised in one SDK verifies byte-identically in any of the
+others.
 
 > **Versioning** — the npm packages are versioned independently of the wire
 > protocol. Package `0.x` releases implement **wire protocol `0.2`** (the
@@ -26,12 +47,27 @@ Each tool publishes a **glyph** — a self-describing, signed, content-addressed
 
 ## Quick Start
 
+Requirements: Node `>=20` and pnpm pinned via Corepack (see `packageManager`
+in `package.json`). One command sets up the toolchain and validates the
+entire repo end-to-end:
+
 ```bash
+corepack enable
 pnpm install
+pnpm verify         # typecheck + test + build + smoke + conformance
+```
+
+Then run the hello-world example:
+
+```bash
 cd examples/01-hello-glyph
 pnpm server   # terminal 1
 pnpm client   # terminal 2
 ```
+
+If you also have Python and Go installed, `pnpm verify:full` additionally
+exercises the Python and Go SDKs against the canonical test vectors in
+`spec/canonical/`.
 
 ## Examples
 
@@ -268,6 +304,28 @@ which is a separate, larger effort.
   lifecycle (approve / review on change / revoke), `diffCards`, and an optional
   signed `UpdateManifest`. Additive — no wire-protocol change.
 
+## Conformance
+
+`@glyphp/conformance` ships a four-level executable suite — `discovery`,
+`execution`, `security`, `governance` — that produces a versioned JSON
+badge a server can publish:
+
+```bash
+pnpm exec glyph-conformance https://your-server.example \
+  --level all \
+  --fixture-echo conformance-echo \
+  --fixture-requires-confirmation conformance-requires-confirmation \
+  --fixture-slow conformance-slow \
+  --fixture-invalid-output conformance-invalid-output \
+  --output report.json --markdown report.md
+```
+
+`@glyphp/conformance` also exposes `registerFixtures(server)` —
+register the standard fixture glyphs and external auditors can exercise
+all four levels against your deployment. See
+[`scripts/conformance-self.mjs`](scripts/conformance-self.mjs) for a
+worked example.
+
 ## Spec
 
 The wire protocol is documented in [`spec/`](spec):
@@ -279,6 +337,21 @@ The wire protocol is documented in [`spec/`](spec):
 - [`update-governance.md`](spec/update-governance.md) — pinning, the tool
   lifecycle, and signed update manifests.
 - [`security.md`](spec/security.md) — deploying a server safely.
+- [`canonical/`](spec/canonical) — cross-SDK test vectors (hashing,
+  canonicalisation, signatures, sanitization).
+- [`rfcs/`](spec/rfcs) — protocol RFCs (starting with
+  [RFC-0001 — Key Registry, Rotation and Revocation](spec/rfcs/RFC-0001-key-registry.md)).
+
+## Project documentation
+
+- [`CHANGELOG-PROTOCOL.md`](CHANGELOG-PROTOCOL.md) — wire-protocol changelog.
+- [`GOVERNANCE.md`](GOVERNANCE.md) — roles, versioning, RFC process.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, where things live, conventions.
+- [`SECURITY.md`](SECURITY.md) — supported versions, disclosure policy.
+- [`docs/why-glyph.md`](docs/why-glyph.md) — when to use Glyph vs MCP /
+  OpenAPI / function-calling.
+- [`docs/deployment.md`](docs/deployment.md) — operational checklist,
+  Docker, secrets, observability.
 
 ## License
 

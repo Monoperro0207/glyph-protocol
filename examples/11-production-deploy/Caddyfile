@@ -1,0 +1,4 @@
+{$GLYPH_DOMAIN:localhost} {
+    reverse_proxy glyph:3100
+    encode zstd gzip
+}

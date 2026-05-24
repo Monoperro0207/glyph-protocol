@@ -11,6 +11,18 @@ importers:
       '@changesets/cli':
         specifier: ^2.31.0
         version: 2.31.0(@types/node@20.19.41)
+      '@glyphp/conformance':
+        specifier: workspace:*
+        version: link:packages/conformance
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@glyphp/server':
+        specifier: workspace:*
+        version: link:packages/server
+      '@noble/ed25519':
+        specifier: ^2.1.0
+        version: 2.3.0
       '@types/node':
         specifier: ^20.12.12
         version: 20.19.41
@@ -128,6 +140,25 @@ importers:
         specifier: ^4.11.0
         version: 4.22.3
 
+  examples/11-production-deploy:
+    dependencies:
+      '@glyphp/conformance':
+        specifier: workspace:*
+        version: link:../../packages/conformance
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@glyphp/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.11.0
+        version: 4.22.3
+
   packages/adapters/mcp:
     dependencies:
       '@glyphp/core':
@@ -232,9 +263,63 @@ importers:
       '@noble/ed25519':
         specifier: ^2.1.0
         version: 2.3.0
+      ajv:
+        specifier: ^8.17.1
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+
+  packages/integrations/langchain:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../../types
+
+  packages/integrations/llamaindex:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../../types
+
+  packages/integrations/openai-agents:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../../types
+
+  packages/integrations/vercel-ai:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../../types
 
   packages/resolver:
     dependencies:
