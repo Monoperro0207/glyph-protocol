@@ -12,7 +12,8 @@
     "packages/*",
     "packages/adapters/*",
     "packages/integrations/*",
-    "examples/*"
+    "examples/*",
+    "bench"
   ],
   "scripts": {
     "build": "pnpm -r build",

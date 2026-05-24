@@ -1,0 +1,21 @@
+{
+  "name": "@glyphp/bench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reproducible multi-model benchmark for Glyph Protocol",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "bench": "tsx src/runner.ts"
+  },
+  "dependencies": {
+    "@glyphp/client": "workspace:*",
+    "@glyphp/core": "workspace:*",
+    "@glyphp/server": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0",
+    "@types/node": "^20.12.12"
+  }
+}

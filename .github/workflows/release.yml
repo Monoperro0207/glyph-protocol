@@ -13,6 +13,13 @@
 #      Actions, pointing at this repo and `.github/workflows/release.yml`.
 # After that, this workflow publishes every subsequent release with no
 # npm token stored in GitHub — auth is short-lived OIDC.
+#
+# A second job (`attestations`) runs AFTER `release` completes, on the
+# packages that were just published. It generates a CycloneDX SBOM and a
+# sigstore cosign signature per tarball and attaches both to the
+# corresponding GitHub Release. The job is `continue-on-error: true` so a
+# transient sigstore/cdxgen failure never blocks the npm publish that
+# already succeeded.
 
 name: Release
 
@@ -30,6 +37,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,9 +55,78 @@ jobs:
       # npm >=11.5 is required for OIDC trusted publishing.
       - run: npm install -g npm@latest
 
-      - uses: changesets/action@v1
+      - id: changesets
+        uses: changesets/action@v1
         with:
           version: pnpm version-packages
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  attestations:
+    # Generate CycloneDX SBOMs and cosign signatures for the tarballs that
+    # were just published, and attach them to the matching GitHub Release.
+    # Best-effort — npm publish has already succeeded if we got here.
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Install cdxgen
+        run: npm install -g @cyclonedx/cdxgen@^11
+
+      - name: Generate SBOM and cosign signature per published package
+        env:
+          PUBLISHED: ${{ needs.release.outputs.published_packages }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          mkdir -p .attest
+          cd .attest
+          echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
+            name=$(echo "$row" | jq -r .name)
+            version=$(echo "$row" | jq -r .version)
+            tag="${name}@${version}"
+
+            echo "::group::$tag"
+
+            # Pull the tarball that was just published.
+            tarball=$(npm pack "$name@$version" --silent) || {
+              echo "::warning::npm pack failed for $tag"
+              echo "::endgroup::"
+              continue
+            }
+
+            # CycloneDX SBOM from the extracted package contents.
+            extracted=$(mktemp -d)
+            tar -xzf "$tarball" -C "$extracted"
+            sbom="${tarball%.tgz}.cdx.sbom.json"
+            cdxgen -t npm -o "$sbom" "$extracted/package" \
+              || echo "::warning::cdxgen failed for $tag"
+
+            # Keyless cosign signature anchored at this workflow's OIDC identity.
+            bundle="${tarball%.tgz}.cosign.bundle"
+            cosign sign-blob --yes --bundle "$bundle" "$tarball" \
+              || echo "::warning::cosign failed for $tag"
+
+            # Attach to the GitHub Release that changesets-action created.
+            uploads=()
+            [ -f "$sbom" ] && uploads+=("$sbom")
+            [ -f "$bundle" ] && uploads+=("$bundle")
+            if [ ${#uploads[@]} -gt 0 ]; then
+              gh release upload "$tag" "${uploads[@]}" --clobber \
+                || echo "::warning::release upload failed for $tag"
+            fi
+            echo "::endgroup::"
+          done
