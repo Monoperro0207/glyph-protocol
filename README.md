@@ -1,8 +1,10 @@
 # Glyph Protocol SDK
 
 [![wire protocol](https://img.shields.io/badge/wire%20protocol-1.0%20stable-2ea44f)](spec/protocol.md)
-[![npm core](https://img.shields.io/badge/%40glyphp%2F*-1.0.0-blue)](https://www.npmjs.com/org/glyphp)
-[![npm integrations](https://img.shields.io/badge/%40glyphp%2Fintegration--*-1.1.0-blue)](https://www.npmjs.com/org/glyphp)
+[![npm core](https://img.shields.io/npm/v/@glyphp/core?label=%40glyphp%2Fcore)](https://www.npmjs.com/package/@glyphp/core)
+[![npm server](https://img.shields.io/npm/v/@glyphp/server?label=%40glyphp%2Fserver)](https://www.npmjs.com/package/@glyphp/server)
+[![npm integrations](https://img.shields.io/npm/v/@glyphp/integration-vercel-ai?label=%40glyphp%2Fintegration--*)](https://www.npmjs.com/org/glyphp)
+[![npm exporter-otel](https://img.shields.io/npm/v/@glyphp/exporter-otel?label=%40glyphp%2Fexporter--otel)](https://www.npmjs.com/package/@glyphp/exporter-otel)
 [![Python SDK](https://img.shields.io/pypi/v/glyph-protocol?label=pypi%20glyph-protocol)](https://pypi.org/project/glyph-protocol/)
 [![Go SDK](https://img.shields.io/badge/go%20sdk-v1.0.0-00ADD8)](sdks/go/glyphprotocol)
 [![conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMonoperro0207%2Fglyph-protocol%2Fmain%2Fdocs%2Fconformance-badge.json)](packages/conformance)
