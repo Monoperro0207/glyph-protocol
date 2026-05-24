@@ -1,5 +1,60 @@
 # @glyphp/types
 
+## 1.0.0
+
+### Major Changes
+
+- a703d69: Bump every package to **1.0.0** alongside the **Glyph Protocol 1.0** wire
+  release. See [`CHANGELOG-PROTOCOL.md`](../CHANGELOG-PROTOCOL.md) for the
+  full wire changeset; the package-level highlights are:
+
+  - **Adapters now validate output by default.** `@glyphp/adapter-mcp` and
+    `@glyphp/adapter-openapi` honour the declared `outputSchema` via AJV
+    (JSON Schema 2020-12). Pass `outputValidation: 'none'` to opt out.
+  - **OpenAPI adapter — header / cookie / security / `servers[]`.** Bearer,
+    basic and apiKey (header / query / cookie) security schemes; document
+    servers[] fallback; per-style query serialisation; non-JSON response
+    passthrough.
+  - **`@glyphp/server` returns distinct `CONFIRMATION_REQUIRED` vs
+    `INVALID_CONFIRMATION`** for missing-token vs unknown / expired /
+    mismatched-token. `depth=bogus` rejects with `400 VALIDATION_FAILED`.
+  - **`@glyphp/core` — `KeyRegistry` (RFC-0001).** New
+    `FileKeyRegistry` / `HttpKeyRegistry` / `StaticKeyRegistry`, plus
+    `buildKeyEntry`, `buildKeyRegistry`, `verifyKeyRegistry`,
+    `resolveKey`, `fingerprintKey`. `GlyphServer` exposes `GET /keys`
+    when configured with a `keyRegistry`.
+  - **`@glyphp/cli` — `glyph keys init|rotate|revoke|list`** and
+    `glyph init --profile <local-dev|production-server|consumer-agent>`.
+  - **`@glyphp/conformance` — four levels** (`discovery`, `execution`,
+    `security`, `governance`) with badge-shaped JSON + Markdown reports
+    and standard fixture glyphs (`registerFixtures`).
+  - **New framework integration packages** under `@glyphp/integration-*`:
+    Vercel AI, LangChain, LlamaIndex, OpenAI Agents.
+  - **Schema additions.** New `MALFORMED_JSON`, `INTERNAL_ERROR`,
+    `KEY_REVOKED` error codes; new `key-registry.schema.json`.
+  - **Cross-language SDKs.** `glyph-protocol` (PyPI) and the Go module
+    at `github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol`
+    ship at the same 1.0 cycle, sharing canonical test vectors with the
+    TypeScript reference.
+
+### Minor Changes
+
+- 704a89f: Optional execution-attestation slot on `GlyphCard`.
+
+  A card may now carry an optional `attestation: { type, payload, reference? }`
+  envelope — opaque external evidence (Sigstore bundle, SLSA provenance, in-toto
+  statement, or vendor-specific format) of what code is running behind the
+  declared contract. The field enters canonical content, so a change to it
+  moves the card `id`; `diffCards()` flags any change as `breaking`.
+
+  `verifyAttestation()` checks the envelope is well-formed and reports whether
+  the `type` is one the SDK has a known schema for. Verifying the payload
+  against a trust root (Sigstore registry, OIDC, SLSA verifier, etc.) is the
+  consumer's responsibility — the SDK cannot certify its own host process.
+
+  Backwards compatible: a card without an attestation hashes identically to a
+  0.2-era card.
+
 ## 0.2.0
 
 ### Minor Changes

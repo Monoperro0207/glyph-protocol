@@ -1,7 +1,7 @@
 {
   "name": "05-hermes-integration",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "description": "Integration test: Hermes Agent + DeepSeek-V4 Flash + Glyph Protocol (via the MCP bridge)",
   "scripts": {
