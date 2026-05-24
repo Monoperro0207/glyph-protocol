@@ -7,11 +7,11 @@ on:
 
 jobs:
   verify:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node: [20, 22]
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +30,6 @@ jobs:
 
   python-sdk:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('sdks/python/pyproject.toml') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -47,7 +46,6 @@ jobs:
 
   go-sdk:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('sdks/go/glyphprotocol/go.mod') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
