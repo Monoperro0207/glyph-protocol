@@ -24,3 +24,4 @@ examples/05-hermes-integration/workspace/landing/
 # Local-only scratch (user-provided PDFs etc.)
 .tmp-landings.*
 .atl/
+coverage/
