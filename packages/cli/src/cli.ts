@@ -15,6 +15,9 @@ import {
   runKeysRevoke,
   runKeysRotate,
 } from './commands/keys.js'
+import { runImportMcp } from './commands/import-mcp/index.js'
+import { ALL_CLIENT_IDS } from './commands/import-mcp/clients/index.js'
+import type { ClientId } from './commands/import-mcp/types.js'
 
 const HELP = `glyph — Glyph Protocol CLI
 
@@ -32,6 +35,11 @@ usage:
                                  flags: --profile <production-server|agent-ts|mcp-bridge|
                                                    openapi-wrapper|python-client|local-dev>
                                  (prompts interactively on a TTY when --profile is omitted)
+  glyph import mcp               auto-map MCP servers from a client config or manual target
+                                 flags: --from <claude-desktop|cursor|codex|openclaw|hermes-agent>,
+                                        --pick, --command <stdio>, --url <http>, --bearer-token,
+                                        --output <dir>, --port-base <n>, --timeout-ms <n>, --dry-run
+                                 (interactive when no --from / --command / --url is passed)
   glyph keys init                generate the first keypair + registry
                                  flags: --file <path> (defaults to keys.json),
                                         --server-id <id>
@@ -160,6 +168,63 @@ try {
         profile = await promptInitProfile()
       }
       console.log(await runInit(dir, { profile }))
+      break
+    }
+    case 'import': {
+      const sub = args[0]
+      if (sub !== 'mcp') fail('import mcp is the only subcommand for now')
+      const { flags } = parseFlags(args.slice(1), [
+        'from',
+        'command',
+        'url',
+        'bearer-token',
+        'output',
+        'port-base',
+        'timeout-ms',
+        'name',
+      ])
+      const from = flags.from as string | undefined
+      if (from && !ALL_CLIENT_IDS.includes(from as ClientId)) {
+        fail(`--from must be one of: ${ALL_CLIENT_IDS.join(', ')}`)
+      }
+      const manualCommand = flags.command as string | undefined
+      const manualUrl = flags.url as string | undefined
+      const manual = manualCommand || manualUrl
+        ? {
+            command: manualCommand,
+            url: manualUrl,
+            bearerToken: flags['bearer-token'] as string | undefined,
+            name: flags.name as string | undefined,
+          }
+        : undefined
+      const portBase = flags['port-base']
+        ? Number(flags['port-base'] as string)
+        : 3100
+      const timeoutMs = flags['timeout-ms']
+        ? Number(flags['timeout-ms'] as string)
+        : 10_000
+      if (!Number.isFinite(portBase) || portBase < 1 || portBase > 65535) {
+        fail(`--port-base must be a valid port`)
+      }
+      if (!Number.isFinite(timeoutMs) || timeoutMs < 100) {
+        fail(`--timeout-ms must be ≥ 100`)
+      }
+      const result = await runImportMcp({
+        from: from as ClientId | undefined,
+        pick: Boolean(flags.pick),
+        manual,
+        options: {
+          output: (flags.output as string | undefined) ?? 'glyph-imports',
+          portBase,
+          dryRun: Boolean(flags['dry-run']),
+          timeoutMs,
+        },
+      })
+      if (!flags['dry-run']) {
+        console.log(
+          `\n[glyph] done — ${result.imported.length} imported, ${result.skipped.length} skipped.`
+        )
+      }
       break
     }
     case 'keys': {
