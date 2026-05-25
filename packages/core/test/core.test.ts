@@ -174,7 +174,7 @@ test('canonicalHash is deterministic and ignores key order', () => {
 function buildReceipt(): CallReceipt {
   const keyPair = generateKeyPair()
   const base: Omit<CallReceipt, 'signature'> = {
-    receiptVersion: '0.2',
+    receiptVersion: '0.3',
     callId: 'call-1',
     glyphId: 'glyph-1',
     glyphName: 'test-glyph',
