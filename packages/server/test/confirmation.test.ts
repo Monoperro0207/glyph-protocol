@@ -120,3 +120,79 @@ test('prepare rejects invalid input', async () => {
   })
   assert.equal(res.status, 400)
 })
+
+// --- Backlog limit tests (Fix 1) ---
+
+test('backlog full returns 503 CONFIRMATION_BACKLOG_FULL with Retry-After', async () => {
+  const srv = new GlyphServer({ maxPendingConfirmations: 3 })
+  srv.register(risky)
+
+  // Fill to capacity
+  for (let i = 1; i <= 3; i++) {
+    const res = await srv.fetch(
+      new Request('http://glyph/glyphs/risky-op/prepare', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ input: { x: i } }),
+      })
+    )
+    assert.equal(res.status, 200)
+  }
+
+  // This one should be rejected
+  const res = await srv.fetch(
+    new Request('http://glyph/glyphs/risky-op/prepare', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ input: { x: 4 } }),
+    })
+  )
+  const body = (await res.json()) as any
+  assert.equal(res.status, 503)
+  assert.equal(body.error.code, 'CONFIRMATION_BACKLOG_FULL')
+  assert.ok(res.headers.get('Retry-After'), 'must include Retry-After header')
+})
+
+test('normal operation below backlog limit succeeds', async () => {
+  const srv = new GlyphServer({ maxPendingConfirmations: 3 })
+  srv.register(risky)
+  const postFn = async (body: unknown) => {
+    const res = await srv.fetch(
+      new Request('http://glyph/glyphs/risky-op/prepare', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    )
+    return { status: res.status, body: (await res.json()) as any }
+  }
+
+  // Should all succeed (below limit of 3)
+  const r1 = await postFn({ input: { x: 1 } })
+  const r2 = await postFn({ input: { x: 2 } })
+  assert.equal(r1.status, 200)
+  assert.equal(r2.status, 200)
+  assert.ok(r1.body.confirmationToken)
+  assert.ok(r2.body.confirmationToken)
+})
+
+test('maxPendingConfirmations from constructor overrides default', async () => {
+  const srv = new GlyphServer({ maxPendingConfirmations: 1 })
+  srv.register(risky)
+  const postFn = async (body: unknown) => {
+    const res = await srv.fetch(
+      new Request('http://glyph/glyphs/risky-op/prepare', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    )
+    return { status: res.status, body: (await res.json()) as any }
+  }
+
+  // First succeeds, second hits custom limit of 1
+  await postFn({ input: { x: 1 } })
+  const res = await postFn({ input: { x: 2 } })
+  assert.equal(res.status, 503)
+  assert.equal(res.body.error.code, 'CONFIRMATION_BACKLOG_FULL')
+})
