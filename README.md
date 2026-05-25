@@ -1,4 +1,8 @@
-# Glyph Protocol SDK
+# Glyph Protocol
+
+> **Signed, content-addressed tool contracts for AI agents.**
+>
+> Every tool publishes a **glyph** — a self-describing, cryptographically signed card that carries not just the schema but also intent, cost, risk, and reversibility. Agents discover glyphs, verify their signatures, and execute tools with audit-grade receipts. No blind function calling. No trust-without-verify.
 
 [![wire protocol](https://img.shields.io/badge/wire%20protocol-1.0%20stable-2ea44f)](spec/protocol.md)
 [![npm core](https://img.shields.io/npm/v/@glyphp/core?label=%40glyphp%2Fcore)](https://www.npmjs.com/package/@glyphp/core)
@@ -9,10 +13,6 @@
 [![Go SDK](https://img.shields.io/badge/go%20sdk-v1.0.0-00ADD8)](sdks/go/glyphprotocol)
 [![conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMonoperro0207%2Fglyph-protocol%2Fmain%2Fdocs%2Fconformance-badge.json)](packages/conformance)
 [![CI](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml)
-
-> A connection protocol designed from the ground up for LLM consumers.
-
-Each tool publishes a **glyph** — a self-describing, signed, content-addressed card that carries not just the schema but also intent, cost, risk, and reversibility.
 
 ## Packages
 
