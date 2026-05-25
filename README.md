@@ -92,6 +92,26 @@ If you also have Python and Go installed, `pnpm verify:full` additionally
 exercises the Python and Go SDKs against the canonical test vectors in
 `spec/canonical/`.
 
+### Map existing MCP servers automatically
+
+If you already have MCP servers configured in Claude Desktop, Cursor, or
+Codex, `glyph import mcp` reads that config, connects to each server,
+and generates a Glyph bridge project per MCP — signed cards, cost/risk
+inferred from MCP annotations, confirmation gate already wired:
+
+```bash
+pnpm exec glyph import mcp                       # interactive picker
+pnpm exec glyph import mcp --from claude-desktop # all MCPs in your Claude Desktop config
+pnpm exec glyph import mcp --command "npx -y @modelcontextprotocol/server-everything"
+```
+
+Output: `glyph-imports/<name>/server.ts` per MCP plus a markdown
+`IMPORT_REPORT.md` listing what was imported, what was skipped (with
+the exact reason — missing env var, timeout, etc.), and which cards the
+heuristic tagged as `caution`/`danger` for review. See
+[`spec/rfcs/RFC-0004-import-clients.md`](spec/rfcs/RFC-0004-import-clients.md)
+for which client adapters are stable today vs. pending verification.
+
 ## Examples
 
 - [`01-hello-glyph`](examples/01-hello-glyph) — one glyph, end to end in under 2 minutes
