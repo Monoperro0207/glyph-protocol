@@ -49,5 +49,9 @@
       "better-sqlite3",
       "esbuild"
     ]
+  },
+  "dependencies": {
+    "@myecoria/frost-ed25519-blake2b-wasm": "^0.1.4",
+    "@noble/curves": "^2.2.0"
   }
 }
