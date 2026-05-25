@@ -24,6 +24,7 @@
     "conformance:badge": "tsx scripts/conformance-badge.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:full": "node scripts/verify.mjs --full",
+    "coverage": "c8 --reporter=text --reporter=lcov tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts examples/05-hermes-integration/test/*.test.ts",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
@@ -35,6 +36,7 @@
     "@glyphp/server": "workspace:*",
     "@noble/ed25519": "^2.1.0",
     "@types/node": "^20.12.12",
+    "c8": "^11.0.0",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5"
   },
