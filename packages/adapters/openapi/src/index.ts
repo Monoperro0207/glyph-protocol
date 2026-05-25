@@ -46,6 +46,18 @@ export interface OpenApiAdapterOptions {
   outputValidation?: 'schema' | 'none'
   /** Credentials for the OpenAPI security schemes the operation declares. */
   security?: OpenApiSecurityConfig
+  /**
+   * Set to true to trust the server URL declared in the OpenAPI document.
+   * Default is false for security: document-declared URLs may point to
+   * attacker-controlled hosts (SSRF vector). Prefer explicit `baseUrl`.
+   */
+  allowDocumentServerUrl?: boolean
+  /**
+   * Optional host allowlist. When set and `allowDocumentServerUrl` is true,
+   * the resolved host from the document's server URL MUST be in this list.
+   * Ignored when an explicit `baseUrl` is provided.
+   */
+  allowedHosts?: string[]
 }
 
 export function glyphsFromOpenApi(
@@ -53,10 +65,39 @@ export function glyphsFromOpenApi(
   options: OpenApiAdapterOptions
 ): GlyphDefinition<any, any>[] {
   const provider = options.provider ?? doc.info?.title ?? 'openapi'
-  const baseUrl = options.baseUrl ?? doc.servers?.[0]?.url
-  if (!baseUrl) {
+  const documentServerUrl = doc.servers?.[0]?.url
+
+  let baseUrl: string
+  if (options.baseUrl) {
+    // Explicit baseUrl always wins — trust the operator, not the document.
+    baseUrl = options.baseUrl
+  } else if (options.allowDocumentServerUrl) {
+    if (!documentServerUrl) {
+      throw new Error(
+        'OpenAPI adapter: allowDocumentServerUrl is true but the document declares no servers[].url'
+      )
+    }
+    // Validate against allowedHosts if provided.
+    if (options.allowedHosts && options.allowedHosts.length > 0) {
+      const host = extractHost(documentServerUrl)
+      if (!options.allowedHosts.includes(host)) {
+        throw new Error(
+          `OpenAPI adapter: document server URL host "${host}" is not in the allowed hosts list`
+        )
+      }
+    }
+    baseUrl = documentServerUrl
+  } else if (documentServerUrl) {
+    // Document declares a server URL but the operator hasn't opted in.
+    // This is the SSRF-prevention gate: implicit trust is refused.
     throw new Error(
-      'OpenAPI adapter requires a baseUrl (or a `servers[]` entry in the document)'
+      'OpenAPI adapter: document declares a server URL but no explicit baseUrl is provided. ' +
+        'Set `baseUrl` to use a trusted URL, or set `allowDocumentServerUrl: true` to opt in ' +
+        'to the document-declared URL. Implicit trust of document server URLs is refused as an SSRF vector.'
+    )
+  } else {
+    throw new Error(
+      'OpenAPI adapter requires a baseUrl (or allowDocumentServerUrl + a `servers[]` entry in the document)'
     )
   }
   const outputValidation = options.outputValidation ?? 'schema'
@@ -114,6 +155,15 @@ export function glyphsFromOpenApi(
 }
 
 export { compileJsonSchema } from '@glyphp/core'
+
+/** Extracts the hostname from a URL string. Returns empty string on parse failure. */
+function extractHost(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return ''
+  }
+}
 
 function deriveCost(method: HttpMethod): GlyphCard['cost'] {
   const isRead = method === 'get'
