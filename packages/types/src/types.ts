@@ -243,6 +243,13 @@ export interface KeyEntry {
   signedBy?: string
   /** ed25519 signature by the signedBy key. Absent on the genesis. */
   signature?: string
+  /** Multi-signer group metadata — present when this key is a FROST group key. */
+  group?: {
+    /** Minimum signers required (M). */
+    threshold: number
+    /** Total signers in the group (N). */
+    participants: number
+  }
 }
 
 /**
