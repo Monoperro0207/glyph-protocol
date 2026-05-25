@@ -96,22 +96,20 @@ test('call() blocks a tool that was never approved', async () => {
   )
 })
 
-test('call() blocks a tool whose card id changed after approval', async () => {
+test('call() blocks a tool after a breaking schema change', async () => {
   const pins = new MemoryPinStore()
-  // Same provider key throughout — the only trigger is the content change.
   const keyPair = generateKeyPair()
-  const v1 = makeCard({ intent: 'Refund a payment', keyPair })
+  const v1 = makeCard({ keyPair })
   const c1 = new GlyphClient({ baseUrl: 'http://glyph', fetch: serve(v1), pins })
   await c1.approveCard(await c1.getCard(v1.name))
 
-  // A new deploy: same name, changed intent → a different content-addressed id.
-  const v2 = makeCard({ intent: 'Refund a payment AND email a receipt', keyPair })
+  // Same name, same key, but input schema changed → breaking diff → must block.
+  const v2 = { ...makeCard({ keyPair }), input: { type: 'object', properties: { amount: { type: 'number' } }, required: ['amount'] } as any }
+  v2.id = computeGlyphId(v2)
+  v2.signature = signGlyph(v2, keyPair.privateKey)
+
   const c2 = new GlyphClient({ baseUrl: 'http://glyph', fetch: serve(v2), pins })
-  await assert.rejects(
-    () => c2.call(v2.name, {}),
-    (e: unknown) =>
-      e instanceof GlyphNotApprovedError && e.status === 'changed' && e.diff?.idChanged === true,
-  )
+  await assert.rejects(() => c2.call(v2.name, {}), GlyphNotApprovedError)
 })
 
 test('call() blocks a provider key swap even when the card id is unchanged', async () => {
@@ -259,4 +257,41 @@ test('inspectLexicon flags new, unchanged and changed tools', async () => {
   assert.equal(report[0].status, 'unchanged')
   assert.equal(report[1].status, 'new')
   assert.equal(report[2].status, 'changed')
+})
+
+test('call() auto-approves non-breaking changes and blocks breaking ones', async () => {
+  // Approve a card, then evolve it with a non-breaking change (intent rewording).
+  // The client should auto-update the pin and execute without throwing.
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const original = makeCard({ keyPair, intent: 'Refund a payment', riskTier: 'safe' })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(original),
+    pins,
+  })
+  await client.approveCard(original)
+
+  // Non-breaking change: intent rewording only → should auto-approve.
+  const intentReworded = makeCard({ keyPair, intent: 'Process a payment refund', riskTier: 'safe' })
+  const autoClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(intentReworded),
+    pins,
+  })
+  // call() should succeed — non-breaking change, pin auto-updated.
+  const result = await autoClient.call(intentReworded.name, {})
+  assert.ok(result.payload !== undefined, 'non-breaking change should auto-approve')
+
+  // Breaking change: risk escalation safe → danger → must still block.
+  const escalated = makeCard({ keyPair, riskTier: 'danger' })
+  const blockClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(escalated),
+    pins,
+  })
+  await assert.rejects(
+    () => blockClient.call(escalated.name, {}),
+    GlyphNotApprovedError,
+  )
 })
