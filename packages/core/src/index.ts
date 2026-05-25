@@ -429,3 +429,5 @@ export {
   StaticKeyRegistry,
   verifyKeyRegistry,
 } from './key-registry.js'
+export { Ed25519Signer } from './signer.js'
+export type { GlyphSigner } from './signer.js'
