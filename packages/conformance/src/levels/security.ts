@@ -116,8 +116,34 @@ export const securityLevel: LevelRunner = async (ctx) => {
     }
   }
 
-  // 5. Rate limit — burst until the server responds 429. Skipped if echo not
-  //    exposed (we need a cheap endpoint to hammer that is not /health).
+  // 5. Timeout — fixture handler that exceeds the timeout must produce 504.
+  const slow = ctx.fixtures.slow
+  if (!slow || !ctx.lexiconNames.includes(slow)) {
+    add('security.timeout', 'skipped', 'fixtures.slow not declared')
+  } else {
+    try {
+      const { status, json } = await ctx.http('POST', `/glyphs/${encodeURIComponent(slow)}/call`, {
+        input: {},
+      })
+      const ok =
+        status === 504 &&
+        ctx.validators.glyphError(json) === true &&
+        json.error.code === 'HANDLER_TIMEOUT'
+      add(
+        'security.timeout',
+        ok ? 'passed' : 'failed',
+        ok
+          ? 'slow handler → 504 HANDLER_TIMEOUT'
+          : `expected 504 HANDLER_TIMEOUT, got ${status} ${json?.error?.code ?? ''}`,
+      )
+    } catch (e) {
+      add('security.timeout', 'failed', errMsg(e))
+    }
+  }
+
+  // 6. Rate limit — burst until the server responds 429. MUST run LAST in the
+  //    security level: it drains the rate-limit bucket and any subsequent HTTP
+  //    check would receive spurious 429 responses.
   const echo = ctx.fixtures.echo
   if (!echo || !ctx.lexiconNames.includes(echo)) {
     add('security.rateLimit', 'skipped', 'fixtures.echo required for a rate-limit burst')
@@ -142,31 +168,6 @@ export const securityLevel: LevelRunner = async (ctx) => {
       )
     } catch (e) {
       add('security.rateLimit', 'failed', errMsg(e))
-    }
-  }
-
-  // 6. Timeout — fixture handler that exceeds the timeout must produce 504.
-  const slow = ctx.fixtures.slow
-  if (!slow || !ctx.lexiconNames.includes(slow)) {
-    add('security.timeout', 'skipped', 'fixtures.slow not declared')
-  } else {
-    try {
-      const { status, json } = await ctx.http('POST', `/glyphs/${encodeURIComponent(slow)}/call`, {
-        input: {},
-      })
-      const ok =
-        status === 504 &&
-        ctx.validators.glyphError(json) === true &&
-        json.error.code === 'HANDLER_TIMEOUT'
-      add(
-        'security.timeout',
-        ok ? 'passed' : 'failed',
-        ok
-          ? 'slow handler → 504 HANDLER_TIMEOUT'
-          : `expected 504 HANDLER_TIMEOUT, got ${status} ${json?.error?.code ?? ''}`,
-      )
-    } catch (e) {
-      add('security.timeout', 'failed', errMsg(e))
     }
   }
 
