@@ -400,7 +400,7 @@ test('security: apiKey-in-header scheme adds custom header', async () => {
   assert.equal(observed.headers['X-Api-Key'], 'k-1')
 })
 
-test('baseUrl falls back to doc.servers[0].url when not provided', () => {
+test('baseUrl from doc.servers[0].url requires explicit opt-in', () => {
   const doc: OpenApiDoc = {
     openapi: '3.0.0',
     info: { title: 't', version: '1' },
@@ -411,8 +411,10 @@ test('baseUrl falls back to doc.servers[0].url when not provided', () => {
       },
     },
   }
-  // Does not throw — the fallback resolves.
-  const glyphs = glyphsFromOpenApi(doc, {} as any)
+  // Without allowDocumentServerUrl, the implicit server URL is refused as SSRF vector.
+  assert.throws(() => glyphsFromOpenApi(doc, {} as any), /baseUrl|SSRF|opt.?in/)
+  // With the opt-in, it works.
+  const glyphs = glyphsFromOpenApi(doc, { allowDocumentServerUrl: true })
   assert.equal(glyphs.length, 1)
 })
 
