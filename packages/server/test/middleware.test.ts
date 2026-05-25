@@ -98,3 +98,21 @@ test('rateLimitMiddleware never limits /health', async () => {
   await app.request('/health')
   assert.equal((await app.request('/health')).status, 200)
 })
+
+// --- Constant-time token check tests (Fix 3) ---
+
+test('authMiddleware rejects a token of different length than configured tokens', async () => {
+  const app = appWith(authMiddleware({ tokens: ['short'] }))
+  const res = await app.request('/x', {
+    headers: { Authorization: 'Bearer a-very-long-token-that-does-not-match-at-all' },
+  })
+  assert.equal(res.status, 401)
+})
+
+test('authMiddleware rejects a token that differs only in case', async () => {
+  const app = appWith(authMiddleware({ tokens: ['Secret-Token'] }))
+  const res = await app.request('/x', {
+    headers: { Authorization: 'Bearer secret-token' },
+  })
+  assert.equal(res.status, 401)
+})
