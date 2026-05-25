@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/exporter-otel",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Map Glyph Protocol receipts to OpenTelemetry spans and/or SIEM JSONL",
   "license": "Apache-2.0",
   "author": "Patrick Espino",

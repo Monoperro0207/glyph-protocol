@@ -1,5 +1,12 @@
 # @glyphp/exporter-otel
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [44caa8c]
+  - @glyphp/types@1.2.0
+
 ## 0.2.0
 
 ### Minor Changes
