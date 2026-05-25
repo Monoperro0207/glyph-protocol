@@ -326,8 +326,10 @@ export class GlyphClient {
 
   /**
    * Pin gate for call(): with a PinStore configured, a tool must have a pin
-   * that still matches its current card. A new or changed tool throws
-   * GlyphNotApprovedError instead of executing.
+   * that still matches its current card. A new tool throws
+   * GlyphNotApprovedError. A changed tool whose diff is breaking throws.
+   * A changed tool whose diff is non-breaking ('review') auto-updates its
+   * pin so execution resumes without human re-approval.
    */
   private async ensureApproved(name: string): Promise<void> {
     if (!this.pins) return
@@ -338,6 +340,16 @@ export class GlyphClient {
     if (inspection.status === 'unchanged') return
     if (inspection.status === 'revoked') {
       throw new GlyphRevokedError(name, inspection.pin?.revokeReason)
+    }
+    // Auto-approve non-breaking changes (e.g. intent rewording, example updates).
+    // Breaking changes — key swaps, risk escalation, schema changes — still
+    // require explicit human re-approval.
+    if (inspection.status === 'changed' && inspection.diff && !inspection.diff.requiresApproval) {
+      if (inspection.pin) {
+        const updated: Pin = { ...inspection.pin, card, approvedAt: new Date().toISOString() }
+        await this.pins.set(updated)
+        return
+      }
     }
     throw new GlyphNotApprovedError(name, inspection.status, inspection.diff)
   }

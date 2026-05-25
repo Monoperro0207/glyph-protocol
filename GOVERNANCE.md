@@ -15,6 +15,32 @@ can participate.
 There is no formal voting body yet. Maintainer decisions are public and
 appealable via an issue or RFC.
 
+### Bus factor & succession
+
+The project currently has a bus factor of 1. To mitigate this:
+
+- **ARCHITECTURE.md** provides a complete technical map of the codebase
+  (component diagram, trust boundaries, data flow, key decisions).
+- **docs/threat-to-tests.md** maps every STRIDE threat to its covering test.
+- **The conformance suite** (`packages/conformance/`) is the protocol's
+  executable contract — any new maintainer can verify correctness without
+  reading every line of code.
+- **RFCs under `spec/rfcs/`** document the motivation and design of every
+  protocol feature, in chronological order.
+- **Test coverage** is tracked via `pnpm coverage` (83%+).
+
+To add a maintainer: open an RFC proposing the candidate, with at least one
+merged contribution and conformance-level understanding of the protocol. The
+existing maintainer must approve. Once added, both maintainers have equal
+merge and release authority.
+
+In the event the sole maintainer becomes unavailable:
+1. A trusted community member (identified in advance by the maintainer) can
+   fork the repo under the Apache 2.0 license.
+2. The npm packages can be transferred by npm support with proof of
+   maintainer unavailability.
+3. GitHub org ownership transfer follows GitHub's deceased-user policy.
+
 ## Versioning
 
 Two version axes are tracked **separately**:
