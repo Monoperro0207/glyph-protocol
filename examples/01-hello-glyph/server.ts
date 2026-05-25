@@ -32,9 +32,7 @@ const greet = defineGlyph({
       output: { message: '¡Hola, Carlos!' },
     },
   ],
-  failureModes: [
-    { code: 'EMPTY_NAME', description: 'Name cannot be an empty string' },
-  ],
+  failureModes: [{ code: 'EMPTY_NAME', description: 'Name cannot be an empty string' }],
   provider: 'hello-glyph-example',
   handler: async ({ name, language }) => {
     const message = language === 'es' ? `¡Hola, ${name}!` : `Hello, ${name}!`

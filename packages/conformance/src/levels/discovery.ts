@@ -1,7 +1,7 @@
 import { verifyGlyph } from '@glyphp/core'
-import { PROTOCOL_VERSION } from '@glyphp/types'
 import type { GlyphCard, LexiconEntry } from '@glyphp/types'
-import type { CheckResult, LevelContext, LevelRunner } from '../types.js'
+import { PROTOCOL_VERSION } from '@glyphp/types'
+import type { CheckResult, LevelRunner } from '../types.js'
 
 /**
  * Discovery level — what a client sees before it ever calls a tool: health,
@@ -12,25 +12,19 @@ import type { CheckResult, LevelContext, LevelRunner } from '../types.js'
  */
 export const discoveryLevel: LevelRunner = async (ctx) => {
   const checks: CheckResult[] = []
-  const add = (
-    name: string,
-    status: 'passed' | 'failed' | 'skipped',
-    detail: string
-  ) => checks.push({ name, level: 'discovery', status, detail })
+  const add = (name: string, status: 'passed' | 'failed' | 'skipped', detail: string) =>
+    checks.push({ name, level: 'discovery', status, detail })
 
   // 1. /health
   try {
     const { status, json } = await ctx.http('GET', '/health')
-    const ok =
-      status === 200 &&
-      json?.ok === true &&
-      typeof json?.protocolVersion === 'string'
+    const ok = status === 200 && json?.ok === true && typeof json?.protocolVersion === 'string'
     add(
       'discovery.health',
       ok ? 'passed' : 'failed',
       ok
         ? `protocolVersion=${json.protocolVersion}`
-        : `expected 200 + {ok,protocolVersion}, got ${status}`
+        : `expected 200 + {ok,protocolVersion}, got ${status}`,
     )
   } catch (e) {
     add('discovery.health', 'failed', errMsg(e))
@@ -49,9 +43,7 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
     add(
       'discovery.handshake.accept',
       ok ? 'passed' : 'failed',
-      ok
-        ? 'valid HandshakeResponse'
-        : `expected 200 + HandshakeResponse, got ${status}`
+      ok ? 'valid HandshakeResponse' : `expected 200 + HandshakeResponse, got ${status}`,
     )
     if (ok) lexicon = json.lexicon
   } catch (e) {
@@ -75,9 +67,7 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
       ok ? 'passed' : 'failed',
       ok
         ? 'version mismatch → 426 PROTOCOL_VERSION_UNSUPPORTED'
-        : `expected 426 PROTOCOL_VERSION_UNSUPPORTED, got ${status} ${
-            json?.error?.code ?? ''
-          }`
+        : `expected 426 PROTOCOL_VERSION_UNSUPPORTED, got ${status} ${json?.error?.code ?? ''}`,
     )
   } catch (e) {
     add('discovery.handshake.reject', 'failed', errMsg(e))
@@ -95,7 +85,7 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
       ok ? 'passed' : 'failed',
       ok
         ? `${json.length} entr${json.length === 1 ? 'y' : 'ies'}`
-        : `expected 200 + LexiconEntry[], got ${status}`
+        : `expected 200 + LexiconEntry[], got ${status}`,
     )
     if (ok && lexicon.length === 0) lexicon = json
   } catch (e) {
@@ -113,15 +103,13 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
     try {
       const { status, json } = await ctx.http(
         'GET',
-        `/glyphs/${encodeURIComponent(name)}?depth=rich`
+        `/glyphs/${encodeURIComponent(name)}?depth=rich`,
       )
       const shapeOk = status === 200 && ctx.validators.glyphCard(json) === true
       add(
         'discovery.card.shape',
         shapeOk ? 'passed' : 'failed',
-        shapeOk
-          ? `'${name}' is a valid GlyphCard`
-          : `expected a valid GlyphCard, got ${status}`
+        shapeOk ? `'${name}' is a valid GlyphCard` : `expected a valid GlyphCard, got ${status}`,
       )
       if (shapeOk) {
         const sigOk = verifyGlyph(json as GlyphCard)
@@ -130,14 +118,10 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
           sigOk ? 'passed' : 'failed',
           sigOk
             ? `'${name}' signature and content hash verify`
-            : 'signature or content-hash check failed'
+            : 'signature or content-hash check failed',
         )
       } else {
-        add(
-          'discovery.card.signature',
-          'failed',
-          'card shape invalid — cannot check signature'
-        )
+        add('discovery.card.signature', 'failed', 'card shape invalid — cannot check signature')
       }
     } catch (e) {
       add('discovery.card.shape', 'failed', errMsg(e))
@@ -150,7 +134,7 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
   try {
     const { status, json } = await ctx.http(
       'GET',
-      `/glyphs/${encodeURIComponent(probeName)}?depth=bogus`
+      `/glyphs/${encodeURIComponent(probeName)}?depth=bogus`,
     )
     const ok =
       status === 400 &&
@@ -160,10 +144,8 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
       'discovery.card.depthEnum',
       ok ? 'passed' : 'failed',
       ok
-        ? "depth=bogus → 400 VALIDATION_FAILED"
-        : `expected 400 VALIDATION_FAILED, got ${status} ${
-            json?.error?.code ?? ''
-          }`
+        ? 'depth=bogus → 400 VALIDATION_FAILED'
+        : `expected 400 VALIDATION_FAILED, got ${status} ${json?.error?.code ?? ''}`,
     )
   } catch (e) {
     add('discovery.card.depthEnum', 'failed', errMsg(e))
@@ -171,20 +153,15 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
 
   // 8. NOT_FOUND envelope for an unknown glyph
   try {
-    const { status, json } = await ctx.http(
-      'GET',
-      '/glyphs/__conformance_unknown__'
-    )
+    const { status, json } = await ctx.http('GET', '/glyphs/__conformance_unknown__')
     const ok =
-      status === 404 &&
-      ctx.validators.glyphError(json) === true &&
-      json.error.code === 'NOT_FOUND'
+      status === 404 && ctx.validators.glyphError(json) === true && json.error.code === 'NOT_FOUND'
     add(
       'discovery.error.notFound',
       ok ? 'passed' : 'failed',
       ok
         ? 'unknown glyph → 404 NOT_FOUND'
-        : `expected 404 NOT_FOUND, got ${status} ${json?.error?.code ?? ''}`
+        : `expected 404 NOT_FOUND, got ${status} ${json?.error?.code ?? ''}`,
     )
   } catch (e) {
     add('discovery.error.notFound', 'failed', errMsg(e))
@@ -204,7 +181,7 @@ export const discoveryLevel: LevelRunner = async (ctx) => {
       ok ? 'passed' : 'failed',
       ok
         ? 'bundled Sanitization schema validates representative samples'
-        : 'bundled Sanitization schema is inconsistent'
+        : 'bundled Sanitization schema is inconsistent',
     )
   } catch (e) {
     add('discovery.schema.sanitization', 'failed', errMsg(e))

@@ -26,7 +26,7 @@ const steps = [
 // Conformance:self runs the full 4-level suite against an in-process
 // reference server with the standard fixture glyphs registered.
 const rootPkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'))
-if (rootPkg.scripts && rootPkg.scripts['conformance:self']) {
+if (rootPkg.scripts?.['conformance:self']) {
   steps.push({
     name: 'conformance:self',
     cmd: 'pnpm',

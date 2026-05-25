@@ -1,11 +1,7 @@
 import { appendFile } from 'node:fs/promises'
-import { GlyphServer, defineGlyph } from '@glyphp/server'
-import {
-  buildKeyEntry,
-  buildKeyRegistry,
-  StaticKeyRegistry,
-} from '@glyphp/core'
 import { registerFixtures } from '@glyphp/conformance'
+import { buildKeyEntry, buildKeyRegistry, StaticKeyRegistry } from '@glyphp/core'
+import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { z } from 'zod'
 
 function required(name: string): string {
@@ -55,7 +51,7 @@ const server = new GlyphServer({
   keyRegistry: new StaticKeyRegistry(registry),
   onCall: (receipt) => {
     // Append-only audit trail. In production, ship this to your SIEM as well.
-    appendFile(auditLog, JSON.stringify(receipt) + '\n').catch((err) => {
+    appendFile(auditLog, `${JSON.stringify(receipt)}\n`).catch((err) => {
       console.error('[glyph] audit append failed:', err)
     })
   },

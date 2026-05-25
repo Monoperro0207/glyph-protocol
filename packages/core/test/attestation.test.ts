@@ -1,5 +1,6 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import type { CardAttestation, GlyphCard } from '@glyphp/types'
 import {
   computeGlyphId,
   diffCards,
@@ -8,7 +9,6 @@ import {
   verifyAttestation,
   verifyGlyph,
 } from '../src/index.js'
-import type { CardAttestation, GlyphCard } from '@glyphp/types'
 
 const baseCard = {
   version: '1.0.0',
@@ -38,10 +38,7 @@ test('omitting attestation produces the same id as before — backwards compatib
   // SHA-256 of the canonical content for this exact card. Snapshot to lock
   // backwards compatibility: if this value ever changes for a card that does
   // NOT carry an attestation, we broke 0.2-era pins.
-  assert.equal(
-    id,
-    computeGlyphId({ ...baseCard, attestation: undefined })
-  )
+  assert.equal(id, computeGlyphId({ ...baseCard, attestation: undefined }))
   assert.equal(id.length, 64) // sha256 hex
 })
 
@@ -59,7 +56,7 @@ test('changing the attestation payload changes the id', () => {
   const b: CardAttestation = { type: 'sigstore-bundle', payload: 'BBBB' }
   assert.notEqual(
     computeGlyphId({ ...baseCard, attestation: a }),
-    computeGlyphId({ ...baseCard, attestation: b })
+    computeGlyphId({ ...baseCard, attestation: b }),
   )
 })
 

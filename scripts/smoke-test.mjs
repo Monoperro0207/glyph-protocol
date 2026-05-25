@@ -11,15 +11,9 @@
  * because tests run from `src`.
  */
 import { execFileSync } from 'node:child_process'
-import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  readFileSync,
-  rmSync,
-} from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -107,9 +101,7 @@ try {
   const tarballOf = {}
   for (const dir of PKG_DIRS) {
     const pkgPath = join(repoRoot, dir)
-    const { name, version } = JSON.parse(
-      readFileSync(join(pkgPath, 'package.json'), 'utf8')
-    )
+    const { name, version } = JSON.parse(readFileSync(join(pkgPath, 'package.json'), 'utf8'))
     run('pnpm', ['pack', '--pack-destination', tarDir], pkgPath)
     const tarball = `${name.replace('@', '').replace('/', '-')}-${version}.tgz`
     const ref = `file:${join(tarDir, tarball)}`
@@ -120,7 +112,7 @@ try {
 
   writeFileSync(
     join(proj, 'package.json'),
-    JSON.stringify(
+    `${JSON.stringify(
       {
         name: 'glyph-smoke',
         private: true,
@@ -134,8 +126,8 @@ try {
         pnpm: { overrides },
       },
       null,
-      2
-    ) + '\n'
+      2,
+    )}\n`,
   )
   writeFileSync(join(proj, 'smoke.mjs'), SMOKE_APP)
 

@@ -23,15 +23,14 @@ export interface CallerPrincipal {
  * to "anonymous, no scopes" and any glyph declaring `requiredScopes` is
  * rejected with `403 INSUFFICIENT_SCOPE`.
  */
-export type PolicyResolver = (c: Context) =>
-  | CallerPrincipal
-  | undefined
-  | Promise<CallerPrincipal | undefined>
+export type PolicyResolver = (
+  c: Context,
+) => CallerPrincipal | undefined | Promise<CallerPrincipal | undefined>
 
 /** Returns the scopes the caller is missing for a given glyph card. */
 export function missingScopes(
   required: readonly string[] | undefined,
-  caller: CallerPrincipal | undefined
+  caller: CallerPrincipal | undefined,
 ): string[] {
   if (!required || required.length === 0) return []
   const have = new Set(caller?.scopes ?? [])

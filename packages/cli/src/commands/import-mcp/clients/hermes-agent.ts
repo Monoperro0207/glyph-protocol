@@ -18,7 +18,7 @@ export const hermesAgentAdapter: ClientAdapter = {
   async load() {
     throw new Error(
       'hermes-agent: import not implemented yet — the cli-config.yaml MCP section is not publicly schema-locked. ' +
-        'Track progress in spec/rfcs/RFC-0004-import-clients.md, or pass --command/--url as a manual target.'
+        'Track progress in spec/rfcs/RFC-0004-import-clients.md, or pass --command/--url as a manual target.',
     )
   },
 }

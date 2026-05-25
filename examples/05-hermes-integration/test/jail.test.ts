@@ -1,8 +1,8 @@
-import { test, afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, rm, symlink, writeFile, readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { afterEach, beforeEach, test } from 'node:test'
 import { createJail } from '../jail.js'
 
 let root: string
@@ -36,37 +36,25 @@ test('jailedReadPath rejects ../ traversal', async () => {
 test('jailedReadPath rejects symlink to a file outside the workspace (audit H1 read)', async () => {
   await symlink(join(outside, 'secret.txt'), join(root, 'escape'))
   const { jailedReadPath } = createJail({ root })
-  await assert.rejects(
-    () => jailedReadPath('escape'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedReadPath('escape'), /escapes workspace/)
 })
 
 test('jailedReadPath rejects symlink to a directory outside the workspace', async () => {
   await symlink(outside, join(root, 'escape-dir'))
   const { jailedReadPath } = createJail({ root })
-  await assert.rejects(
-    () => jailedReadPath('escape-dir'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedReadPath('escape-dir'), /escapes workspace/)
 })
 
 test('jailedWritePath rejects writes through a symlink pointing outside (audit H1 write)', async () => {
   await symlink(join(outside, 'target.txt'), join(root, 'outside-write'))
   const { jailedWritePath } = createJail({ root })
-  await assert.rejects(
-    () => jailedWritePath('outside-write'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedWritePath('outside-write'), /escapes workspace/)
 })
 
 test('jailedWritePath rejects writes whose parent is a symlink escaping', async () => {
   await symlink(outside, join(root, 'escape-dir'))
   const { jailedWritePath } = createJail({ root })
-  await assert.rejects(
-    () => jailedWritePath('escape-dir/new.txt'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedWritePath('escape-dir/new.txt'), /escapes workspace/)
 })
 
 test('jailedWritePath allows fresh file creation inside the workspace', async () => {
@@ -82,10 +70,7 @@ test('jailedWritePath rejects writes through a symlink CHAIN escaping (audit 3)'
   await symlink(join(outside, 'target.txt'), join(root, 'subdir', 'inner-link'))
   await symlink(join(root, 'subdir', 'inner-link'), join(root, 'outer-link'))
   const { jailedWritePath } = createJail({ root })
-  await assert.rejects(
-    () => jailedWritePath('outer-link'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedWritePath('outer-link'), /escapes workspace/)
 })
 
 test('jailedWritePath rejects dangling symlink chain escaping (audit 3)', async () => {
@@ -93,8 +78,5 @@ test('jailedWritePath rejects dangling symlink chain escaping (audit 3)', async 
   await symlink(join(outside, 'nonexistent.txt'), join(root, 'subdir', 'inner-link2'))
   await symlink(join(root, 'subdir', 'inner-link2'), join(root, 'outer-link2'))
   const { jailedWritePath } = createJail({ root })
-  await assert.rejects(
-    () => jailedWritePath('outer-link2'),
-    /escapes workspace/
-  )
+  await assert.rejects(() => jailedWritePath('outer-link2'), /escapes workspace/)
 })

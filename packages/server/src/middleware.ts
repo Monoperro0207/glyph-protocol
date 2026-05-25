@@ -1,6 +1,6 @@
-import type { Context, MiddlewareHandler } from 'hono'
-import { getConnInfo } from '@hono/node-server/conninfo'
 import { createHash, timingSafeEqual } from 'node:crypto'
+import { getConnInfo } from '@hono/node-server/conninfo'
+import type { Context, MiddlewareHandler } from 'hono'
 import { errorResponse } from './errors.js'
 
 export interface AuthConfig {
@@ -67,7 +67,7 @@ export function authMiddleware(config: AuthConfig): MiddlewareHandler {
  */
 export function rateLimitMiddleware(
   config: RateLimitConfig,
-  verifyToken?: (token: string) => boolean
+  verifyToken?: (token: string) => boolean,
 ): MiddlewareHandler {
   const hits = new Map<string, { count: number; resetAt: number }>()
   return async (c, next) => {
@@ -93,10 +93,7 @@ export function rateLimitMiddleware(
   }
 }
 
-function clientKey(
-  c: Context,
-  verifyToken?: (token: string) => boolean
-): string {
+function clientKey(c: Context, verifyToken?: (token: string) => boolean): string {
   const token = bearerToken(c)
   // Only a verified token earns its own bucket. An unverified or absent token
   // falls back to the remote IP — otherwise rotating fake tokens defeats the

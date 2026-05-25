@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto'
 /**
  * Generates canonical test vectors used by every SDK (TypeScript, Python,
  * Go, …) to verify that they implement the protocol identically.
@@ -13,12 +14,11 @@
  * canonical form, hashing, signature, or sanitization changes — the SDKs'
  * test suites will fail loudly if anyone forgets.
  */
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createHash } from 'node:crypto'
+import { canonicalHash, canonicalize, sanitize } from '@glyphp/core'
 import * as ed from '@noble/ed25519'
-import { canonicalize, canonicalHash, sanitize } from '@glyphp/core'
 
 // Sync sha512 needed for synchronous ed25519 usage.
 ed.etc.sha512Sync = (...msgs) => {
@@ -56,7 +56,7 @@ const canonicalVectors = canonicalCases.map(({ name, input }) => ({
 }))
 writeFileSync(
   join(outDir, 'canonicalize-vectors.json'),
-  JSON.stringify({ generated: new Date().toISOString(), cases: canonicalVectors }, null, 2) + '\n'
+  `${JSON.stringify({ generated: new Date().toISOString(), cases: canonicalVectors }, null, 2)}\n`,
 )
 
 // ---------- 2. hashing -----------------------------------------------------
@@ -68,7 +68,7 @@ const hashingVectors = canonicalCases.map(({ name, input }) => ({
 }))
 writeFileSync(
   join(outDir, 'hashing-vectors.json'),
-  JSON.stringify({ generated: new Date().toISOString(), cases: hashingVectors }, null, 2) + '\n'
+  `${JSON.stringify({ generated: new Date().toISOString(), cases: hashingVectors }, null, 2)}\n`,
 )
 
 // ---------- 3. signatures --------------------------------------------------
@@ -107,7 +107,7 @@ for (const privHex of fixedKeys) {
 }
 writeFileSync(
   join(outDir, 'signature-vectors.json'),
-  JSON.stringify({ generated: new Date().toISOString(), cases: signatureVectors }, null, 2) + '\n'
+  `${JSON.stringify({ generated: new Date().toISOString(), cases: signatureVectors }, null, 2)}\n`,
 )
 
 // ---------- 4. sanitize ----------------------------------------------------
@@ -131,7 +131,7 @@ const sanitizeVectors = sanitizeCases.map(({ name, input }) => {
 })
 writeFileSync(
   join(outDir, 'sanitize-vectors.json'),
-  JSON.stringify({ generated: new Date().toISOString(), cases: sanitizeVectors }, null, 2) + '\n'
+  `${JSON.stringify({ generated: new Date().toISOString(), cases: sanitizeVectors }, null, 2)}\n`,
 )
 
 console.log(`Wrote canonical vectors to ${outDir}`)

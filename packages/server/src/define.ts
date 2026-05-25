@@ -1,7 +1,7 @@
-import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { computeGlyphId } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
+import type { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 
 /**
  * Runtime context handed to a glyph handler. `signal` aborts when the call
@@ -43,9 +43,10 @@ export function defineGlyph<TInput, TOutput>(config: {
 }): GlyphDefinition<TInput, TOutput> {
   // An empty array would change the card id and feel weird; treat it as
   // "no scopes declared" so the canonical content omits the field.
-  const scopes = config.requiredScopes && config.requiredScopes.length > 0
-    ? [...config.requiredScopes]
-    : undefined
+  const scopes =
+    config.requiredScopes && config.requiredScopes.length > 0
+      ? [...config.requiredScopes]
+      : undefined
   const partial: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'> = {
     version: '1.0.0',
     name: config.name,

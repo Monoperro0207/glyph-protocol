@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { glyphsFromOpenApi } from '../src/index.js'
 import type { OpenApiDoc } from '../src/openapi-types.js'
 
@@ -77,7 +77,9 @@ function byName(name: string) {
 }
 
 test('generates one glyph per operation with kebab-case names', () => {
-  const names = glyphs().map((g) => g.card.name).sort()
+  const names = glyphs()
+    .map((g) => g.card.name)
+    .sort()
   assert.deepEqual(names, ['create-pet', 'delete-pet', 'get-pet-by-id', 'list-pets'])
 })
 
@@ -213,10 +215,7 @@ test('input schema enforces enums, typed arrays and nested objects', () => {
   // a typed array rejects a wrong element type
   assert.equal(schema.safeParse({ ...ok, ids: ['nope'] }).success, false)
   // a nested required field is enforced
-  assert.equal(
-    schema.safeParse({ ...ok, body: { filter: {} } }).success,
-    false
-  )
+  assert.equal(schema.safeParse({ ...ok, body: { filter: {} } }).success, false)
 })
 
 // ---- output validation against the declared response schema ----------------
@@ -316,15 +315,18 @@ test('header params are forwarded to fetch', async () => {
     return { ok: true, status: 200, text: async () => '' } as any
   }) as any
   try {
-    await glyph.handler({ 'X-Tenant': 'acme', session: 'abc', tag: ['a', 'b'] }, {
-      signal: new AbortController().signal,
-    })
+    await glyph.handler(
+      { 'X-Tenant': 'acme', session: 'abc', tag: ['a', 'b'] },
+      {
+        signal: new AbortController().signal,
+      },
+    )
   } finally {
     globalThis.fetch = realFetch
   }
   assert.ok(observed)
   assert.equal((observed as any).init.headers['X-Tenant'], 'acme')
-  assert.equal((observed as any).init.headers['Cookie'], 'session=abc')
+  assert.equal((observed as any).init.headers.Cookie, 'session=abc')
   // array query expanded into repeated keys
   assert.match((observed as any).url, /tag=a&tag=b/)
 })
@@ -363,7 +365,7 @@ test('security: bearer scheme adds Authorization header', async () => {
   } finally {
     globalThis.fetch = realFetch
   }
-  assert.equal(observed.headers['Authorization'], 'Bearer tok123')
+  assert.equal(observed.headers.Authorization, 'Bearer tok123')
 })
 
 test('security: apiKey-in-header scheme adds custom header', async () => {

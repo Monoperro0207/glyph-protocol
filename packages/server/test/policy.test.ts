@@ -6,11 +6,12 @@
  * scopes (and an optional tenant). The handler runs only when the caller
  * has every required scope.
  */
-import { test } from 'node:test'
+
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { z } from 'zod'
-import { defineGlyph, GlyphServer } from '../src/index.js'
 import type { PolicyResolver } from '../src/index.js'
+import { defineGlyph, GlyphServer } from '../src/index.js'
 
 const SCOPED = defineGlyph({
   name: 'reports.read',

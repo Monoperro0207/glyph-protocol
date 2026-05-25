@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { z } from 'zod'
 import { runConformance } from '../src/index.js'
 
 const server = new GlyphServer()
@@ -20,7 +20,7 @@ server.register(
     output: z.object({ value: z.string() }),
     provider: 'conformance-fixture',
     handler: async (input) => input,
-  })
+  }),
 )
 
 test('a spec-compliant server passes the discovery level', async () => {
@@ -30,11 +30,7 @@ test('a spec-compliant server passes the discovery level', async () => {
   })
   for (const check of report.checks) {
     if (check.status === 'skipped') continue
-    assert.equal(
-      check.status,
-      'passed',
-      `${check.name}: ${check.detail}`
-    )
+    assert.equal(check.status, 'passed', `${check.name}: ${check.detail}`)
   }
   assert.equal(report.passed, true)
   assert.ok(report.compatibility.includes('discovery'))

@@ -25,11 +25,15 @@
     "verify": "node scripts/verify.mjs",
     "verify:full": "node scripts/verify.mjs --full",
     "coverage": "c8 --reporter=text --reporter=lcov tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts examples/05-hermes-integration/test/*.test.ts",
+    "lint": "biome lint --write .",
+    "format": "biome format --write .",
+    "check": "biome check .",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@changesets/cli": "^2.31.0",
     "@glyphp/conformance": "workspace:*",
     "@glyphp/core": "workspace:*",

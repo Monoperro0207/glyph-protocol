@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { compileJsonSchema } from '../src/json-schema-validator.js'
 
 // --- helpers ---
@@ -44,9 +44,7 @@ test('schema with > 1000 total nodes throws SCHEMA_TOO_COMPLEX', () => {
   const schema = buildManyNodes(335)
   assert.throws(
     () => compileJsonSchema(schema),
-    (err: Error) =>
-      err.message.includes('SCHEMA_TOO_COMPLEX') ||
-      /too complex/i.test(err.message)
+    (err: Error) => err.message.includes('SCHEMA_TOO_COMPLEX') || /too complex/i.test(err.message),
   )
 })
 
@@ -54,9 +52,7 @@ test('schema with > 32 depth throws SCHEMA_TOO_COMPLEX', () => {
   const schema = buildDeepSchema(50)
   assert.throws(
     () => compileJsonSchema(schema),
-    (err: Error) =>
-      err.message.includes('SCHEMA_TOO_COMPLEX') ||
-      /too complex/i.test(err.message)
+    (err: Error) => err.message.includes('SCHEMA_TOO_COMPLEX') || /too complex/i.test(err.message),
   )
 })
 

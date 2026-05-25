@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { PROTOCOL_VERSION } from '@glyphp/types'
+import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
 const server = new GlyphServer()
@@ -20,7 +20,7 @@ server.register(
     output: z.object({}),
     provider: 'test',
     handler: async () => ({}),
-  })
+  }),
 )
 
 async function handshake(body: unknown) {
@@ -29,7 +29,7 @@ async function handshake(body: unknown) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
-    })
+    }),
   )
   return { status: res.status, body: (await res.json()) as any }
 }

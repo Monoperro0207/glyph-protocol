@@ -1,18 +1,14 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { z } from 'zod'
+import { test } from 'node:test'
+import { generateKeyPair, signManifest } from '@glyphp/core'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
 import type { GlyphCard, UpdateManifest } from '@glyphp/types'
-import { generateKeyPair, signManifest } from '@glyphp/core'
-import {
-  runPinsApprove,
-  runPinsList,
-  runPinsRevoke,
-} from '../src/commands/pins.js'
+import { z } from 'zod'
 import { runManifestVerify } from '../src/commands/manifest.js'
+import { runPinsApprove, runPinsList, runPinsRevoke } from '../src/commands/pins.js'
 
 const server = new GlyphServer()
 server.register(
@@ -30,13 +26,11 @@ server.register(
     output: z.object({ greeting: z.string() }),
     provider: 'test',
     handler: async () => ({ greeting: 'hi' }),
-  })
+  }),
 )
 
 async function fetchCard(): Promise<GlyphCard> {
-  const res = await server.fetch(
-    new Request('http://glyph/glyphs/greet?depth=rich')
-  )
+  const res = await server.fetch(new Request('http://glyph/glyphs/greet?depth=rich'))
   return (await res.json()) as GlyphCard
 }
 
@@ -90,10 +84,7 @@ test('revoke flips the status; approve refuses to reinstate without flag', async
     assert.match(revoked.report, /Revoked "greet"/)
     assert.match(revoked.report, /rotation/)
 
-    await assert.rejects(
-      runPinsApprove(cardFile, { file: pinFile }),
-      /revoked/i
-    )
+    await assert.rejects(runPinsApprove(cardFile, { file: pinFile }), /revoked/i)
 
     const reinstated = await runPinsApprove(cardFile, {
       file: pinFile,

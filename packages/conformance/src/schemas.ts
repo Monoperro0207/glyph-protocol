@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { Ajv2020 } from 'ajv/dist/2020.js'
 import type { ValidateFunction } from 'ajv'
+import { Ajv2020 } from 'ajv/dist/2020.js'
 
 // Schemas are bundled with this package (a copy of spec/schemas/, kept in
 // sync by test/schemas.test.ts). Loaded relative to this module so it works

@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 import { writeFileSync } from 'node:fs'
-import {
-  runConformance,
-  formatReport,
-  formatReportMarkdown,
-  ALL_LEVELS,
-} from './conformance.js'
+import { ALL_LEVELS, formatReport, formatReportMarkdown, runConformance } from './conformance.js'
 import type { ConformanceLevel, FixtureGlyphs } from './types.js'
 
 interface Args {
@@ -25,12 +20,13 @@ function parseArgs(argv: string[]): Args {
     if (arg === '--help' || arg === '-h') out.help = true
     else if (arg === '--level' || arg === '--levels') {
       const value = argv[++i] ?? ''
-      out.levels = value === 'all'
-        ? Array.from(ALL_LEVELS)
-        : value
-            .split(',')
-            .map((s) => s.trim() as ConformanceLevel)
-            .filter((s) => (ALL_LEVELS as readonly string[]).includes(s))
+      out.levels =
+        value === 'all'
+          ? Array.from(ALL_LEVELS)
+          : value
+              .split(',')
+              .map((s) => s.trim() as ConformanceLevel)
+              .filter((s) => (ALL_LEVELS as readonly string[]).includes(s))
     } else if (arg === '--output') out.output = argv[++i]
     else if (arg === '--markdown') out.markdown = argv[++i]
     else if (arg === '--auth-token') out.authToken = argv[++i]
@@ -70,7 +66,7 @@ if (args.help || !args.baseUrl) {
       'example: glyph-conformance http://localhost:3100 --level all \\',
       '           --fixture-echo conformance-echo \\',
       '           --output report.json --markdown report.md',
-    ].join('\n')
+    ].join('\n'),
   )
   process.exit(args.baseUrl ? 0 : 2)
 }

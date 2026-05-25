@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { glyphsFromMcpTools, glyphsFromMcpClient } from '../src/index.js'
+import { test } from 'node:test'
 import type { McpCallFn, McpClientLike, McpTool } from '../src/index.js'
+import { glyphsFromMcpClient, glyphsFromMcpTools } from '../src/index.js'
 
 const sampleTools: McpTool[] = [
   {
@@ -36,10 +36,11 @@ const noopCall: McpCallFn = async () => ({ structuredContent: null })
 
 test('converts every MCP tool to a glyph with a kebab-case name', () => {
   const glyphs = glyphsFromMcpTools(sampleTools, noopCall)
-  assert.deepEqual(
-    glyphs.map((g) => g.card.name).sort(),
-    ['delete-file', 'search-docs', 'write-file']
-  )
+  assert.deepEqual(glyphs.map((g) => g.card.name).sort(), [
+    'delete-file',
+    'search-docs',
+    'write-file',
+  ])
 })
 
 test('maps the MCP description to the glyph intent', () => {
@@ -50,38 +51,31 @@ test('maps the MCP description to the glyph intent', () => {
 
 test('maps readOnlyHint to a safe, side-effect-free cost', () => {
   const search = glyphsFromMcpTools(sampleTools, noopCall).find(
-    (g) => g.card.name === 'search-docs'
+    (g) => g.card.name === 'search-docs',
   )!
   assert.equal(search.card.cost.riskTier, 'safe')
   assert.equal(search.card.cost.sideEffects, false)
 })
 
 test('maps destructiveHint to a danger tier requiring confirmation', () => {
-  const del = glyphsFromMcpTools(sampleTools, noopCall).find(
-    (g) => g.card.name === 'delete-file'
-  )!
+  const del = glyphsFromMcpTools(sampleTools, noopCall).find((g) => g.card.name === 'delete-file')!
   assert.equal(del.card.cost.riskTier, 'danger')
   assert.equal(del.card.cost.requiresConfirmation, true)
 })
 
 test('defaults to the caution tier when there are no annotations', () => {
-  const glyphs = glyphsFromMcpTools(
-    [{ name: 'mystery', description: 'does something' }],
-    noopCall
-  )
+  const glyphs = glyphsFromMcpTools([{ name: 'mystery', description: 'does something' }], noopCall)
   assert.equal(glyphs[0].card.cost.riskTier, 'caution')
 })
 
 test('maps idempotentHint to the glyph idempotent flag', () => {
-  const write = glyphsFromMcpTools(sampleTools, noopCall).find(
-    (g) => g.card.name === 'write-file'
-  )!
+  const write = glyphsFromMcpTools(sampleTools, noopCall).find((g) => g.card.name === 'write-file')!
   assert.equal(write.card.idempotent, true)
 })
 
 test('carries the MCP inputSchema onto the card', () => {
   const search = glyphsFromMcpTools(sampleTools, noopCall).find(
-    (g) => g.card.name === 'search-docs'
+    (g) => g.card.name === 'search-docs',
   )!
   assert.deepEqual(search.card.input, sampleTools[0].inputSchema)
 })
@@ -144,7 +138,7 @@ test('a dangerous tool name overrides a lying readOnlyHint', () => {
         annotations: { readOnlyHint: true },
       },
     ],
-    noopCall
+    noopCall,
   )
   assert.equal(glyph.card.cost.riskTier, 'danger')
   assert.equal(glyph.card.cost.requiresConfirmation, true)
@@ -170,18 +164,12 @@ test('input schema enforces enums and nested objects from the MCP tool', () => {
         },
       },
     ],
-    noopCall
+    noopCall,
   )
   const schema = glyph.inputSchema
-  assert.equal(
-    schema.safeParse({ mode: 'auto', target: { id: 'x' } }).success,
-    true
-  )
+  assert.equal(schema.safeParse({ mode: 'auto', target: { id: 'x' } }).success, true)
   // enum rejects an out-of-set value
-  assert.equal(
-    schema.safeParse({ mode: 'invalid', target: { id: 'x' } }).success,
-    false
-  )
+  assert.equal(schema.safeParse({ mode: 'invalid', target: { id: 'x' } }).success, false)
   // a nested required field is enforced
   assert.equal(schema.safeParse({ mode: 'on', target: {} }).success, false)
 })
@@ -195,7 +183,7 @@ test('a benign tool name keeps its honest readOnlyHint', () => {
         annotations: { readOnlyHint: true },
       },
     ],
-    noopCall
+    noopCall,
   )
   assert.equal(glyph.card.cost.riskTier, 'safe')
 })

@@ -1,4 +1,4 @@
-export type { Scorer, ResolverMatch } from './resolver.js'
-export { LexicalScorer, GlyphResolver } from './resolver.js'
 export type { EmbedFn } from './embedding.js'
-export { EmbeddingScorer, createTransformersScorer } from './embedding.js'
+export { createTransformersScorer, EmbeddingScorer } from './embedding.js'
+export type { ResolverMatch, Scorer } from './resolver.js'
+export { GlyphResolver, LexicalScorer } from './resolver.js'

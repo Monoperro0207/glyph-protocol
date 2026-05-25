@@ -1,12 +1,10 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { fromLexicon, glyphsAsVercelAiTools } from '../src/index.js'
 
 const fakeClient = {
   async getLexicon() {
-    return [
-      { id: 'a', name: 'echo', intent: 'Echo', tags: [], riskTier: 'safe' as const },
-    ]
+    return [{ id: 'a', name: 'echo', intent: 'Echo', tags: [], riskTier: 'safe' as const }]
   },
   async call(name: string, input: unknown) {
     return {
@@ -18,7 +16,14 @@ const fakeClient = {
     }
   },
   async prepare(_name: string, _input: unknown) {
-    return { confirmationToken: 'tok', cost: {}, glyphId: 'a', name: 'echo', input: {}, expiresAt: 'now' }
+    return {
+      confirmationToken: 'tok',
+      cost: {},
+      glyphId: 'a',
+      name: 'echo',
+      input: {},
+      expiresAt: 'now',
+    }
   },
 }
 
@@ -40,10 +45,9 @@ test('tool execute calls the glyph and returns payload', async () => {
 
 // --- glyphsAsVercelAiTools: real schema + safe confirmation contract ---
 
-function makeRichClient(opts: {
-  callBehavior?: 'ok' | 'requires-confirmation'
-  cardInput?: unknown
-} = {}) {
+function makeRichClient(
+  opts: { callBehavior?: 'ok' | 'requires-confirmation'; cardInput?: unknown } = {},
+) {
   let callCount = 0
   const calls: Array<{ name: string; input: unknown; confirmationToken?: string }> = []
   return {
@@ -52,7 +56,9 @@ function makeRichClient(opts: {
       return callCount
     },
     async getLexicon() {
-      return [{ id: 'a', name: 'send', intent: 'Send a message', tags: [], riskTier: 'caution' as const }]
+      return [
+        { id: 'a', name: 'send', intent: 'Send a message', tags: [], riskTier: 'caution' as const },
+      ]
     },
     async getCard(_name: string, _depth?: string) {
       return {
@@ -106,10 +112,7 @@ test('onConfirmation returning false does NOT authorize the call', async () => {
   const tools = await glyphsAsVercelAiTools(client as any, {
     onConfirmation: async () => false,
   })
-  await assert.rejects(
-    () => tools.send.execute({ to: 'a', body: 'b' }),
-    /confirmation required/
-  )
+  await assert.rejects(() => tools.send.execute({ to: 'a', body: 'b' }), /confirmation required/)
   // 1 call: only the initial CONFIRMATION_REQUIRED attempt. No second call.
   assert.equal(client.callCount, 1)
 })

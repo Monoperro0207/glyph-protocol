@@ -1,14 +1,11 @@
-import { writeFileSync } from 'node:fs'
 import {
   buildKeyEntry,
   buildKeyRegistry,
-  fingerprintKey,
-  generateKeyPair,
   FileKeyRegistry,
-  resolveKey,
+  generateKeyPair,
   verifyKeyRegistry,
 } from '@glyphp/core'
-import type { KeyEntry, KeyRegistry } from '@glyphp/types'
+import type { KeyEntry } from '@glyphp/types'
 
 interface KeysCommandOptions {
   file: string
@@ -25,9 +22,7 @@ export async function runKeysInit(options: KeysCommandOptions): Promise<{
   ok: boolean
   report: string
 }> {
-  const serverId =
-    options.serverId ??
-    `glyph-${Math.random().toString(36).slice(2, 10)}.local`
+  const serverId = options.serverId ?? `glyph-${Math.random().toString(36).slice(2, 10)}.local`
   const kp = generateKeyPair()
   const entry = buildKeyEntry(kp.publicKey, new Date().toISOString())
   const registry = buildKeyRegistry({
@@ -60,7 +55,7 @@ export async function runKeysInit(options: KeysCommandOptions): Promise<{
  * operator looks it up from their secret manager).
  */
 export async function runKeysRotate(
-  options: KeysCommandOptions & { previousPrivateKey: string }
+  options: KeysCommandOptions & { previousPrivateKey: string },
 ): Promise<{ ok: boolean; report: string }> {
   const file = new FileKeyRegistry(options.file)
   const current = await file.registry()
@@ -75,7 +70,7 @@ export async function runKeysRotate(
     privateKey: options.previousPrivateKey,
   })
   const retiredEntries: KeyEntry[] = current.keys.map((k) =>
-    k.fingerprint === activeEntry.fingerprint ? { ...k, validUntil: now } : k
+    k.fingerprint === activeEntry.fingerprint ? { ...k, validUntil: now } : k,
   )
   const next = buildKeyRegistry({
     serverId: current.serverId,
@@ -104,7 +99,7 @@ export async function runKeysRotate(
  */
 export async function runKeysRevoke(
   fingerprint: string,
-  options: KeysCommandOptions & { activePrivateKey: string }
+  options: KeysCommandOptions & { activePrivateKey: string },
 ): Promise<{ ok: boolean; report: string }> {
   const file = new FileKeyRegistry(options.file)
   const current = await file.registry()
@@ -120,9 +115,7 @@ export async function runKeysRevoke(
   }
   const now = new Date().toISOString()
   const updated: KeyEntry[] = current.keys.map((k) =>
-    k.fingerprint === fingerprint
-      ? { ...k, revokedAt: now, revocationReason: options.reason }
-      : k
+    k.fingerprint === fingerprint ? { ...k, revokedAt: now, revocationReason: options.reason } : k,
   )
   const next = buildKeyRegistry({
     serverId: current.serverId,
@@ -162,17 +155,13 @@ export async function runKeysList(options: { file: string }): Promise<{
     `keys (${registry.keys.length}):`,
   ]
   for (const entry of registry.keys) {
-    const tag = entry.revokedAt
-      ? 'REVOKED'
-      : entry.validUntil
-        ? 'retired'
-        : 'active'
+    const tag = entry.revokedAt ? 'REVOKED' : entry.validUntil ? 'retired' : 'active'
     lines.push(
       `  [${tag}] ${entry.fingerprint}  validFrom=${entry.validFrom}` +
         (entry.validUntil ? `  validUntil=${entry.validUntil}` : '') +
         (entry.revokedAt ? `  revokedAt=${entry.revokedAt}` : '') +
         (entry.revocationReason ? `  reason=${entry.revocationReason}` : '') +
-        (entry.signedBy ? `  signedBy=${entry.signedBy}` : '  (genesis)')
+        (entry.signedBy ? `  signedBy=${entry.signedBy}` : '  (genesis)'),
     )
   }
   return { ok: true, report: lines.join('\n') }

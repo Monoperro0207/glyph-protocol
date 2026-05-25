@@ -1,7 +1,7 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
-import { createInterface } from 'node:readline/promises'
-import { stdin, stdout } from 'node:process'
 import { join } from 'node:path'
+import { stdin, stdout } from 'node:process'
+import { createInterface } from 'node:readline/promises'
 
 export type InitProfile =
   | 'local-dev'
@@ -13,20 +13,19 @@ export type InitProfile =
   // Legacy alias for agent-ts kept so older invocations keep working.
   | 'consumer-agent'
 
-const TSCONFIG =
-  JSON.stringify(
-    {
-      compilerOptions: {
-        target: 'ES2022',
-        module: 'NodeNext',
-        moduleResolution: 'NodeNext',
-        strict: true,
-        skipLibCheck: true,
-      },
+const TSCONFIG = `${JSON.stringify(
+  {
+    compilerOptions: {
+      target: 'ES2022',
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      strict: true,
+      skipLibCheck: true,
     },
-    null,
-    2
-  ) + '\n'
+  },
+  null,
+  2,
+)}\n`
 
 // ---- local-dev (the original scaffold, kept as default) -------------------
 
@@ -213,7 +212,12 @@ const PYTHON_REQUIREMENTS = `glyph-protocol>=1.0.0,<2.0.0
 
 const PROFILES: Record<
   InitProfile,
-  { entry: string; entryFile: string; pkg: Record<string, unknown>; extras?: Record<string, string> }
+  {
+    entry: string
+    entryFile: string
+    pkg: Record<string, unknown>
+    extras?: Record<string, string>
+  }
 > = {
   'local-dev': {
     entry: LOCAL_DEV_SERVER,
@@ -319,7 +323,7 @@ const PROFILES: Record<
 /** Scaffolds a Glyph project into `dir` using the chosen profile. */
 export async function runInit(
   dir: string,
-  options: { profile?: InitProfile } = {}
+  options: { profile?: InitProfile } = {},
 ): Promise<string> {
   // Production-server is the default since v1.0 so a fresh scaffold uses
   // stable keys, auth, rate limiting and a pin store out of the box. Pass
@@ -328,7 +332,7 @@ export async function runInit(
   const cfg = PROFILES[profile]
   if (!cfg) {
     throw new Error(
-      `unknown profile "${profile}" — choose from: ${Object.keys(PROFILES).join(', ')}`
+      `unknown profile "${profile}" — choose from: ${Object.keys(PROFILES).join(', ')}`,
     )
   }
 
@@ -338,16 +342,14 @@ export async function runInit(
     throw new Error(`${dir} already contains a project — refusing to overwrite`)
   }
 
-  await writeFile(join(dir, 'package.json'), JSON.stringify(cfg.pkg, null, 2) + '\n')
+  await writeFile(join(dir, 'package.json'), `${JSON.stringify(cfg.pkg, null, 2)}\n`)
   await writeFile(join(dir, cfg.entryFile), cfg.entry)
   if (profile !== 'python-client') {
     await writeFile(join(dir, 'tsconfig.json'), TSCONFIG)
   }
   await writeFile(
     join(dir, '.gitignore'),
-    profile === 'python-client'
-      ? 'venv\n__pycache__\n*.pyc\n'
-      : 'node_modules\n'
+    profile === 'python-client' ? 'venv\n__pycache__\n*.pyc\n' : 'node_modules\n',
   )
   if (cfg.extras) {
     for (const [name, body] of Object.entries(cfg.extras)) {
@@ -358,35 +360,35 @@ export async function runInit(
   const nextSteps =
     profile === 'production-server'
       ? [
-          '  cd ' + dir,
+          `  cd ${dir}`,
           '  pnpm install',
           '  # Set GLYPH_PUBLIC_KEY, GLYPH_PRIVATE_KEY, GLYPH_AUTH_TOKEN in your env',
           '  pnpm start',
         ]
       : profile === 'agent-ts' || profile === 'consumer-agent'
         ? [
-            '  cd ' + dir,
+            `  cd ${dir}`,
             '  pnpm install',
             '  # Set GLYPH_SERVER_URL (and optionally GLYPH_AUTH_TOKEN)',
             '  pnpm start',
           ]
         : profile === 'mcp-bridge'
           ? [
-              '  cd ' + dir,
+              `  cd ${dir}`,
               '  pnpm install',
               '  # Point MCP_COMMAND/MCP_ARGS at the MCP server you want to re-export',
               '  pnpm start',
             ]
           : profile === 'openapi-wrapper'
             ? [
-                '  cd ' + dir,
+                `  cd ${dir}`,
                 '  pnpm install',
                 '  # Drop your OpenAPI 3.x spec at ./openapi.json and set UPSTREAM_BASE_URL',
                 '  pnpm start',
               ]
             : profile === 'python-client'
               ? [
-                  '  cd ' + dir,
+                  `  cd ${dir}`,
                   '  python -m venv venv && source venv/bin/activate',
                   '  pip install -r requirements.txt',
                   '  # Set GLYPH_SERVER_URL (and optionally GLYPH_AUTH_TOKEN)',
@@ -405,12 +407,36 @@ export async function runInit(
 
 /** Profiles offered in the interactive picker, in display order. */
 const PROMPT_CHOICES: Array<{ key: string; profile: InitProfile; label: string }> = [
-  { key: '1', profile: 'production-server', label: 'production-server  (recommended — stable key, auth, rate limit, pin store)' },
-  { key: '2', profile: 'agent-ts', label: 'agent-ts             (TypeScript consumer with pin store)' },
-  { key: '3', profile: 'mcp-bridge', label: 'mcp-bridge           (re-export an MCP server as glyphs)' },
-  { key: '4', profile: 'openapi-wrapper', label: 'openapi-wrapper      (re-export an OpenAPI 3.x spec as glyphs)' },
-  { key: '5', profile: 'python-client', label: 'python-client        (Python script using glyph-protocol on PyPI)' },
-  { key: '6', profile: 'local-dev', label: 'local-dev            (ephemeral key, no auth — prototyping only)' },
+  {
+    key: '1',
+    profile: 'production-server',
+    label: 'production-server  (recommended — stable key, auth, rate limit, pin store)',
+  },
+  {
+    key: '2',
+    profile: 'agent-ts',
+    label: 'agent-ts             (TypeScript consumer with pin store)',
+  },
+  {
+    key: '3',
+    profile: 'mcp-bridge',
+    label: 'mcp-bridge           (re-export an MCP server as glyphs)',
+  },
+  {
+    key: '4',
+    profile: 'openapi-wrapper',
+    label: 'openapi-wrapper      (re-export an OpenAPI 3.x spec as glyphs)',
+  },
+  {
+    key: '5',
+    profile: 'python-client',
+    label: 'python-client        (Python script using glyph-protocol on PyPI)',
+  },
+  {
+    key: '6',
+    profile: 'local-dev',
+    label: 'local-dev            (ephemeral key, no auth — prototyping only)',
+  },
 ]
 
 /**
@@ -426,9 +452,7 @@ export async function promptInitProfile(): Promise<InitProfile> {
       stdout.write(`  ${c.key}) ${c.label}\n`)
     }
     const answer = (await rl.question('> [1] ')).trim() || '1'
-    const match = PROMPT_CHOICES.find(
-      (c) => c.key === answer || c.profile === answer
-    )
+    const match = PROMPT_CHOICES.find((c) => c.key === answer || c.profile === answer)
     if (!match) {
       stdout.write(`Unknown choice "${answer}" — falling back to production-server.\n`)
       return 'production-server'

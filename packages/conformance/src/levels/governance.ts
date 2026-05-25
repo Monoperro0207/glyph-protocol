@@ -9,11 +9,8 @@ import type { CheckResult, LevelRunner } from '../types.js'
  */
 export const governanceLevel: LevelRunner = async (ctx) => {
   const checks: CheckResult[] = []
-  const add = (
-    name: string,
-    status: 'passed' | 'failed' | 'skipped',
-    detail: string
-  ) => checks.push({ name, level: 'governance', status, detail })
+  const add = (name: string, status: 'passed' | 'failed' | 'skipped', detail: string) =>
+    checks.push({ name, level: 'governance', status, detail })
 
   // 1. Card depth round-trip — `id` must persist across every depth so a
   //    consumer that fetched a `minimal` card later can match it against the
@@ -24,18 +21,9 @@ export const governanceLevel: LevelRunner = async (ctx) => {
     add('governance.card.depthIdentity', 'skipped', 'no glyphs advertised')
   } else {
     try {
-      const minimal = await ctx.http(
-        'GET',
-        `/glyphs/${encodeURIComponent(name)}?depth=minimal`
-      )
-      const standard = await ctx.http(
-        'GET',
-        `/glyphs/${encodeURIComponent(name)}?depth=standard`
-      )
-      const rich = await ctx.http(
-        'GET',
-        `/glyphs/${encodeURIComponent(name)}?depth=rich`
-      )
+      const minimal = await ctx.http('GET', `/glyphs/${encodeURIComponent(name)}?depth=minimal`)
+      const standard = await ctx.http('GET', `/glyphs/${encodeURIComponent(name)}?depth=standard`)
+      const rich = await ctx.http('GET', `/glyphs/${encodeURIComponent(name)}?depth=rich`)
       const ok =
         minimal.status === 200 &&
         standard.status === 200 &&
@@ -46,9 +34,7 @@ export const governanceLevel: LevelRunner = async (ctx) => {
       add(
         'governance.card.depthIdentity',
         ok ? 'passed' : 'failed',
-        ok
-          ? `'${name}' id identical across depths`
-          : 'id drifted with depth'
+        ok ? `'${name}' id identical across depths` : 'id drifted with depth',
       )
     } catch (e) {
       add('governance.card.depthIdentity', 'failed', errMsg(e))
@@ -61,10 +47,7 @@ export const governanceLevel: LevelRunner = async (ctx) => {
     add('governance.manifest', 'skipped', 'no glyphs advertised')
   } else {
     try {
-      const { status, json } = await ctx.http(
-        'GET',
-        `/glyphs/${encodeURIComponent(name)}/manifest`
-      )
+      const { status, json } = await ctx.http('GET', `/glyphs/${encodeURIComponent(name)}/manifest`)
       if (status === 404) {
         add('governance.manifest', 'skipped', 'no manifest published for this glyph')
       } else {
@@ -74,7 +57,7 @@ export const governanceLevel: LevelRunner = async (ctx) => {
           ok ? 'passed' : 'failed',
           ok
             ? 'manifest is a valid UpdateManifest'
-            : `expected 200 + UpdateManifest, got ${status}`
+            : `expected 200 + UpdateManifest, got ${status}`,
         )
       }
     } catch (e) {
@@ -87,27 +70,21 @@ export const governanceLevel: LevelRunner = async (ctx) => {
   try {
     const { status, json } = await ctx.http('GET', '/keys')
     if (status === 404) {
-      add(
-        'governance.keyRegistry',
-        'skipped',
-        'server does not publish /keys yet'
-      )
+      add('governance.keyRegistry', 'skipped', 'server does not publish /keys yet')
     } else {
       const ok =
         status === 200 &&
         Array.isArray(json?.keys) &&
         json.keys.length > 0 &&
         json.keys.every(
-          (k: any) =>
-            typeof k.fingerprint === 'string' &&
-            typeof k.publicKey === 'string'
+          (k: any) => typeof k.fingerprint === 'string' && typeof k.publicKey === 'string',
         )
       add(
         'governance.keyRegistry',
         ok ? 'passed' : 'failed',
         ok
           ? `${json.keys.length} key${json.keys.length === 1 ? '' : 's'} published`
-          : `expected 200 + KeyRegistry, got ${status}`
+          : `expected 200 + KeyRegistry, got ${status}`,
       )
     }
   } catch (e) {

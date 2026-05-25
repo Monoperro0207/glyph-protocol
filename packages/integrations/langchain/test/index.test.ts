@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { fromLexicon, glyphsAsLangChainTools } from '../src/index.js'
 
 const fakeClient = {
@@ -7,7 +7,14 @@ const fakeClient = {
     return { payload: { input }, type: 'data' }
   },
   async prepare() {
-    return { confirmationToken: 'tok', cost: {}, glyphId: 'a', name: 'x', input: {}, expiresAt: 'now' }
+    return {
+      confirmationToken: 'tok',
+      cost: {},
+      glyphId: 'a',
+      name: 'x',
+      input: {},
+      expiresAt: 'now',
+    }
   },
 }
 
@@ -33,27 +40,42 @@ function makeRichClient(opts: { requireConfirmation?: boolean } = {}) {
   const calls: Array<{ confirmationToken?: string }> = []
   return {
     calls,
-    get callCount() { return callCount },
+    get callCount() {
+      return callCount
+    },
     async getLexicon() {
       return [{ id: 'a', name: 'lookup', intent: 'Lookup', tags: [], riskTier: 'safe' as const }]
     },
     async getCard() {
       return {
-        id: 'a', name: 'lookup', intent: 'Lookup',
+        id: 'a',
+        name: 'lookup',
+        intent: 'Lookup',
         input: { type: 'object', properties: { q: { type: 'string' } }, required: ['q'] },
-        output: { type: 'object' }, tags: [], riskTier: 'safe',
+        output: { type: 'object' },
+        tags: [],
+        riskTier: 'safe',
       }
     },
     async call(_n: string, _i: unknown, options?: { confirmationToken?: string }) {
       callCount++
       calls.push({ confirmationToken: options?.confirmationToken })
       if (opts.requireConfirmation && !options?.confirmationToken) {
-        const e: any = new Error('confirm'); e.code = 'CONFIRMATION_REQUIRED'; throw e
+        const e: any = new Error('confirm')
+        e.code = 'CONFIRMATION_REQUIRED'
+        throw e
       }
       return { type: 'data', payload: { ok: true } }
     },
     async prepare() {
-      return { confirmationToken: 'real-tok', cost: {}, glyphId: 'a', name: 'lookup', input: {}, expiresAt: 'soon' }
+      return {
+        confirmationToken: 'real-tok',
+        cost: {},
+        glyphId: 'a',
+        name: 'lookup',
+        input: {},
+        expiresAt: 'soon',
+      }
     },
   }
 }

@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { computeGlyphId, generateKeyPair, signGlyph } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
 import {
@@ -13,11 +13,9 @@ import {
 type GlyphKeyPair = { publicKey: string; privateKey: string }
 
 /** Builds a fully signed card. Vary intent/riskTier/keyPair to model updates. */
-function makeCard(opts: {
-  intent?: string
-  riskTier?: 'safe' | 'caution' | 'danger'
-  keyPair?: GlyphKeyPair
-} = {}): GlyphCard {
+function makeCard(
+  opts: { intent?: string; riskTier?: 'safe' | 'caution' | 'danger'; keyPair?: GlyphKeyPair } = {},
+): GlyphCard {
   const keyPair = opts.keyPair ?? generateKeyPair()
   const partial = {
     version: '1.0.0',
@@ -94,7 +92,7 @@ test('call() blocks a tool that was never approved', async () => {
   })
   await assert.rejects(
     () => client.call(card.name, {}),
-    (e: unknown) => e instanceof GlyphNotApprovedError && e.status === 'new'
+    (e: unknown) => e instanceof GlyphNotApprovedError && e.status === 'new',
   )
 })
 
@@ -112,9 +110,7 @@ test('call() blocks a tool whose card id changed after approval', async () => {
   await assert.rejects(
     () => c2.call(v2.name, {}),
     (e: unknown) =>
-      e instanceof GlyphNotApprovedError &&
-      e.status === 'changed' &&
-      e.diff?.idChanged === true
+      e instanceof GlyphNotApprovedError && e.status === 'changed' && e.diff?.idChanged === true,
   )
 })
 
@@ -131,9 +127,7 @@ test('call() blocks a provider key swap even when the card id is unchanged', asy
   await assert.rejects(
     () => c2.call(v2.name, {}),
     (e: unknown) =>
-      e instanceof GlyphNotApprovedError &&
-      e.status === 'changed' &&
-      e.diff?.keyChanged === true
+      e instanceof GlyphNotApprovedError && e.status === 'changed' && e.diff?.keyChanged === true,
   )
 })
 
@@ -153,7 +147,7 @@ test('call() blocks a tool that escalated from safe to danger', async () => {
       if (!(e instanceof GlyphNotApprovedError)) return false
       const risk = e.diff?.changes.find((c) => c.field === 'cost.riskTier')
       return risk?.severity === 'breaking' && e.diff?.requiresApproval === true
-    }
+    },
   )
 })
 
@@ -167,7 +161,7 @@ test('getCard() rejects a card with an invalid signature', async () => {
   })
   await assert.rejects(
     () => client.getCard(card.name),
-    (e: unknown) => e instanceof GlyphVerificationError
+    (e: unknown) => e instanceof GlyphVerificationError,
   )
 })
 
@@ -192,7 +186,7 @@ test('revokeTool blocks call() with GlyphRevokedError', async () => {
     (e: unknown) =>
       e instanceof GlyphRevokedError &&
       e.toolName === card.name &&
-      e.reason === 'compromised provider'
+      e.reason === 'compromised provider',
   )
 })
 
@@ -208,7 +202,7 @@ test('a revoked tool is reinstated only with an explicit flag', async () => {
   // A plain re-approval must not silently clear a revocation.
   await assert.rejects(
     () => client.approveCard(card),
-    (e: unknown) => e instanceof GlyphRevokedError
+    (e: unknown) => e instanceof GlyphRevokedError,
   )
   // The explicit flag clears it; the tool runs again.
   await client.approveCard(card, { reinstate: true })
@@ -222,10 +216,7 @@ test('revokeTool throws for a tool that has no pin', async () => {
     fetch: serve(makeCard()),
     pins: new MemoryPinStore(),
   })
-  await assert.rejects(
-    () => client.revokeTool('never-seen'),
-    /nothing to revoke/
-  )
+  await assert.rejects(() => client.revokeTool('never-seen'), /nothing to revoke/)
 })
 
 test('inspectLexicon reports a revoked tool', async () => {

@@ -14,9 +14,7 @@ export interface ManifestResult {
  * tool MUST additionally check the manifest is signed by the *pinned* key —
  * the client does that automatically via `getManifest()`.
  */
-export async function runManifestVerify(
-  source: string
-): Promise<ManifestResult> {
+export async function runManifestVerify(source: string): Promise<ManifestResult> {
   if (!source) {
     return {
       ok: false,

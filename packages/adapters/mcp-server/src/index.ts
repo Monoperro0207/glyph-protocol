@@ -34,14 +34,12 @@
  *
  * See `spec/tests/hermes-deepseek.md` for a worked example.
  */
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
 import type { GlyphClient } from '@glyphp/client'
 import type { GlyphCard, SealedEnvelope } from '@glyphp/types'
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
 export interface BridgeOptions {
   /** Reported as the MCP server name on handshake. */
@@ -65,16 +63,13 @@ export interface BridgeOptions {
  *   const server = mcpServerFromGlyph(client)
  *   await server.connect(new StdioServerTransport())
  */
-export function mcpServerFromGlyph(
-  client: GlyphClient,
-  options: BridgeOptions = {}
-): Server {
+export function mcpServerFromGlyph(client: GlyphClient, options: BridgeOptions = {}): Server {
   const server = new Server(
     {
       name: options.serverName ?? 'glyph-mcp-bridge',
       version: options.serverVersion ?? '0.1.0',
     },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {} } },
   )
 
   /**
@@ -89,8 +84,7 @@ export function mcpServerFromGlyph(
   /** mcp-safe-name → original card.name */
   let nameAlias: Map<string, string> | undefined
 
-  const sanitizeMcpName = (name: string): string =>
-    name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  const sanitizeMcpName = (name: string): string => name.replace(/[^a-zA-Z0-9_-]/g, '_')
 
   const loadCards = async (): Promise<{
     cards: Map<string, GlyphCard>
@@ -108,7 +102,7 @@ export function mcpServerFromGlyph(
       const safe = sanitizeMcpName(entry.name)
       if (alias.has(safe)) {
         throw new Error(
-          `MCP name collision: glyph "${entry.name}" and "${alias.get(safe)}" both normalize to "${safe}". Rename one.`
+          `MCP name collision: glyph "${entry.name}" and "${alias.get(safe)}" both normalize to "${safe}". Rename one.`,
         )
       }
       alias.set(safe, entry.name)
@@ -161,7 +155,7 @@ export function mcpServerFromGlyph(
     try {
       const envelope = (await client.call(
         originalName,
-        (args ?? {}) as Record<string, unknown>
+        (args ?? {}) as Record<string, unknown>,
       )) as SealedEnvelope
       return envelopeToMcpResult(envelope)
     } catch (err) {
@@ -241,7 +235,7 @@ function envelopeToMcpResult(envelope: SealedEnvelope): {
  */
 export async function runStdioBridge(
   client: GlyphClient,
-  options?: BridgeOptions
+  options?: BridgeOptions,
 ): Promise<Server> {
   const server = mcpServerFromGlyph(client, options)
   await server.connect(new StdioServerTransport())
@@ -249,7 +243,7 @@ export async function runStdioBridge(
 }
 
 export {
+  type LazyBridgeOptions,
   mcpServerFromGlyphLazy,
   runStdioBridgeLazy,
-  type LazyBridgeOptions,
 } from './lazy.js'

@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { GlyphClient } from '../src/index.js'
 
 function jsonResponse(data: unknown): Response {
@@ -62,7 +62,7 @@ test('GlyphClient percent-encodes the glyph name in the path', async () => {
   await client.getCard('weird/name with spaces')
   assert.ok(
     rec.last().url.endsWith('/glyphs/weird%2Fname%20with%20spaces'),
-    `unexpected url: ${rec.last().url}`
+    `unexpected url: ${rec.last().url}`,
   )
 })
 

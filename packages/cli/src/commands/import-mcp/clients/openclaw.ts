@@ -17,7 +17,7 @@ export const openclawAdapter: ClientAdapter = {
   async load() {
     throw new Error(
       'openclaw: import not implemented yet — the upstream config schema is not publicly documented. ' +
-        'Track progress in spec/rfcs/RFC-0004-import-clients.md, or pass --command/--url as a manual target.'
+        'Track progress in spec/rfcs/RFC-0004-import-clients.md, or pass --command/--url as a manual target.',
     )
   },
 }

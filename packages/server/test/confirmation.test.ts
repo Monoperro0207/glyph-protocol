@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
@@ -45,7 +45,7 @@ async function post(path: string, body: unknown) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
-    })
+    }),
   )
   return { status: res.status, body: (await res.json()) as any }
 }
@@ -134,7 +134,7 @@ test('backlog full returns 503 CONFIRMATION_BACKLOG_FULL with Retry-After', asyn
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ input: { x: i } }),
-      })
+      }),
     )
     assert.equal(res.status, 200)
   }
@@ -145,7 +145,7 @@ test('backlog full returns 503 CONFIRMATION_BACKLOG_FULL with Retry-After', asyn
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: { x: 4 } }),
-    })
+    }),
   )
   const body = (await res.json()) as any
   assert.equal(res.status, 503)
@@ -162,7 +162,7 @@ test('normal operation below backlog limit succeeds', async () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
-      })
+      }),
     )
     return { status: res.status, body: (await res.json()) as any }
   }
@@ -185,7 +185,7 @@ test('maxPendingConfirmations from constructor overrides default', async () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
-      })
+      }),
     )
     return { status: res.status, body: (await res.json()) as any }
   }

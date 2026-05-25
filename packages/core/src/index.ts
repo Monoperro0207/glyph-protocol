@@ -1,5 +1,4 @@
 import { createHash, randomUUID } from 'node:crypto'
-import * as ed from '@noble/ed25519'
 import type {
   CallReceipt,
   CardAttestation,
@@ -12,6 +11,7 @@ import type {
   SealedEnvelope,
   UpdateManifest,
 } from '@glyphp/types'
+import * as ed from '@noble/ed25519'
 
 // @noble/ed25519 v2 needs a sha512 implementation wired in for synchronous use.
 ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
@@ -61,7 +61,7 @@ export function canonicalize(value: unknown): unknown {
 export type GlyphKeyPair = { publicKey: string; privateKey: string }
 
 export function computeGlyphId(
-  card: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'>
+  card: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'>,
 ): string {
   const picked: Record<string, unknown> = {}
   for (const field of CANONICAL_FIELDS) {
@@ -181,10 +181,7 @@ export function canonicalHash(value: unknown): string {
 }
 
 /** Signs a call receipt with the server's ed25519 private key. */
-export function signReceipt(
-  receipt: Omit<CallReceipt, 'signature'>,
-  privateKey: string
-): string {
+export function signReceipt(receipt: Omit<CallReceipt, 'signature'>, privateKey: string): string {
   const message = new TextEncoder().encode(canonicalHash(receipt))
   return toHex(ed.sign(message, fromHex(privateKey)))
 }
@@ -195,11 +192,7 @@ export function verifyReceipt(receipt: CallReceipt): boolean {
   const { signature, ...rest } = receipt
   try {
     const message = new TextEncoder().encode(canonicalHash(rest))
-    return ed.verify(
-      fromHex(signature),
-      message,
-      fromHex(receipt.serverPublicKey)
-    )
+    return ed.verify(fromHex(signature), message, fromHex(receipt.serverPublicKey))
   } catch {
     return false
   }
@@ -208,7 +201,7 @@ export function verifyReceipt(receipt: CallReceipt): boolean {
 /** Signs an update manifest with the server's ed25519 private key. */
 export function signManifest(
   manifest: Omit<UpdateManifest, 'signature'>,
-  privateKey: string
+  privateKey: string,
 ): string {
   const message = new TextEncoder().encode(canonicalHash(manifest))
   return toHex(ed.sign(message, fromHex(privateKey)))
@@ -220,11 +213,7 @@ export function verifyManifest(manifest: UpdateManifest): boolean {
   const { signature, ...rest } = manifest
   try {
     const message = new TextEncoder().encode(canonicalHash(rest))
-    return ed.verify(
-      fromHex(signature),
-      message,
-      fromHex(manifest.serverPublicKey)
-    )
+    return ed.verify(fromHex(signature), message, fromHex(manifest.serverPublicKey))
   } catch {
     return false
   }
@@ -246,20 +235,17 @@ export function verifyManifest(manifest: UpdateManifest): boolean {
  *     for. `false` is not a failure; it means the consumer must bring its
  *     own verifier for that format.
  */
-export function verifyAttestation(
-  attestation: CardAttestation | undefined
-): { ok: boolean; recognized: boolean } {
+export function verifyAttestation(attestation: CardAttestation | undefined): {
+  ok: boolean
+  recognized: boolean
+} {
   if (!attestation) return { ok: false, recognized: false }
   const ok =
     typeof attestation.type === 'string' &&
     attestation.type.length > 0 &&
     typeof attestation.payload === 'string' &&
     attestation.payload.length > 0
-  const KNOWN_TYPES = new Set([
-    'sigstore-bundle',
-    'slsa-provenance',
-    'in-toto',
-  ])
+  const KNOWN_TYPES = new Set(['sigstore-bundle', 'slsa-provenance', 'in-toto'])
   return { ok, recognized: ok && KNOWN_TYPES.has(attestation.type) }
 }
 
@@ -275,7 +261,7 @@ export function toLexiconEntry(card: GlyphCard): LexiconEntry {
 
 export function applyDepth(
   card: GlyphCard,
-  depth: 'minimal' | 'standard' | 'rich'
+  depth: 'minimal' | 'standard' | 'rich',
 ): Partial<GlyphCard> {
   if (depth === 'rich') return card
 
@@ -304,7 +290,7 @@ export function sealResult(
   payload: unknown,
   latencyMs: number,
   provider: string,
-  inspection?: Sanitization
+  inspection?: Sanitization,
 ): SealedEnvelope {
   const envelope: SealedEnvelope = {
     type: 'data',
@@ -355,14 +341,10 @@ const STRIP_CLASSES: ReadonlyArray<{
   },
 ]
 
-const buildRegex = (
-  ranges: ReadonlyArray<readonly [number, number]>
-): RegExp => {
+const buildRegex = (ranges: ReadonlyArray<readonly [number, number]>): RegExp => {
   const body = ranges
     .map(([lo, hi]) =>
-      lo === hi
-        ? `\\u{${lo.toString(16)}}`
-        : `\\u{${lo.toString(16)}}-\\u{${hi.toString(16)}}`
+      lo === hi ? `\\u{${lo.toString(16)}}` : `\\u{${lo.toString(16)}}-\\u{${hi.toString(16)}}`,
     )
     .join('')
   return new RegExp(`[${body}]`, 'gu')
@@ -374,14 +356,9 @@ const STRIP_REGEXES: ReadonlyArray<{
 }> = STRIP_CLASSES.map(({ kind, ranges }) => ({ kind, re: buildRegex(ranges) }))
 
 // JSON Pointer (RFC 6901) token escaping, so a finding's path is unambiguous.
-const escapeToken = (key: string): string =>
-  key.replace(/~/g, '~0').replace(/\//g, '~1')
+const escapeToken = (key: string): string => key.replace(/~/g, '~0').replace(/\//g, '~1')
 
-function sanitizeString(
-  input: string,
-  path: string,
-  findings: SanitizationFinding[]
-): string {
+function sanitizeString(input: string, path: string, findings: SanitizationFinding[]): string {
   let s = input
   for (const { kind, re } of STRIP_REGEXES) {
     const matches = s.match(re)
@@ -401,11 +378,7 @@ function sanitizeString(
   return s
 }
 
-function sanitizeValue(
-  value: unknown,
-  path: string,
-  findings: SanitizationFinding[]
-): unknown {
+function sanitizeValue(value: unknown, path: string, findings: SanitizationFinding[]): unknown {
   if (typeof value === 'string') return sanitizeString(value, path, findings)
   if (Array.isArray(value)) {
     return value.map((item, i) => sanitizeValue(item, `${path}/${i}`, findings))
@@ -416,7 +389,7 @@ function sanitizeValue(
       out[key] = sanitizeValue(
         (value as Record<string, unknown>)[key],
         `${path}/${escapeToken(key)}`,
-        findings
+        findings,
       )
     }
     return out
@@ -438,29 +411,21 @@ export function sanitize(value: unknown): {
   const findings: SanitizationFinding[] = []
   const cleaned = sanitizeValue(value, '', findings)
   findings.sort((a, b) =>
-    a.path < b.path
-      ? -1
-      : a.path > b.path
-        ? 1
-        : a.kind < b.kind
-          ? -1
-          : a.kind > b.kind
-            ? 1
-            : 0
+    a.path < b.path ? -1 : a.path > b.path ? 1 : a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0,
   )
   return { value: cleaned, report: { modified: findings.length > 0, findings } }
 }
 
 export { compileJsonSchema } from './json-schema-validator.js'
-export {
-  KEY_REGISTRY_VERSION,
-  fingerprintKey,
-  verifyKeyRegistry,
-  resolveKey,
-  buildKeyRegistry,
-  buildKeyEntry,
-  StaticKeyRegistry,
-  FileKeyRegistry,
-  HttpKeyRegistry,
-} from './key-registry.js'
 export type { KeyRegistrySource, ResolveResult } from './key-registry.js'
+export {
+  buildKeyEntry,
+  buildKeyRegistry,
+  FileKeyRegistry,
+  fingerprintKey,
+  HttpKeyRegistry,
+  KEY_REGISTRY_VERSION,
+  resolveKey,
+  StaticKeyRegistry,
+  verifyKeyRegistry,
+} from './key-registry.js'

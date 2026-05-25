@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { fromLexicon, glyphsAsOpenAiAgentTools } from '../src/index.js'
 
 const fakeClient = {
@@ -7,7 +7,14 @@ const fakeClient = {
     return { payload: { input }, type: 'data' }
   },
   async prepare() {
-    return { confirmationToken: 't', cost: {}, glyphId: 'a', name: 'x', input: {}, expiresAt: 'now' }
+    return {
+      confirmationToken: 't',
+      cost: {},
+      glyphId: 'a',
+      name: 'x',
+      input: {},
+      expiresAt: 'now',
+    }
   },
 }
 
@@ -33,27 +40,44 @@ function makeRichClient(opts: { requireConfirmation?: boolean } = {}) {
   const calls: Array<{ confirmationToken?: string }> = []
   return {
     calls,
-    get callCount() { return callCount },
+    get callCount() {
+      return callCount
+    },
     async getLexicon() {
-      return [{ id: 'a', name: 'order', intent: 'Place order', tags: [], riskTier: 'caution' as const }]
+      return [
+        { id: 'a', name: 'order', intent: 'Place order', tags: [], riskTier: 'caution' as const },
+      ]
     },
     async getCard() {
       return {
-        id: 'a', name: 'order', intent: 'Place order',
+        id: 'a',
+        name: 'order',
+        intent: 'Place order',
         input: { type: 'object', properties: { id: { type: 'integer' } }, required: ['id'] },
-        output: { type: 'object' }, tags: [], riskTier: 'caution',
+        output: { type: 'object' },
+        tags: [],
+        riskTier: 'caution',
       }
     },
     async call(_n: string, _i: unknown, options?: { confirmationToken?: string }) {
       callCount++
       calls.push({ confirmationToken: options?.confirmationToken })
       if (opts.requireConfirmation && !options?.confirmationToken) {
-        const e: any = new Error('confirm'); e.code = 'CONFIRMATION_REQUIRED'; throw e
+        const e: any = new Error('confirm')
+        e.code = 'CONFIRMATION_REQUIRED'
+        throw e
       }
       return { type: 'data', payload: { ok: true } }
     },
     async prepare() {
-      return { confirmationToken: 'real-tok', cost: {}, glyphId: 'a', name: 'order', input: {}, expiresAt: 'soon' }
+      return {
+        confirmationToken: 'real-tok',
+        cost: {},
+        glyphId: 'a',
+        name: 'order',
+        input: {},
+        expiresAt: 'soon',
+      }
     },
   }
 }

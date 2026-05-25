@@ -40,13 +40,10 @@ export interface RenderOptions {
  * A model can still choose to obey a visible instruction inside a clearly
  * delimited data block. See spec/trust.md.
  */
-export function renderEnvelope(
-  envelope: SealedEnvelope,
-  options: RenderOptions = {}
-): string {
+export function renderEnvelope(envelope: SealedEnvelope, options: RenderOptions = {}): string {
   if (options.verify && !options.verify(envelope)) {
     throw new Error(
-      'renderEnvelope: envelope failed verification — refusing to render unverified data'
+      'renderEnvelope: envelope failed verification — refusing to render unverified data',
     )
   }
 
@@ -64,7 +61,7 @@ export function renderEnvelope(
   if (envelope.inspection?.modified) {
     lines.push(
       '[glyph] this tool result was sanitized before delivery; ' +
-        'see the envelope inspection report for details.'
+        'see the envelope inspection report for details.',
     )
   }
   lines.push(`<glyph:data boundary="${nonce}">`)

@@ -57,11 +57,10 @@ export function parseCodexToml(raw: string): McpServerConfig[] {
     parsed = toml.parse(raw)
   } catch (e) {
     throw new Error(
-      `failed to parse codex config as TOML: ${e instanceof Error ? e.message : String(e)}`
+      `failed to parse codex config as TOML: ${e instanceof Error ? e.message : String(e)}`,
     )
   }
-  const block =
-    (parsed as { mcp_servers?: Record<string, unknown> } | null)?.mcp_servers ?? {}
+  const block = (parsed as { mcp_servers?: Record<string, unknown> } | null)?.mcp_servers ?? {}
   const out: McpServerConfig[] = []
   for (const [name, entry] of Object.entries(block)) {
     if (!entry || typeof entry !== 'object') continue
@@ -98,8 +97,8 @@ export function parseCodexToml(raw: string): McpServerConfig[] {
           e.env && typeof e.env === 'object'
             ? Object.fromEntries(
                 Object.entries(e.env as Record<string, unknown>).filter(
-                  ([, v]) => typeof v === 'string'
-                ) as [string, string][]
+                  ([, v]) => typeof v === 'string',
+                ) as [string, string][],
               )
             : undefined,
       },

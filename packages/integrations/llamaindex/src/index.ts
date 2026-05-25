@@ -24,7 +24,7 @@ export interface GlyphsAsLlamaIndexToolsOptions {
 
 export async function glyphsAsLlamaIndexTools(
   client: GlyphClient,
-  options: GlyphsAsLlamaIndexToolsOptions = {}
+  options: GlyphsAsLlamaIndexToolsOptions = {},
 ): Promise<LlamaIndexGlyphTool[]> {
   const lexicon = await client.getLexicon()
   const tools: LlamaIndexGlyphTool[] = []
@@ -41,7 +41,7 @@ export async function glyphsAsLlamaIndexTools(
 export function fromLexicon(
   client: GlyphClient,
   lexicon: LexiconEntry[],
-  options: GlyphsAsLlamaIndexToolsOptions = {}
+  options: GlyphsAsLlamaIndexToolsOptions = {},
 ): LlamaIndexGlyphTool[] {
   return lexicon.map((entry) => ({
     name: entry.name,
@@ -54,7 +54,7 @@ export function fromLexicon(
 async function buildTool(
   client: GlyphClient,
   entry: LexiconEntry,
-  options: GlyphsAsLlamaIndexToolsOptions
+  options: GlyphsAsLlamaIndexToolsOptions,
 ): Promise<LlamaIndexGlyphTool> {
   let parameters: LlamaIndexGlyphTool['parameters'] = { type: 'object', properties: {} }
   try {
@@ -62,7 +62,7 @@ async function buildTool(
     parameters = mapToObjectSchema(card.input)
   } catch (err) {
     console.warn(
-      `[@glyphp/integration-llamaindex] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`
+      `[@glyphp/integration-llamaindex] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`,
     )
   }
   return {
@@ -95,13 +95,17 @@ function mapToObjectSchema(input: unknown): LlamaIndexGlyphTool['parameters'] {
     }
   }
   if (!input) return { type: 'object', properties: {} }
-  return { type: 'object', properties: { value: input as Record<string, unknown> }, required: ['value'] }
+  return {
+    type: 'object',
+    properties: { value: input as Record<string, unknown> },
+    required: ['value'],
+  }
 }
 
 function makeFn(
   client: GlyphClient,
   name: string,
-  options: GlyphsAsLlamaIndexToolsOptions
+  options: GlyphsAsLlamaIndexToolsOptions,
 ): LlamaIndexGlyphTool['fn'] {
   return async (input) => {
     const envelope = await client.call(name, input).catch(async (err) => {

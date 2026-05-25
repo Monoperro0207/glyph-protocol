@@ -1,12 +1,12 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import type { LexiconEntry } from '@glyphp/types'
 import {
-  LexicalScorer,
-  GlyphResolver,
-  EmbeddingScorer,
   createTransformersScorer,
+  EmbeddingScorer,
   type EmbedFn,
+  GlyphResolver,
+  LexicalScorer,
 } from '../src/index.js'
 
 const lexicon: LexiconEntry[] = [

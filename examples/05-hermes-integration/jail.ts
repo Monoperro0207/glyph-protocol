@@ -7,6 +7,7 @@
  * read x` would have escaped the previous implementation).
  */
 
+import type { Stats } from 'node:fs'
 import { lstat, readlink, realpath } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, resolve, sep } from 'node:path'
 
@@ -29,7 +30,7 @@ function escapes(real: string, root: string): boolean {
 async function walkChain(start: string, max = 40): Promise<string> {
   let cur = start
   for (let i = 0; i < max; i++) {
-    let st
+    let st: Stats | undefined
     try {
       st = await lstat(cur)
     } catch (e) {

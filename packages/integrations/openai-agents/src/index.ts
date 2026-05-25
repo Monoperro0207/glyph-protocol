@@ -23,7 +23,7 @@ export interface GlyphsAsOpenAiAgentToolsOptions {
 
 export async function glyphsAsOpenAiAgentTools(
   client: GlyphClient,
-  options: GlyphsAsOpenAiAgentToolsOptions = {}
+  options: GlyphsAsOpenAiAgentToolsOptions = {},
 ): Promise<OpenAiAgentTool[]> {
   const lexicon = await client.getLexicon()
   const tools: OpenAiAgentTool[] = []
@@ -40,7 +40,7 @@ export async function glyphsAsOpenAiAgentTools(
 export function fromLexicon(
   client: GlyphClient,
   lexicon: LexiconEntry[],
-  options: GlyphsAsOpenAiAgentToolsOptions = {}
+  options: GlyphsAsOpenAiAgentToolsOptions = {},
 ): OpenAiAgentTool[] {
   return lexicon.map((entry) => ({
     name: entry.name,
@@ -53,7 +53,7 @@ export function fromLexicon(
 async function buildTool(
   client: GlyphClient,
   entry: LexiconEntry,
-  options: GlyphsAsOpenAiAgentToolsOptions
+  options: GlyphsAsOpenAiAgentToolsOptions,
 ): Promise<OpenAiAgentTool> {
   let parameters: unknown = { type: 'object', properties: {} }
   try {
@@ -61,7 +61,7 @@ async function buildTool(
     if (card.input) parameters = card.input
   } catch (err) {
     console.warn(
-      `[@glyphp/integration-openai-agents] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`
+      `[@glyphp/integration-openai-agents] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`,
     )
   }
   return {
@@ -75,7 +75,7 @@ async function buildTool(
 function makeExecute(
   client: GlyphClient,
   name: string,
-  options: GlyphsAsOpenAiAgentToolsOptions
+  options: GlyphsAsOpenAiAgentToolsOptions,
 ): OpenAiAgentTool['execute'] {
   return async (input) => {
     const envelope = await client.call(name, input).catch(async (err) => {
