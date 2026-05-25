@@ -5,10 +5,15 @@ CHANGELOGs in each `packages/*/CHANGELOG.md`. The wire version is the
 `PROTOCOL_VERSION` constant in `@glyphp/types` — clients and servers must
 agree on it at the handshake.
 
-## 1.0 — 2026-05-24
+## 1.0 — 2026-05-24 (updated 2026-05-25)
 
 First stable wire-protocol line. Released with the v1.0 stable SDK line
 (tag `v1.0.0`, commit `5da0f87`).
+
+**2026-05-25 update:** `RECEIPT_VERSION` bumped from 0.2 to 0.3.
+`callId` is now always server-generated (UUID v4). An optional
+`clientCallId` field is added to `CallReceipt` for client-side
+correlation. See [RFC-0005](spec/rfcs/RFC-0005-receipt-callid.md).
 
 Additive on top of 0.2 (all existing 0.2 endpoints remain), plus:
 
