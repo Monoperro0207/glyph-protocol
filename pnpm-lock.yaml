@@ -31,8 +31,8 @@ importers:
         specifier: workspace:*
         version: link:packages/server
       '@noble/ed25519':
-        specifier: ^2.1.0
-        version: 2.3.0
+        specifier: ^3.1.0
+        version: 3.1.0
       '@types/node':
         specifier: ^20.12.12
         version: 20.19.41
@@ -305,8 +305,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       '@noble/ed25519':
-        specifier: ^2.1.0
-        version: 2.3.0
+        specifier: ^3.1.0
+        version: 3.1.0
       ajv:
         specifier: ^8.17.1
         version: 8.20.0
@@ -733,8 +733,8 @@ packages:
     resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
     engines: {node: '>= 20.19.0'}
 
-  '@noble/ed25519@2.3.0':
-    resolution: {integrity: sha512-M7dvXL2B92/M7dw9+gzuydL8qn/jiqNHaoR3Q+cb1q1GHV7uwE17WCyFMG+Y+TZb5izcaXk5TdJRrDUxHXL78A==}
+  '@noble/ed25519@3.1.0':
+    resolution: {integrity: sha512-pfcObRY3CtvwfaG9Mt5XqZdKmAQppl37tHUeuBhDUbiwJBCVY4/A4lbMvb1xKhMDx96AqAqZpMWuBX1HulhX4g==}
 
   '@noble/hashes@2.2.0':
     resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
@@ -1991,7 +1991,7 @@ snapshots:
     dependencies:
       '@noble/hashes': 2.2.0
 
-  '@noble/ed25519@2.3.0': {}
+  '@noble/ed25519@3.1.0': {}
 
   '@noble/hashes@2.2.0': {}
 

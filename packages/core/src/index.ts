@@ -13,11 +13,10 @@ import type {
 } from '@glyphp/types'
 import * as ed from '@noble/ed25519'
 
-// @noble/ed25519 v2 needs a sha512 implementation wired in for synchronous use.
-ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
-  const hash = createHash('sha512')
-  for (const msg of msgs) hash.update(msg)
-  return new Uint8Array(hash.digest())
+// @noble/ed25519 needs a sha512 implementation wired in for synchronous use.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(ed.hashes as any).sha512 = (msg: Uint8Array): Uint8Array => {
+  return new Uint8Array(createHash('sha512').update(msg).digest())
 }
 
 const toHex = (bytes: Uint8Array): string => Buffer.from(bytes).toString('hex')
@@ -73,7 +72,7 @@ export function computeGlyphId(
 }
 
 export function generateKeyPair(): GlyphKeyPair {
-  const privateKey = ed.utils.randomPrivateKey()
+  const privateKey = ed.utils.randomSecretKey()
   const publicKey = ed.getPublicKey(privateKey)
   return { publicKey: toHex(publicKey), privateKey: toHex(privateKey) }
 }
