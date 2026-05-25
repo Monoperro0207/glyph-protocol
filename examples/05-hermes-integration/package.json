@@ -12,7 +12,7 @@
     "@glyphp/server": "workspace:*",
     "@glyphp/client": "workspace:*",
     "@glyphp/adapter-mcp-server": "workspace:*",
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^12.10.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
