@@ -97,18 +97,24 @@ try {
   // — to resolve to the local tarball instead of the npm registry. Direct
   // `file:` deps alone do not: pnpm would still fetch a transitive
   // `@glyphp/core@<version>` from the registry.
-  const overrides = {}
+  // npm resolves file: deps and their transitive deps from the local tarball,
+  // no overrides needed.
   const tarballOf = {}
   for (const dir of PKG_DIRS) {
     const pkgPath = join(repoRoot, dir)
     const { name, version } = JSON.parse(readFileSync(join(pkgPath, 'package.json'), 'utf8'))
     run('pnpm', ['pack', '--pack-destination', tarDir], pkgPath)
     const tarball = `${name.replace('@', '').replace('/', '-')}-${version}.tgz`
-    const ref = `file:${join(tarDir, tarball)}`
-    overrides[name] = ref
-    tarballOf[name] = ref
+    tarballOf[name] = `file:${join(tarDir, tarball)}`
     console.log(`[smoke] packed ${name}@${version}`)
   }
+
+  const deps = {}
+  for (const dir of PKG_DIRS) {
+    const { name } = JSON.parse(readFileSync(join(repoRoot, dir, 'package.json'), 'utf8'))
+    if (name !== '@glyphp/cli') deps[name] = tarballOf[name]
+  }
+  deps['zod'] = '^3.23.8'
 
   writeFileSync(
     join(proj, 'package.json'),
@@ -117,13 +123,7 @@ try {
         name: 'glyph-smoke',
         private: true,
         type: 'module',
-        dependencies: {
-          '@glyphp/server': tarballOf['@glyphp/server'],
-          '@glyphp/client': tarballOf['@glyphp/client'],
-          '@glyphp/core': tarballOf['@glyphp/core'],
-          zod: '^3.23.8',
-        },
-        pnpm: { overrides },
+        dependencies: deps,
       },
       null,
       2,
@@ -132,7 +132,9 @@ try {
   writeFileSync(join(proj, 'smoke.mjs'), SMOKE_APP)
 
   console.log('[smoke] installing tarballs into an external project…')
-  run('pnpm', ['install', '--ignore-workspace'], proj)
+  // Use npm — pnpm overrides do not reliably override transitive version
+  // specs inside tarball package.json files.
+  run('npm', ['install', '--install-strategy', 'nested', '--legacy-peer-deps'], proj)
 
   console.log('[smoke] running the server <-> client round-trip…')
   console.log(run('node', ['smoke.mjs'], proj))
