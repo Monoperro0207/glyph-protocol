@@ -161,12 +161,7 @@ export interface GlyphError {
  */
 export interface SanitizationFinding {
   path: string
-  kind:
-    | 'unicode-tags'
-    | 'zero-width'
-    | 'bidi-override'
-    | 'control-char'
-    | 'nfkc-normalized'
+  kind: 'unicode-tags' | 'zero-width' | 'bidi-override' | 'control-char' | 'nfkc-normalized'
   count: number
 }
 

@@ -76,7 +76,7 @@ export class FilePinStore implements PinStore {
     }
     await mkdir(dirname(this.path), { recursive: true })
     const tmp = `${this.path}.tmp`
-    await writeFile(tmp, JSON.stringify(payload, null, 2) + '\n', 'utf8')
+    await writeFile(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
     await rename(tmp, this.path)
   }
 }

@@ -1,19 +1,19 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import type { CallReceipt, GlyphCard } from '@glyphp/types'
 import {
+  applyDepth,
+  canonicalHash,
   computeGlyphId,
   generateKeyPair,
-  signGlyph,
-  verifyGlyph,
-  signReceipt,
-  verifyReceipt,
-  canonicalHash,
-  toLexiconEntry,
-  applyDepth,
-  sealResult,
   sanitize,
+  sealResult,
+  signGlyph,
+  signReceipt,
+  toLexiconEntry,
+  verifyGlyph,
+  verifyReceipt,
 } from '../src/index.js'
-import type { CallReceipt, GlyphCard } from '@glyphp/types'
 
 const partial = {
   version: '1.0.0',
@@ -51,7 +51,7 @@ test('computeGlyphId is deterministic', () => {
 test('computeGlyphId changes when top-level content changes', () => {
   assert.notEqual(
     computeGlyphId(partial),
-    computeGlyphId({ ...partial, intent: 'a different intent' })
+    computeGlyphId({ ...partial, intent: 'a different intent' }),
   )
 })
 
@@ -119,13 +119,7 @@ test('verifyGlyph fails when the public key is missing', () => {
 
 test('toLexiconEntry keeps only the small lexicon fields', () => {
   const entry = toLexiconEntry(buildCard())
-  assert.deepEqual(Object.keys(entry).sort(), [
-    'id',
-    'intent',
-    'name',
-    'riskTier',
-    'tags',
-  ])
+  assert.deepEqual(Object.keys(entry).sort(), ['id', 'intent', 'name', 'riskTier', 'tags'])
   assert.equal(entry.riskTier, 'safe')
 })
 
@@ -219,9 +213,7 @@ test('sanitize strips Unicode tag-block characters', () => {
   const { value, report } = sanitize({ msg: `hi${TAG}${TAG}` })
   assert.deepEqual(value, { msg: 'hi' })
   assert.equal(report.modified, true)
-  assert.deepEqual(report.findings, [
-    { path: '/msg', kind: 'unicode-tags', count: 2 },
-  ])
+  assert.deepEqual(report.findings, [{ path: '/msg', kind: 'unicode-tags', count: 2 }])
 })
 
 test('sanitize strips zero-width characters', () => {
@@ -261,9 +253,7 @@ test('sanitize recurses into nested objects and arrays', () => {
     note: 'ok',
   })
   assert.deepEqual(value, { items: ['clean', 'bad'], note: 'ok' })
-  assert.deepEqual(report.findings, [
-    { path: '/items/1', kind: 'zero-width', count: 1 },
-  ])
+  assert.deepEqual(report.findings, [{ path: '/items/1', kind: 'zero-width', count: 1 }])
 })
 
 test('sanitize reports modified:false for a clean payload', () => {

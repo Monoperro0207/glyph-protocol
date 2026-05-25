@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { GlyphDefinition } from '@glyphp/server'
-import type { McpServerConfig, ImportedServer } from './types.js'
+import type { ImportedServer, McpServerConfig } from './types.js'
 
 /**
  * Writes the per-MCP project directory: `server.ts`, `package.json`,
@@ -13,7 +13,7 @@ export async function emitServerProject(
   config: McpServerConfig,
   glyphs: GlyphDefinition<any, any>[],
   port: number,
-  outDir: string
+  outDir: string,
 ): Promise<ImportedServer> {
   await mkdir(outDir, { recursive: true })
 
@@ -81,30 +81,28 @@ console.log('[glyph] ${config.name} bridge live on http://localhost:${port} with
 }
 
 function renderPackageJson(config: McpServerConfig): string {
-  return (
-    JSON.stringify(
-      {
-        name: `glyph-bridge-${config.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`,
-        version: '0.0.1',
-        private: true,
-        type: 'module',
-        scripts: {
-          dev: 'tsx server.ts',
-        },
-        dependencies: {
-          '@glyphp/adapter-mcp': '^1.0.0',
-          '@glyphp/server': '^1.1.0',
-          '@modelcontextprotocol/sdk': '^1.0.0',
-        },
-        devDependencies: {
-          tsx: '^4.11.0',
-          typescript: '^5.4.0',
-        },
+  return `${JSON.stringify(
+    {
+      name: `glyph-bridge-${config.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`,
+      version: '0.0.1',
+      private: true,
+      type: 'module',
+      scripts: {
+        dev: 'tsx server.ts',
       },
-      null,
-      2
-    ) + '\n'
-  )
+      dependencies: {
+        '@glyphp/adapter-mcp': '^1.0.0',
+        '@glyphp/server': '^1.1.0',
+        '@modelcontextprotocol/sdk': '^1.0.0',
+      },
+      devDependencies: {
+        tsx: '^4.11.0',
+        typescript: '^5.4.0',
+      },
+    },
+    null,
+    2,
+  )}\n`
 }
 
 function renderEnvExample(config: McpServerConfig): string {
@@ -126,7 +124,7 @@ function renderEnvExample(config: McpServerConfig): string {
 function renderReadme(
   config: McpServerConfig,
   port: number,
-  cards: ImportedServer['cards']
+  cards: ImportedServer['cards'],
 ): string {
   const dangerCount = cards.filter((c) => c.riskTier === 'danger').length
   const cautionCount = cards.filter((c) => c.riskTier === 'caution').length
@@ -140,7 +138,7 @@ function renderReadme(
     '',
     '```bash',
     'pnpm install',
-    'pnpm run dev   # arranca el bridge en http://localhost:' + port,
+    `pnpm run dev   # arranca el bridge en http://localhost:${port}`,
     '```',
     '',
     '## Tools',
@@ -149,7 +147,7 @@ function renderReadme(
     '',
     ...cards.map(
       (c) =>
-        `- \`${c.name}\` — risk: **${c.riskTier}**${c.requiresConfirmation ? ' • requires confirmation' : ''}`
+        `- \`${c.name}\` — risk: **${c.riskTier}**${c.requiresConfirmation ? ' • requires confirmation' : ''}`,
     ),
     '',
     '## ⚠ Review before production',
@@ -161,10 +159,7 @@ function renderReadme(
   ].join('\n')
 }
 
-export async function emitTopLevelIndex(
-  outDir: string,
-  imported: ImportedServer[]
-): Promise<void> {
+export async function emitTopLevelIndex(outDir: string, imported: ImportedServer[]): Promise<void> {
   const lines = [
     `# Glyph imports`,
     '',
@@ -179,7 +174,7 @@ export async function emitTopLevelIndex(
     '|---|---|--:|--:|---|',
     ...imported.map(
       (s) =>
-        `| \`${s.config.name}\` | ${s.config.source} | ${s.port} | ${s.toolCount} | \`${s.outputDir}/\` |`
+        `| \`${s.config.name}\` | ${s.config.source} | ${s.port} | ${s.toolCount} | \`${s.outputDir}/\` |`,
     ),
     '',
   ]

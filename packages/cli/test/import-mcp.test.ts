@@ -1,16 +1,16 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseClaudeDesktopJson } from '../src/commands/import-mcp/clients/claude-desktop.js'
-import { parseCodexToml } from '../src/commands/import-mcp/clients/codex.js'
-import { manualConfig } from '../src/commands/import-mcp/manual.js'
-import { emitServerProject } from '../src/commands/import-mcp/emitter.js'
-import { emitReport } from '../src/commands/import-mcp/report.js'
-import { runImportMcp } from '../src/commands/import-mcp/index.js'
+import { test } from 'node:test'
 import type { GlyphDefinition } from '@glyphp/server'
 import type { GlyphCard } from '@glyphp/types'
+import { parseClaudeDesktopJson } from '../src/commands/import-mcp/clients/claude-desktop.js'
+import { parseCodexToml } from '../src/commands/import-mcp/clients/codex.js'
+import { emitServerProject } from '../src/commands/import-mcp/emitter.js'
+import { runImportMcp } from '../src/commands/import-mcp/index.js'
+import { manualConfig } from '../src/commands/import-mcp/manual.js'
+import { emitReport } from '../src/commands/import-mcp/report.js'
 
 test('parseClaudeDesktopJson handles a standard config', () => {
   const raw = JSON.stringify({
@@ -36,10 +36,9 @@ test('parseClaudeDesktopJson handles a standard config', () => {
     assert.deepEqual(fs.transport.args, ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'])
   }
   const notion = out.find((s) => s.name === 'notion')!
-  assert.deepEqual(
-    notion.transport.kind === 'stdio' ? notion.transport.env : undefined,
-    { NOTION_API_KEY: 'secret-not-copied' }
-  )
+  assert.deepEqual(notion.transport.kind === 'stdio' ? notion.transport.env : undefined, {
+    NOTION_API_KEY: 'secret-not-copied',
+  })
 })
 
 test('parseClaudeDesktopJson silently skips malformed entries instead of throwing', () => {
@@ -116,7 +115,10 @@ test('manualConfig throws when neither command nor url is set', () => {
   assert.throws(() => manualConfig({}), /pass either --command or --url/)
 })
 
-function fakeGlyph(name: string, riskTier: 'safe' | 'caution' | 'danger'): GlyphDefinition<any, any> {
+function fakeGlyph(
+  name: string,
+  riskTier: 'safe' | 'caution' | 'danger',
+): GlyphDefinition<any, any> {
   const card: GlyphCard = {
     id: `gid:${name}`,
     version: '1.0.0',
@@ -230,7 +232,7 @@ test('runImportMcp with a failing manual command skips + reports without abortin
   const tmp = await mkdtemp(join(tmpdir(), 'glyph-import-fail-'))
   try {
     const result = await runImportMcp({
-      manual: { command: '/nonexistent/binary-' + Math.random() },
+      manual: { command: `/nonexistent/binary-${Math.random()}` },
       options: { output: tmp, portBase: 3100, dryRun: false, timeoutMs: 2_000 },
     })
     assert.equal(result.imported.length, 0)
@@ -255,7 +257,11 @@ test('runImportMcp --dry-run writes nothing and returns empty arrays', async () 
     // No files should exist in tmp.
     const fs = await import('node:fs/promises')
     const entries = await fs.readdir(tmp)
-    assert.equal(entries.length, 0, `dry-run should not write anything, found: ${entries.join(',')}`)
+    assert.equal(
+      entries.length,
+      0,
+      `dry-run should not write anything, found: ${entries.join(',')}`,
+    )
   } finally {
     await rm(tmp, { recursive: true, force: true })
   }

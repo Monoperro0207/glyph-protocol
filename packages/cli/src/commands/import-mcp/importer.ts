@@ -1,7 +1,7 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { glyphsFromMcpClient } from '@glyphp/adapter-mcp'
 import type { GlyphDefinition } from '@glyphp/server'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { McpServerConfig } from './types.js'
 
 /**
@@ -15,7 +15,7 @@ import type { McpServerConfig } from './types.js'
  */
 export async function importOneServer(
   config: McpServerConfig,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<GlyphDefinition<any, any>[]> {
   if (config.transport.kind === 'http') {
     // HTTP/SSE transport isn't fully covered by the v1 of this importer —
@@ -23,7 +23,7 @@ export async function importOneServer(
     // (StreamableHTTP vs SSE) shift faster than we want to bake in. Surface
     // a clear error so the user can switch to stdio for now.
     throw new Error(
-      'HTTP/SSE transport not yet wired in import-mcp v1 — use --command for stdio or stay tuned for v2.'
+      'HTTP/SSE transport not yet wired in import-mcp v1 — use --command for stdio or stay tuned for v2.',
     )
   }
   const transport = new StdioClientTransport({
@@ -40,7 +40,7 @@ export async function importOneServer(
     const glyphs = await withTimeout(
       glyphsFromMcpClient(client, { provider: `mcp:${config.name}` }),
       timeoutMs,
-      'listTools'
+      'listTools',
     )
     return glyphs
   } finally {
@@ -52,11 +52,7 @@ export async function importOneServer(
   }
 }
 
-async function withTimeout<T>(
-  p: Promise<T>,
-  ms: number,
-  stage: string
-): Promise<T> {
+async function withTimeout<T>(p: Promise<T>, ms: number, stage: string): Promise<T> {
   let to: NodeJS.Timeout | undefined
   const timeout = new Promise<never>((_, reject) => {
     to = setTimeout(() => reject(new Error(`${stage} timed out after ${ms}ms`)), ms)

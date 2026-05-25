@@ -18,13 +18,17 @@ function claudeDesktopConfigPath(): string {
     case 'darwin':
       return join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
     case 'win32':
-      return join(process.env.APPDATA ?? join(home, 'AppData', 'Roaming'), 'Claude', 'claude_desktop_config.json')
+      return join(
+        process.env.APPDATA ?? join(home, 'AppData', 'Roaming'),
+        'Claude',
+        'claude_desktop_config.json',
+      )
     default:
       // Linux build is unofficial but uses XDG.
       return join(
         process.env.XDG_CONFIG_HOME ?? join(home, '.config'),
         'Claude',
-        'claude_desktop_config.json'
+        'claude_desktop_config.json',
       )
   }
 }
@@ -53,18 +57,17 @@ export const claudeDesktopAdapter: ClientAdapter = {
  */
 export function parseClaudeDesktopJson(
   raw: string,
-  source: 'claude-desktop' | 'cursor'
+  source: 'claude-desktop' | 'cursor',
 ): McpServerConfig[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch (e) {
     throw new Error(
-      `failed to parse ${source} config as JSON: ${e instanceof Error ? e.message : String(e)}`
+      `failed to parse ${source} config as JSON: ${e instanceof Error ? e.message : String(e)}`,
     )
   }
-  const servers =
-    (parsed as { mcpServers?: Record<string, unknown> } | null)?.mcpServers ?? {}
+  const servers = (parsed as { mcpServers?: Record<string, unknown> } | null)?.mcpServers ?? {}
   const out: McpServerConfig[] = []
   for (const [name, entry] of Object.entries(servers)) {
     if (!entry || typeof entry !== 'object') continue
@@ -90,8 +93,8 @@ export function parseClaudeDesktopJson(
           e.env && typeof e.env === 'object'
             ? Object.fromEntries(
                 Object.entries(e.env as Record<string, unknown>).filter(
-                  ([, v]) => typeof v === 'string'
-                ) as [string, string][]
+                  ([, v]) => typeof v === 'string',
+                ) as [string, string][],
               )
             : undefined,
       },

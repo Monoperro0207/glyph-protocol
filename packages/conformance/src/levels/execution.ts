@@ -9,18 +9,15 @@ import type { CheckResult, LevelRunner } from '../types.js'
  */
 export const executionLevel: LevelRunner = async (ctx) => {
   const checks: CheckResult[] = []
-  const add = (
-    name: string,
-    status: 'passed' | 'failed' | 'skipped',
-    detail: string
-  ) => checks.push({ name, level: 'execution', status, detail })
+  const add = (name: string, status: 'passed' | 'failed' | 'skipped', detail: string) =>
+    checks.push({ name, level: 'execution', status, detail })
 
   const echo = ctx.fixtures.echo
   if (!echo || !ctx.lexiconNames.includes(echo)) {
     add(
       'execution.call.success',
       'skipped',
-      'fixtures.echo not declared or not present in /lexicon'
+      'fixtures.echo not declared or not present in /lexicon',
     )
     add('execution.call.receipt', 'skipped', 'depends on execution.call.success')
     add('execution.call.envelope', 'skipped', 'depends on execution.call.success')
@@ -28,29 +25,24 @@ export const executionLevel: LevelRunner = async (ctx) => {
   } else {
     // 1. POST /call succeeds with valid input and returns a SealedEnvelope
     try {
-      const { status, json } = await ctx.http(
-        'POST',
-        `/glyphs/${encodeURIComponent(echo)}/call`,
-        { input: { value: 'hello' } }
-      )
-      const envelopeOk =
-        status === 200 && ctx.validators.sealedEnvelope(json) === true
+      const { status, json } = await ctx.http('POST', `/glyphs/${encodeURIComponent(echo)}/call`, {
+        input: { value: 'hello' },
+      })
+      const envelopeOk = status === 200 && ctx.validators.sealedEnvelope(json) === true
       add(
         'execution.call.success',
         envelopeOk ? 'passed' : 'failed',
         envelopeOk
           ? `POST /glyphs/${echo}/call → 200 SealedEnvelope`
-          : `expected 200 SealedEnvelope, got ${status}`
+          : `expected 200 SealedEnvelope, got ${status}`,
       )
 
       if (envelopeOk) {
         // 2. Envelope shape
         add(
           'execution.call.envelope',
-          json.type === 'data' && typeof json.payload === 'object'
-            ? 'passed'
-            : 'failed',
-          'envelope.type=data with payload'
+          json.type === 'data' && typeof json.payload === 'object' ? 'passed' : 'failed',
+          'envelope.type=data with payload',
         )
 
         // 3. Receipt signature verifies end-to-end
@@ -61,7 +53,7 @@ export const executionLevel: LevelRunner = async (ctx) => {
             receiptOk ? 'passed' : 'failed',
             receiptOk
               ? 'receipt signature verifies against the server public key'
-              : 'receipt signature did not verify'
+              : 'receipt signature did not verify',
           )
         } catch (e) {
           add('execution.call.receipt', 'failed', errMsg(e))
@@ -69,15 +61,13 @@ export const executionLevel: LevelRunner = async (ctx) => {
 
         // 4. Sanitization report is present and well-shaped
         const inspection = json.inspection
-        const sanitOk =
-          inspection &&
-          ctx.validators.sanitization(inspection) === true
+        const sanitOk = inspection && ctx.validators.sanitization(inspection) === true
         add(
           'execution.call.sanitization',
           sanitOk ? 'passed' : 'failed',
           sanitOk
             ? 'envelope.inspection is a valid Sanitization report'
-            : 'inspection missing or malformed'
+            : 'inspection missing or malformed',
         )
       } else {
         add('execution.call.envelope', 'failed', 'envelope was not valid')
@@ -93,11 +83,9 @@ export const executionLevel: LevelRunner = async (ctx) => {
 
     // 5. Input validation — wrong type rejected
     try {
-      const { status, json } = await ctx.http(
-        'POST',
-        `/glyphs/${encodeURIComponent(echo)}/call`,
-        { input: { value: 123 } }
-      )
+      const { status, json } = await ctx.http('POST', `/glyphs/${encodeURIComponent(echo)}/call`, {
+        input: { value: 123 },
+      })
       const ok =
         status === 400 &&
         ctx.validators.glyphError(json) === true &&
@@ -107,9 +95,7 @@ export const executionLevel: LevelRunner = async (ctx) => {
         ok ? 'passed' : 'failed',
         ok
           ? 'invalid input → 400 VALIDATION_FAILED'
-          : `expected 400 VALIDATION_FAILED, got ${status} ${
-              json?.error?.code ?? ''
-            }`
+          : `expected 400 VALIDATION_FAILED, got ${status} ${json?.error?.code ?? ''}`,
       )
     } catch (e) {
       add('execution.call.inputValidation', 'failed', errMsg(e))
@@ -120,7 +106,7 @@ export const executionLevel: LevelRunner = async (ctx) => {
       const { status, json } = await ctx.http(
         'POST',
         `/glyphs/${encodeURIComponent(echo)}/call`,
-        '{not json'
+        '{not json',
       )
       const ok =
         status === 400 &&
@@ -131,9 +117,7 @@ export const executionLevel: LevelRunner = async (ctx) => {
         ok ? 'passed' : 'failed',
         ok
           ? 'non-JSON body → 400 MALFORMED_JSON'
-          : `expected 400 MALFORMED_JSON, got ${status} ${
-              json?.error?.code ?? ''
-            }`
+          : `expected 400 MALFORMED_JSON, got ${status} ${json?.error?.code ?? ''}`,
       )
     } catch (e) {
       add('execution.call.malformedJson', 'failed', errMsg(e))
@@ -144,17 +128,13 @@ export const executionLevel: LevelRunner = async (ctx) => {
   //    502 OUTPUT_VALIDATION_FAILED when its handler violates the card schema.
   const invalidOutput = ctx.fixtures.invalidOutput
   if (!invalidOutput || !ctx.lexiconNames.includes(invalidOutput)) {
-    add(
-      'execution.call.outputValidation',
-      'skipped',
-      'fixtures.invalidOutput not declared'
-    )
+    add('execution.call.outputValidation', 'skipped', 'fixtures.invalidOutput not declared')
   } else {
     try {
       const { status, json } = await ctx.http(
         'POST',
         `/glyphs/${encodeURIComponent(invalidOutput)}/call`,
-        { input: {} }
+        { input: {} },
       )
       const ok =
         status === 502 &&
@@ -165,9 +145,7 @@ export const executionLevel: LevelRunner = async (ctx) => {
         ok ? 'passed' : 'failed',
         ok
           ? 'mismatched handler output → 502 OUTPUT_VALIDATION_FAILED'
-          : `expected 502 OUTPUT_VALIDATION_FAILED, got ${status} ${
-              json?.error?.code ?? ''
-            }`
+          : `expected 502 OUTPUT_VALIDATION_FAILED, got ${status} ${json?.error?.code ?? ''}`,
       )
     } catch (e) {
       add('execution.call.outputValidation', 'failed', errMsg(e))

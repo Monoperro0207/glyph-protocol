@@ -1,5 +1,5 @@
-import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { GlyphClient } from '@glyphp/client'
 import { GlyphResolver } from '@glyphp/resolver'
 

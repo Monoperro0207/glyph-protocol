@@ -1,5 +1,5 @@
-import type { Context } from 'hono'
 import type { GlyphError } from '@glyphp/types'
+import type { Context } from 'hono'
 
 /** Stable, machine-readable error codes returned by a Glyph server. */
 export type GlyphErrorCode =
@@ -27,7 +27,7 @@ export function errorResponse(
   status: ErrorStatus,
   code: GlyphErrorCode,
   message: string,
-  details?: unknown
+  details?: unknown,
 ) {
   const error: GlyphError['error'] = { code, message }
   if (details !== undefined) error.details = details

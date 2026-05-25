@@ -1,12 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
-import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { test } from 'node:test'
 import { GlyphClient } from '@glyphp/client'
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js'
+import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { z } from 'zod'
 import { mcpServerFromGlyph } from '../src/index.js'
 
 /**
@@ -34,7 +30,7 @@ async function harness(): Promise<{
       output: z.object({ sum: z.number() }),
       provider: 'test',
       handler: async ({ a, b }) => ({ sum: a + b }),
-    })
+    }),
   )
   server.register(
     defineGlyph({
@@ -51,7 +47,7 @@ async function harness(): Promise<{
       output: z.object({ ok: z.boolean() }),
       provider: 'test',
       handler: async () => ({ ok: true }),
-    })
+    }),
   )
 
   const client = new GlyphClient({
@@ -61,10 +57,7 @@ async function harness(): Promise<{
   await client.connect()
 
   const bridge = mcpServerFromGlyph(client) as unknown as {
-    _requestHandlers: Map<
-      string,
-      (req: unknown) => Promise<unknown>
-    >
+    _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
   // The MCP SDK exposes handlers by request schema "method" string. We pull
   // them out and call them directly — that's the same path the stdio
@@ -74,8 +67,7 @@ async function harness(): Promise<{
   const callHandler = handlers.get('tools/call')!
 
   return {
-    callListTools: () =>
-      listHandler({ method: 'tools/list', params: {} }),
+    callListTools: () => listHandler({ method: 'tools/list', params: {} }),
     callTool: (name: string, args: Record<string, unknown>) =>
       callHandler({
         method: 'tools/call',
@@ -106,7 +98,7 @@ test('a safe tool call round-trips the payload', async () => {
   assert.ok(result.content[0]?.text.includes('5'))
 })
 
-test("a danger tool surfaces its risk tier in the MCP description", async () => {
+test('a danger tool surfaces its risk tier in the MCP description', async () => {
   const h = await harness()
   const result = (await h.callListTools()) as {
     tools: Array<{ name: string; description: string }>
@@ -125,8 +117,8 @@ test('a confirmation-required tool is refused at the bridge — MCP has no ticke
     content: Array<{ type: string; text: string }>
   }
   assert.equal(result.isError, true)
-  assert.match(result.content[0]!.text, /requires confirmation/i)
-  assert.match(result.content[0]!.text, /native Glyph client/i)
+  assert.match(result.content[0]?.text, /requires confirmation/i)
+  assert.match(result.content[0]?.text, /native Glyph client/i)
 })
 
 test('tool names with dots are normalized for MCP and round-trip via alias', async () => {
@@ -149,7 +141,7 @@ test('tool names with dots are normalized for MCP and round-trip via alias', asy
       output: z.object({ bytes: z.number() }),
       provider: 'test',
       handler: async ({ path }) => ({ bytes: path.length }),
-    })
+    }),
   )
   const client = new GlyphClient({
     baseUrl: 'http://glyph',
@@ -166,14 +158,14 @@ test('tool names with dots are normalized for MCP and round-trip via alias', asy
   const listed = (await listHandler({ method: 'tools/list', params: {} })) as {
     tools: Array<{ name: string }>
   }
-  assert.equal(listed.tools[0]!.name, 'fs_read')
+  assert.equal(listed.tools[0]?.name, 'fs_read')
 
   const called = (await callHandler({
     method: 'tools/call',
     params: { name: 'fs_read', arguments: { path: 'hello.txt' } },
   })) as { content: Array<{ type: string; text: string }> }
-  assert.ok(called.content[0]!.text.includes('"bytes"'))
-  assert.ok(called.content[0]!.text.includes('9'))
+  assert.ok(called.content[0]?.text.includes('"bytes"'))
+  assert.ok(called.content[0]?.text.includes('9'))
 })
 
 test('an unknown tool returns an MCP error', async () => {
@@ -183,5 +175,5 @@ test('an unknown tool returns an MCP error', async () => {
     content: Array<{ type: string; text: string }>
   }
   assert.equal(result.isError, true)
-  assert.match(result.content[0]!.text, /Unknown Glyph tool/)
+  assert.match(result.content[0]?.text, /Unknown Glyph tool/)
 })

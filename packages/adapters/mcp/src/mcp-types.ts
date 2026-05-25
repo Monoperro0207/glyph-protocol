@@ -31,18 +31,12 @@ export interface McpToolResult {
   [key: string]: unknown
 }
 
-export type McpCallFn = (
-  name: string,
-  args: Record<string, unknown>
-) => Promise<McpToolResult>
+export type McpCallFn = (name: string, args: Record<string, unknown>) => Promise<McpToolResult>
 
 /** The subset of an MCP client this adapter relies on — matches the shape of
  *  the official `@modelcontextprotocol/sdk` Client, so one can be passed
  *  directly without this package depending on the SDK. */
 export interface McpClientLike {
   listTools(): Promise<{ tools: McpTool[] }>
-  callTool(params: {
-    name: string
-    arguments?: Record<string, unknown>
-  }): Promise<McpToolResult>
+  callTool(params: { name: string; arguments?: Record<string, unknown> }): Promise<McpToolResult>
 }

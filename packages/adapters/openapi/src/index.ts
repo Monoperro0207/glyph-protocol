@@ -1,7 +1,7 @@
-import { z } from 'zod'
 import { compileJsonSchema, computeGlyphId } from '@glyphp/core'
-import type { GlyphCard } from '@glyphp/types'
 import type { GlyphDefinition } from '@glyphp/server'
+import type { GlyphCard } from '@glyphp/types'
+import { z } from 'zod'
 import type {
   HttpMethod,
   JsonSchema,
@@ -62,7 +62,7 @@ export interface OpenApiAdapterOptions {
 
 export function glyphsFromOpenApi(
   doc: OpenApiDoc,
-  options: OpenApiAdapterOptions
+  options: OpenApiAdapterOptions,
 ): GlyphDefinition<any, any>[] {
   const provider = options.provider ?? doc.info?.title ?? 'openapi'
   const documentServerUrl = doc.servers?.[0]?.url
@@ -74,7 +74,7 @@ export function glyphsFromOpenApi(
   } else if (options.allowDocumentServerUrl) {
     if (!documentServerUrl) {
       throw new Error(
-        'OpenAPI adapter: allowDocumentServerUrl is true but the document declares no servers[].url'
+        'OpenAPI adapter: allowDocumentServerUrl is true but the document declares no servers[].url',
       )
     }
     // Validate against allowedHosts if provided.
@@ -82,7 +82,7 @@ export function glyphsFromOpenApi(
       const host = extractHost(documentServerUrl)
       if (!options.allowedHosts.includes(host)) {
         throw new Error(
-          `OpenAPI adapter: document server URL host "${host}" is not in the allowed hosts list`
+          `OpenAPI adapter: document server URL host "${host}" is not in the allowed hosts list`,
         )
       }
     }
@@ -93,11 +93,11 @@ export function glyphsFromOpenApi(
     throw new Error(
       'OpenAPI adapter: document declares a server URL but no explicit baseUrl is provided. ' +
         'Set `baseUrl` to use a trusted URL, or set `allowDocumentServerUrl: true` to opt in ' +
-        'to the document-declared URL. Implicit trust of document server URLs is refused as an SSRF vector.'
+        'to the document-declared URL. Implicit trust of document server URLs is refused as an SSRF vector.',
     )
   } else {
     throw new Error(
-      'OpenAPI adapter requires a baseUrl (or allowDocumentServerUrl + a `servers[]` entry in the document)'
+      'OpenAPI adapter requires a baseUrl (or allowDocumentServerUrl + a `servers[]` entry in the document)',
     )
   }
   const outputValidation = options.outputValidation ?? 'schema'
@@ -114,8 +114,7 @@ export function glyphsFromOpenApi(
       const cardBase = {
         version: '1.0.0',
         name: operationName(method, path, op),
-        intent:
-          op.summary ?? op.description ?? `${method.toUpperCase()} ${path}`,
+        intent: op.summary ?? op.description ?? `${method.toUpperCase()} ${path}`,
         tags: op.tags ?? [],
         cost: deriveCost(method),
         idempotent: method === 'get' || method === 'put' || method === 'delete',
@@ -139,7 +138,8 @@ export function glyphsFromOpenApi(
         card,
         inputSchema: buildZodInput(op, doc),
         outputSchema:
-          outputValidation === 'schema' && outputSchemaJson &&
+          outputValidation === 'schema' &&
+          outputSchemaJson &&
           Object.keys(outputSchemaJson).length > 0
             ? compileJsonSchema(outputSchemaJson)
             : z.unknown(),
@@ -184,11 +184,7 @@ function toKebab(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function operationName(
-  method: HttpMethod,
-  path: string,
-  op: Operation
-): string {
+function operationName(method: HttpMethod, path: string, op: Operation): string {
   if (op.operationId) return toKebab(op.operationId)
   return toKebab(`${method}-${path.replace(/[{}]/g, '')}`)
 }
@@ -211,18 +207,14 @@ function buildInputSchema(op: Operation, doc: OpenApiDoc): JsonSchema {
 function buildOutputSchema(op: Operation, doc: OpenApiDoc): JsonSchema {
   const responses = op.responses ?? {}
   const key = Object.keys(responses).find((k) => k.startsWith('2'))
-  const schema = key
-    ? responses[key]?.content?.['application/json']?.schema
-    : undefined
+  const schema = key ? responses[key]?.content?.['application/json']?.schema : undefined
   return schema ? (resolveRefs(schema, doc) as JsonSchema) : {}
 }
 
 function buildZodInput(op: Operation, doc: OpenApiDoc): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const param of op.parameters ?? []) {
-    const resolved = param.schema
-      ? (resolveRefs(param.schema, doc) as JsonSchema)
-      : undefined
+    const resolved = param.schema ? (resolveRefs(param.schema, doc) as JsonSchema) : undefined
     const field = jsonTypeToZod(resolved)
     shape[param.name] = param.required ? field : field.optional()
   }
@@ -244,9 +236,7 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
     const literals = enumValues.map((v) => z.literal(v as never))
     return literals.length === 1
       ? literals[0]
-      : z.union(
-          literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
-        )
+      : z.union(literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
   }
 
   switch (schema.type) {
@@ -267,21 +257,17 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
     case 'array': {
       const items = schema.items
       return z.array(
-        items && typeof items === 'object'
-          ? jsonTypeToZod(items as JsonSchema)
-          : z.unknown()
+        items && typeof items === 'object' ? jsonTypeToZod(items as JsonSchema) : z.unknown(),
       )
     }
     case 'object': {
       const props = schema.properties
       if (props && typeof props === 'object') {
         const required = new Set(
-          Array.isArray(schema.required) ? (schema.required as string[]) : []
+          Array.isArray(schema.required) ? (schema.required as string[]) : [],
         )
         const shape: Record<string, z.ZodTypeAny> = {}
-        for (const [key, prop] of Object.entries(
-          props as Record<string, JsonSchema>
-        )) {
+        for (const [key, prop] of Object.entries(props as Record<string, JsonSchema>)) {
           const field = jsonTypeToZod(prop)
           shape[key] = required.has(key) ? field : field.optional()
         }
@@ -305,7 +291,7 @@ function buildHandler(
   path: string,
   op: Operation,
   baseUrl: string,
-  security: SecurityContext
+  security: SecurityContext,
 ): (input: Record<string, unknown>) => Promise<unknown> {
   const params = op.parameters ?? []
   const effectiveSecurity = op.security ?? security.documentSecurity
@@ -339,7 +325,7 @@ function buildHandler(
 
     const qs = query.toString()
     if (qs) url += `?${qs}`
-    if (cookies.length > 0) headers['Cookie'] = cookies.join('; ')
+    if (cookies.length > 0) headers.Cookie = cookies.join('; ')
 
     const init: { method: string; headers: Record<string, string>; body?: string } = {
       method: method.toUpperCase(),
@@ -358,11 +344,7 @@ function buildHandler(
   }
 }
 
-function appendQuery(
-  query: URLSearchParams,
-  param: Parameter,
-  value: unknown
-): void {
+function appendQuery(query: URLSearchParams, param: Parameter, value: unknown): void {
   // OpenAPI's default style for query is `form` with `explode=true`: arrays
   // become repeated keys, objects flatten into keys. We honor that without
   // depending on full spec semantics — enough for the common case.
@@ -384,7 +366,7 @@ function applySecurity(
   ctx: SecurityContext,
   headers: Record<string, string>,
   query: URLSearchParams,
-  cookies: string[]
+  cookies: string[],
 ): void {
   for (const requirement of requirements) {
     for (const schemeName of Object.keys(requirement)) {
@@ -393,22 +375,21 @@ function applySecurity(
       if (!scheme || !credential) continue
       if (scheme.type === 'http' && scheme.scheme === 'bearer') {
         if (credential.type === 'bearer') {
-          headers['Authorization'] = `Bearer ${credential.token}`
+          headers.Authorization = `Bearer ${credential.token}`
         }
         continue
       }
       if (scheme.type === 'http' && scheme.scheme === 'basic') {
         if (credential.type === 'basic') {
-          const enc = Buffer.from(
-            `${credential.username}:${credential.password}`
-          ).toString('base64')
-          headers['Authorization'] = `Basic ${enc}`
+          const enc = Buffer.from(`${credential.username}:${credential.password}`).toString(
+            'base64',
+          )
+          headers.Authorization = `Basic ${enc}`
         }
         continue
       }
       if (scheme.type === 'apiKey' && scheme.name) {
-        const value =
-          credential.type === 'apiKey' ? credential.value : undefined
+        const value = credential.type === 'apiKey' ? credential.value : undefined
         if (!value) continue
         if (scheme.in === 'header') headers[scheme.name] = value
         else if (scheme.in === 'query') query.set(scheme.name, value)
@@ -438,11 +419,7 @@ async function parseResponse(res: Response): Promise<unknown> {
   return { raw: text, contentType }
 }
 
-function resolveRefs(
-  node: unknown,
-  doc: OpenApiDoc,
-  seen: Set<string> = new Set()
-): unknown {
+function resolveRefs(node: unknown, doc: OpenApiDoc, seen: Set<string> = new Set()): unknown {
   if (Array.isArray(node)) return node.map((n) => resolveRefs(n, doc, seen))
   if (node !== null && typeof node === 'object') {
     const ref = (node as Record<string, unknown>).$ref

@@ -8,7 +8,7 @@
  * intentionally minimal stubs — fill in `runRaw` and `runGlyph` per
  * driver before kicking off real spend.
  */
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -61,14 +61,11 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--models') out.models = argv[++i].split(',').map((s) => s.trim())
-    else if (a === '--modes')
-      out.modes = argv[++i].split(',').map((s) => s.trim()) as Args['modes']
+    else if (a === '--modes') out.modes = argv[++i].split(',').map((s) => s.trim()) as Args['modes']
     else if (a === '--suite') out.suite = argv[++i]
     else if (a === '--dry-run') out.dryRun = true
     else if (a === '--help' || a === '-h') {
-      console.log(
-        'usage: bench --models <csv> --modes <csv> --suite <name> [--dry-run]'
-      )
+      console.log('usage: bench --models <csv> --modes <csv> --suite <name> [--dry-run]')
       process.exit(0)
     }
   }
@@ -90,26 +87,22 @@ async function loadSuite(name: string): Promise<Suite> {
  * Until then, the runner reports the planned work and exits.
  */
 async function runRaw(_model: string, _scenario: Scenario): Promise<ScenarioResult> {
-  throw new Error(
-    'runRaw is not implemented yet — fill in the per-model driver before live runs'
-  )
+  throw new Error('runRaw is not implemented yet — fill in the per-model driver before live runs')
 }
 
 async function runGlyph(_model: string, _scenario: Scenario): Promise<ScenarioResult> {
-  throw new Error(
-    'runGlyph is not implemented yet — fill in the per-model driver before live runs'
-  )
+  throw new Error('runGlyph is not implemented yet — fill in the per-model driver before live runs')
 }
 
 function requireApiKeyFor(model: string): void {
   if (model.startsWith('claude') && !process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is required for ' + model)
+    throw new Error(`ANTHROPIC_API_KEY is required for ${model}`)
   }
   if (model.startsWith('gpt') && !process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is required for ' + model)
+    throw new Error(`OPENAI_API_KEY is required for ${model}`)
   }
   if (model.startsWith('gemini') && !process.env.GOOGLE_API_KEY) {
-    throw new Error('GOOGLE_API_KEY is required for ' + model)
+    throw new Error(`GOOGLE_API_KEY is required for ${model}`)
   }
 }
 
@@ -147,17 +140,15 @@ async function main(): Promise<void> {
       const perFile: ScenarioResult[] = []
       for (const scenario of suite.scenarios) {
         const result =
-          mode === 'raw'
-            ? await runRaw(model, scenario)
-            : await runGlyph(model, scenario)
+          mode === 'raw' ? await runRaw(model, scenario) : await runGlyph(model, scenario)
         perFile.push(result)
         all.push(result)
       }
       const outPath = join(
         resultsDir,
-        `${dateStamp}__${model.replace(/[^a-z0-9.-]/gi, '_')}__${mode}.json`
+        `${dateStamp}__${model.replace(/[^a-z0-9.-]/gi, '_')}__${mode}.json`,
       )
-      await writeFile(outPath, JSON.stringify(perFile, null, 2) + '\n')
+      await writeFile(outPath, `${JSON.stringify(perFile, null, 2)}\n`)
       console.log(`  wrote ${outPath}`)
     }
   }
@@ -189,13 +180,13 @@ function renderSummary(results: ScenarioResult[], suite: Suite): string {
     const avgLat = list.reduce((s, r) => s + r.latencyMs, 0) / list.length
     const usd = list.reduce((s, r) => s + r.costUsd, 0)
     lines.push(
-      `| ${model} | ${mode} | ${((success / list.length) * 100).toFixed(1)} | ${unsafe} | ${refused} | ${avgLat.toFixed(0)} | ${usd.toFixed(4)} |`
+      `| ${model} | ${mode} | ${((success / list.length) * 100).toFixed(1)} | ${unsafe} | ${refused} | ${avgLat.toFixed(0)} | ${usd.toFixed(4)} |`,
     )
   }
-  return lines.join('\n') + '\n'
+  return `${lines.join('\n')}\n`
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.stack ?? err.message : err)
+  console.error(err instanceof Error ? (err.stack ?? err.message) : err)
   process.exit(1)
 })

@@ -42,7 +42,7 @@ export interface GlyphsAsVercelAiToolsOptions {
  */
 export async function glyphsAsVercelAiTools(
   client: GlyphClient,
-  options: GlyphsAsVercelAiToolsOptions = {}
+  options: GlyphsAsVercelAiToolsOptions = {},
 ): Promise<Record<string, VercelAiTool>> {
   const lexicon = await client.getLexicon()
   const out: Record<string, VercelAiTool> = {}
@@ -61,7 +61,7 @@ export async function glyphsAsVercelAiTools(
 export function fromLexicon(
   client: GlyphClient,
   lexicon: LexiconEntry[],
-  options: GlyphsAsVercelAiToolsOptions = {}
+  options: GlyphsAsVercelAiToolsOptions = {},
 ): Record<string, VercelAiTool> {
   const out: Record<string, VercelAiTool> = {}
   for (const entry of lexicon) {
@@ -77,7 +77,7 @@ export function fromLexicon(
 async function buildTool(
   client: GlyphClient,
   entry: LexiconEntry,
-  options: GlyphsAsVercelAiToolsOptions
+  options: GlyphsAsVercelAiToolsOptions,
 ): Promise<VercelAiTool> {
   let schema: unknown = {}
   try {
@@ -85,7 +85,7 @@ async function buildTool(
     if (card.input) schema = card.input
   } catch (err) {
     console.warn(
-      `[@glyphp/integration-vercel-ai] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`
+      `[@glyphp/integration-vercel-ai] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`,
     )
   }
   return {
@@ -98,7 +98,7 @@ async function buildTool(
 function makeExecute(
   client: GlyphClient,
   name: string,
-  options: GlyphsAsVercelAiToolsOptions
+  options: GlyphsAsVercelAiToolsOptions,
 ): VercelAiTool['execute'] {
   return async (input) => {
     const envelope = await client.call(name, input).catch(async (err) => {

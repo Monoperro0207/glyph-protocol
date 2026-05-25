@@ -31,7 +31,7 @@ export interface GlyphsAsLangChainToolsOptions {
 
 export async function glyphsAsLangChainTools(
   client: GlyphClient,
-  options: GlyphsAsLangChainToolsOptions = {}
+  options: GlyphsAsLangChainToolsOptions = {},
 ): Promise<LangChainGlyphTool[]> {
   const lexicon = await client.getLexicon()
   const tools: LangChainGlyphTool[] = []
@@ -48,7 +48,7 @@ export async function glyphsAsLangChainTools(
 export function fromLexicon(
   client: GlyphClient,
   lexicon: LexiconEntry[],
-  options: GlyphsAsLangChainToolsOptions = {}
+  options: GlyphsAsLangChainToolsOptions = {},
 ): LangChainGlyphTool[] {
   return lexicon.map((entry) => ({
     name: entry.name,
@@ -61,7 +61,7 @@ export function fromLexicon(
 async function buildTool(
   client: GlyphClient,
   entry: LexiconEntry,
-  options: GlyphsAsLangChainToolsOptions
+  options: GlyphsAsLangChainToolsOptions,
 ): Promise<LangChainGlyphTool> {
   let schema: unknown = {}
   try {
@@ -69,7 +69,7 @@ async function buildTool(
     if (card.input) schema = card.input
   } catch (err) {
     console.warn(
-      `[@glyphp/integration-langchain] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`
+      `[@glyphp/integration-langchain] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`,
     )
   }
   return {
@@ -83,7 +83,7 @@ async function buildTool(
 function makeInvoke(
   client: GlyphClient,
   name: string,
-  options: GlyphsAsLangChainToolsOptions
+  options: GlyphsAsLangChainToolsOptions,
 ): LangChainGlyphTool['invoke'] {
   return async (input) => {
     const envelope = await client.call(name, input).catch(async (err) => {

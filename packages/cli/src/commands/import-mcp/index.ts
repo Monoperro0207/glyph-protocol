@@ -1,17 +1,17 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
+import { createInterface } from 'node:readline/promises'
 import { ADAPTERS, ALL_CLIENT_IDS } from './clients/index.js'
-import { manualConfig, type ManualOptions } from './manual.js'
-import { importOneServer } from './importer.js'
 import { emitServerProject, emitTopLevelIndex } from './emitter.js'
+import { importOneServer } from './importer.js'
+import { type ManualOptions, manualConfig } from './manual.js'
 import { emitReport } from './report.js'
 import type {
   ClientId,
+  ImportedServer,
   ImportOptions,
   ImportResult,
-  ImportedServer,
   McpServerConfig,
   SkippedServer,
 } from './types.js'
@@ -38,7 +38,7 @@ export async function runImportMcp(input: RunImportMcpInput): Promise<ImportResu
   if (configs.length === 0) {
     throw new Error(
       'no MCP servers to import — pass --from <client>, --command, or --url. ' +
-        'Run `glyph import mcp --help` for details.'
+        'Run `glyph import mcp --help` for details.',
     )
   }
 
@@ -62,7 +62,7 @@ export async function runImportMcp(input: RunImportMcpInput): Promise<ImportResu
       port++
       console.log(
         `[glyph] imported ${config.source}/${config.name} → ${outDir} ` +
-          `(port ${result.port}, ${result.toolCount} tools)`
+          `(port ${result.port}, ${result.toolCount} tools)`,
       )
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e)
@@ -90,7 +90,7 @@ async function resolveConfigs(input: RunImportMcpInput): Promise<McpServerConfig
     const configs = await adapter.load()
     if (configs.length === 0) {
       throw new Error(
-        `${adapter.displayName} config had no MCP servers declared at ${adapter.configPathHint}`
+        `${adapter.displayName} config had no MCP servers declared at ${adapter.configPathHint}`,
       )
     }
     if (input.pick && stdin.isTTY) {
@@ -105,7 +105,7 @@ async function resolveConfigs(input: RunImportMcpInput): Promise<McpServerConfig
 async function interactiveSelect(): Promise<McpServerConfig[]> {
   if (!stdin.isTTY) {
     throw new Error(
-      'interactive client picker requires a TTY — pass --from <client> or --command/--url'
+      'interactive client picker requires a TTY — pass --from <client> or --command/--url',
     )
   }
   const detected: { id: ClientId; displayName: string; configs: McpServerConfig[] }[] = []
@@ -119,13 +119,13 @@ async function interactiveSelect(): Promise<McpServerConfig[]> {
       console.warn(
         `[glyph] could not read ${adapter.displayName} config: ${
           e instanceof Error ? e.message : String(e)
-        }`
+        }`,
       )
     }
   }
   if (detected.length === 0) {
     throw new Error(
-      'no supported MCP client config detected on this machine. Pass --command or --url for a manual target.'
+      'no supported MCP client config detected on this machine. Pass --command or --url for a manual target.',
     )
   }
 
@@ -133,7 +133,9 @@ async function interactiveSelect(): Promise<McpServerConfig[]> {
   try {
     console.log('\nDetected MCP client configs:')
     detected.forEach((d, i) => {
-      console.log(`  ${i + 1}) ${d.displayName} (${d.configs.length} server${d.configs.length === 1 ? '' : 's'})`)
+      console.log(
+        `  ${i + 1}) ${d.displayName} (${d.configs.length} server${d.configs.length === 1 ? '' : 's'})`,
+      )
     })
     const pick = (await rl.question('\nImport from which? [1]: ')).trim() || '1'
     const idx = Number(pick) - 1
@@ -148,7 +150,7 @@ async function interactiveSelect(): Promise<McpServerConfig[]> {
 async function pickFromList(
   label: string,
   configs: McpServerConfig[],
-  rlExisting?: ReturnType<typeof createInterface>
+  rlExisting?: ReturnType<typeof createInterface>,
 ): Promise<McpServerConfig[]> {
   const rl = rlExisting ?? createInterface({ input: stdin, output: stdout })
   try {
@@ -191,5 +193,10 @@ function printDryRunPlan(configs: McpServerConfig[], options: ImportOptions): vo
 }
 
 function safeDirName(raw: string): string {
-  return raw.replace(/[^a-z0-9-]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'mcp'
+  return (
+    raw
+      .replace(/[^a-z0-9-]+/gi, '-')
+      .toLowerCase()
+      .replace(/^-+|-+$/g, '') || 'mcp'
+  )
 }

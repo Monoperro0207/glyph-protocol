@@ -1,12 +1,11 @@
 import { createHash } from 'node:crypto'
-import { readFile, writeFile, rename } from 'node:fs/promises'
-import * as ed from '@noble/ed25519'
+import { readFile, rename, writeFile } from 'node:fs/promises'
 import type { KeyEntry, KeyRegistry } from '@glyphp/types'
+import * as ed from '@noble/ed25519'
 import { canonicalHash } from './index.js'
 
 const toHex = (bytes: Uint8Array): string => Buffer.from(bytes).toString('hex')
-const fromHex = (hex: string): Uint8Array =>
-  new Uint8Array(Buffer.from(hex, 'hex'))
+const fromHex = (hex: string): Uint8Array => new Uint8Array(Buffer.from(hex, 'hex'))
 
 export const KEY_REGISTRY_VERSION = '1.0'
 
@@ -72,7 +71,7 @@ export function verifyKeyRegistry(registry: KeyRegistry): boolean {
     const ok = ed.verify(
       fromHex(entry.signature),
       new TextEncoder().encode(entrySigningPayload(entry)),
-      fromHex(parent.publicKey)
+      fromHex(parent.publicKey),
     )
     if (!ok) return false
   }
@@ -83,7 +82,7 @@ export function verifyKeyRegistry(registry: KeyRegistry): boolean {
   const outerOk = ed.verify(
     fromHex(registry.signature),
     new TextEncoder().encode(registrySigningPayload(registry)),
-    fromHex(active.publicKey)
+    fromHex(active.publicKey),
   )
   return outerOk
 }
@@ -97,10 +96,7 @@ export type ResolveResult =
   | { status: 'revoked'; entry: KeyEntry; reason?: string }
   | { status: 'unknown' }
 
-export function resolveKey(
-  registry: KeyRegistry,
-  publicKey: string
-): ResolveResult {
+export function resolveKey(registry: KeyRegistry, publicKey: string): ResolveResult {
   const target = fingerprintKey(publicKey)
   for (const entry of registry.keys) {
     if (entry.fingerprint !== target) continue
@@ -133,9 +129,7 @@ export function buildKeyRegistry(opts: BuildRegistryOptions): KeyRegistry {
   const issuedAt = opts.issuedAt ?? new Date().toISOString()
   const ttlSeconds = opts.ttlSeconds ?? 3600
   // Active key = the last entry without validUntil and without revokedAt.
-  const active = [...opts.entries]
-    .reverse()
-    .find((e) => !e.validUntil && !e.revokedAt)
+  const active = [...opts.entries].reverse().find((e) => !e.validUntil && !e.revokedAt)
   if (!active) {
     throw new Error('buildKeyRegistry: no active (non-retired, non-revoked) key in entries')
   }
@@ -148,10 +142,7 @@ export function buildKeyRegistry(opts: BuildRegistryOptions): KeyRegistry {
     ttlSeconds,
   }
   const signature = toHex(
-    ed.sign(
-      new TextEncoder().encode(registrySigningPayload(base)),
-      fromHex(opts.activePrivateKey)
-    )
+    ed.sign(new TextEncoder().encode(registrySigningPayload(base)), fromHex(opts.activePrivateKey)),
   )
   return { ...base, signature }
 }
@@ -164,7 +155,7 @@ export function buildKeyRegistry(opts: BuildRegistryOptions): KeyRegistry {
 export function buildKeyEntry(
   publicKey: string,
   validFrom: string,
-  parent?: { fingerprint: string; privateKey: string }
+  parent?: { fingerprint: string; privateKey: string },
 ): KeyEntry {
   const fingerprint = fingerprintKey(publicKey)
   const base: KeyEntry = {
@@ -175,10 +166,7 @@ export function buildKeyEntry(
   }
   if (!parent) return base
   const signature = toHex(
-    ed.sign(
-      new TextEncoder().encode(entrySigningPayload(base)),
-      fromHex(parent.privateKey)
-    )
+    ed.sign(new TextEncoder().encode(entrySigningPayload(base)), fromHex(parent.privateKey)),
   )
   return { ...base, signature }
 }
@@ -237,7 +225,7 @@ export class FileKeyRegistry implements KeyRegistrySource {
       throw new Error('FileKeyRegistry: refusing to save an unsigned registry')
     }
     const tmp = `${this.path}.${process.pid}.tmp`
-    await writeFile(tmp, JSON.stringify(registry, null, 2) + '\n', 'utf8')
+    await writeFile(tmp, `${JSON.stringify(registry, null, 2)}\n`, 'utf8')
     await rename(tmp, this.path)
     this.cache = registry
   }
@@ -260,7 +248,7 @@ export class HttpKeyRegistry implements KeyRegistrySource {
   private cache?: { value: KeyRegistry; expiresAt: number }
   constructor(
     private baseUrl: string,
-    private options: { maxAgeSeconds?: number; fetchImpl?: typeof fetch } = {}
+    private options: { maxAgeSeconds?: number; fetchImpl?: typeof fetch } = {},
   ) {}
 
   async registry(): Promise<KeyRegistry> {
@@ -269,18 +257,13 @@ export class HttpKeyRegistry implements KeyRegistrySource {
     const f = this.options.fetchImpl ?? fetch
     const res = await f(`${this.baseUrl.replace(/\/$/, '')}/keys`)
     if (!res.ok) {
-      throw new Error(
-        `HttpKeyRegistry: GET /keys returned ${res.status} ${res.statusText}`
-      )
+      throw new Error(`HttpKeyRegistry: GET /keys returned ${res.status} ${res.statusText}`)
     }
     const parsed = (await res.json()) as KeyRegistry
     if (!verifyKeyRegistry(parsed)) {
       throw new Error('HttpKeyRegistry: signature verification failed')
     }
-    const ttl = Math.min(
-      parsed.ttlSeconds,
-      this.options.maxAgeSeconds ?? 3600
-    )
+    const ttl = Math.min(parsed.ttlSeconds, this.options.maxAgeSeconds ?? 3600)
     this.cache = { value: parsed, expiresAt: now + ttl * 1000 }
     return parsed
   }

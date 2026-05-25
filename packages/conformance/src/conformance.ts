@@ -1,9 +1,9 @@
 import { PROTOCOL_VERSION } from '@glyphp/types'
-import { validators } from './schemas.js'
 import { discoveryLevel } from './levels/discovery.js'
 import { executionLevel } from './levels/execution.js'
-import { securityLevel } from './levels/security.js'
 import { governanceLevel } from './levels/governance.js'
+import { securityLevel } from './levels/security.js'
+import { validators } from './schemas.js'
 import {
   ALL_LEVELS,
   type CheckResult,
@@ -34,10 +34,9 @@ const RUNNERS: Record<ConformanceLevel, LevelRunner> = {
  */
 export async function runConformance(
   baseUrl: string,
-  options: ConformanceOptions = {}
+  options: ConformanceOptions = {},
 ): Promise<ConformanceReport> {
-  const doFetch: FetchLike =
-    options.fetch ?? ((req) => globalThis.fetch(req))
+  const doFetch: FetchLike = options.fetch ?? ((req) => globalThis.fetch(req))
   const base = baseUrl.replace(/\/$/, '')
   const requested = options.levels ?? ALL_LEVELS
   const ctx: LevelContext = {
@@ -112,15 +111,11 @@ export function formatReport(report: ConformanceReport): string {
   for (const summary of report.levels) {
     const tag = summary.status === 'pass' ? 'PASS' : 'FAIL'
     lines.push(
-      `\n  ${tag}  ${summary.level} — ${summary.passed} passed, ${summary.failed} failed, ${summary.skipped} skipped`
+      `\n  ${tag}  ${summary.level} — ${summary.passed} passed, ${summary.failed} failed, ${summary.skipped} skipped`,
     )
     for (const check of report.checks.filter((c) => c.level === summary.level)) {
       const marker =
-        check.status === 'passed'
-          ? 'PASS'
-          : check.status === 'failed'
-            ? 'FAIL'
-            : 'SKIP'
+        check.status === 'passed' ? 'PASS' : check.status === 'failed' ? 'FAIL' : 'SKIP'
       lines.push(`    ${marker}  ${check.name} — ${check.detail}`)
     }
   }
@@ -128,7 +123,7 @@ export function formatReport(report: ConformanceReport): string {
   lines.push(
     report.passed
       ? `compatible: ${report.compatibility.join(', ')}`
-      : `compatible: ${report.compatibility.join(', ') || '(none)'}`
+      : `compatible: ${report.compatibility.join(', ') || '(none)'}`,
   )
   return lines.join('\n')
 }
@@ -147,7 +142,7 @@ export function formatReportMarkdown(report: ConformanceReport): string {
   ]
   for (const s of report.levels) {
     lines.push(
-      `| ${s.level} | ${s.status === 'pass' ? '✅ pass' : '❌ fail'} | ${s.passed} | ${s.failed} | ${s.skipped} |`
+      `| ${s.level} | ${s.status === 'pass' ? '✅ pass' : '❌ fail'} | ${s.passed} | ${s.failed} | ${s.skipped} |`,
     )
   }
   lines.push('')
@@ -157,12 +152,7 @@ export function formatReportMarkdown(report: ConformanceReport): string {
     lines.push('| Check | Result | Detail |')
     lines.push('| --- | --- | --- |')
     for (const check of report.checks.filter((c) => c.level === summary.level)) {
-      const marker =
-        check.status === 'passed'
-          ? '✅'
-          : check.status === 'failed'
-            ? '❌'
-            : '⏭'
+      const marker = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏭'
       lines.push(`| \`${check.name}\` | ${marker} ${check.status} | ${check.detail} |`)
     }
     lines.push('')
@@ -185,18 +175,12 @@ export function formatBadgeJson(report: ConformanceReport): {
   return {
     schemaVersion: 1,
     label: `glyph conformance ${report.protocolVersion}`,
-    message: passing
-      ? report.compatibility.join(', ') || 'passing'
-      : 'failing',
+    message: passing ? report.compatibility.join(', ') || 'passing' : 'failing',
     color: passing ? 'brightgreen' : 'red',
   }
 }
 
-function buildHttp(
-  base: string,
-  doFetch: FetchLike,
-  authToken?: string
-): HttpFn {
+function buildHttp(base: string, doFetch: FetchLike, authToken?: string): HttpFn {
   return async (method, path, body, extraHeaders) => {
     const headers: Record<string, string> = {}
     if (body !== undefined && !(typeof body === 'string')) {
@@ -205,7 +189,7 @@ function buildHttp(
       // Pre-serialised body (used to test MALFORMED_JSON). Send raw text.
       headers['content-type'] = 'application/json'
     }
-    if (authToken) headers['authorization'] = `Bearer ${authToken}`
+    if (authToken) headers.authorization = `Bearer ${authToken}`
     if (extraHeaders) {
       for (const [k, v] of Object.entries(extraHeaders)) {
         if (v === '') delete headers[k.toLowerCase()]
@@ -216,12 +200,7 @@ function buildHttp(
     const req = new Request(`${base}${path}`, {
       method,
       headers,
-      body:
-        body === undefined
-          ? undefined
-          : typeof body === 'string'
-            ? body
-            : JSON.stringify(body),
+      body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
     })
     const res = await doFetch(req)
     const text = await res.text()
@@ -235,5 +214,5 @@ function buildHttp(
   }
 }
 
-export type { ConformanceReport, ConformanceOptions, CheckResult, FetchLike }
+export type { CheckResult, ConformanceOptions, ConformanceReport, FetchLike }
 export { ALL_LEVELS }

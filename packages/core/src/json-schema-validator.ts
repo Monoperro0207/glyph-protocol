@@ -4,22 +4,23 @@ import Ajv2020Import from 'ajv/dist/2020.js'
 import addFormatsImport from 'ajv-formats'
 import { z } from 'zod'
 
-const Ajv2020 = (
-  (Ajv2020Import as any).default ?? Ajv2020Import
-) as new (opts?: object) => {
+const Ajv2020 = ((Ajv2020Import as any).default ?? Ajv2020Import) as new (
+  opts?: object,
+) => {
   compile: (schema: object) => ((value: unknown) => boolean) & {
     errors?: Array<{ instancePath?: string; message?: string }> | null
   }
 }
-const addFormats = (
-  (addFormatsImport as any).default ?? addFormatsImport
-) as (ajv: unknown, formats?: string[] | object) => unknown
+const addFormats = ((addFormatsImport as any).default ?? addFormatsImport) as (
+  ajv: unknown,
+  formats?: string[] | object,
+) => unknown
 
 /** Thrown when a JSON Schema exceeds the complexity limits. */
 export class SchemaComplexityError extends Error {
   constructor(
     message: string,
-    public readonly detail: { nodes: number; depth: number; maxNodes: number; maxDepth: number }
+    public readonly detail: { nodes: number; depth: number; maxNodes: number; maxDepth: number },
   ) {
     super(message)
     this.name = 'SchemaComplexityError'
@@ -33,11 +34,7 @@ export class SchemaComplexityError extends Error {
  *
  * Throws `SchemaComplexityError` if either limit is exceeded.
  */
-export function validateSchemaComplexity(
-  schema: unknown,
-  maxNodes = 1000,
-  maxDepth = 32
-): void {
+export function validateSchemaComplexity(schema: unknown, maxNodes = 1000, maxDepth = 32): void {
   let totalNodes = 0
   let maxSeenDepth = 0
 
@@ -48,13 +45,13 @@ export function validateSchemaComplexity(
     if (totalNodes > maxNodes) {
       throw new SchemaComplexityError(
         `SCHEMA_TOO_COMPLEX: schema has at least ${totalNodes} nodes (max ${maxNodes})`,
-        { nodes: totalNodes, depth: maxSeenDepth, maxNodes, maxDepth }
+        { nodes: totalNodes, depth: maxSeenDepth, maxNodes, maxDepth },
       )
     }
     if (depth > maxDepth) {
       throw new SchemaComplexityError(
         `SCHEMA_TOO_COMPLEX: schema depth ${depth} exceeds maximum ${maxDepth}`,
-        { nodes: totalNodes, depth, maxNodes, maxDepth }
+        { nodes: totalNodes, depth, maxNodes, maxDepth },
       )
     }
     if (Array.isArray(node)) {

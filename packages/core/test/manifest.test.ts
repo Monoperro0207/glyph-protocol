@@ -1,8 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { generateKeyPair, signManifest, verifyManifest } from '../src/index.js'
-import { MANIFEST_VERSION } from '@glyphp/types'
+import { test } from 'node:test'
 import type { UpdateManifest } from '@glyphp/types'
+import { MANIFEST_VERSION } from '@glyphp/types'
+import { generateKeyPair, signManifest, verifyManifest } from '../src/index.js'
 
 function makeManifest(keyPair = generateKeyPair()): UpdateManifest {
   const base: Omit<UpdateManifest, 'signature'> = {

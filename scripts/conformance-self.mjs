@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { FIXTURE_NAMES, formatReport, registerFixtures, runConformance } from '@glyphp/conformance'
+import { buildKeyEntry, buildKeyRegistry, generateKeyPair, StaticKeyRegistry } from '@glyphp/core'
 /**
  * Conformance self-test.
  *
@@ -7,18 +9,6 @@
  * (every level), and exits non-zero if anything fails.
  */
 import { GlyphServer } from '@glyphp/server'
-import {
-  buildKeyEntry,
-  buildKeyRegistry,
-  generateKeyPair,
-  StaticKeyRegistry,
-} from '@glyphp/core'
-import {
-  runConformance,
-  formatReport,
-  FIXTURE_NAMES,
-  registerFixtures,
-} from '@glyphp/conformance'
 
 const keyPair = generateKeyPair()
 const genesis = buildKeyEntry(keyPair.publicKey, new Date().toISOString())

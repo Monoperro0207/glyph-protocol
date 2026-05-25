@@ -8,9 +8,10 @@
  *   2. the SealedEnvelope reports exactly what was removed, signed,
  *   3. renderEnvelope wraps the result in an unforgeable data block.
  */
-import { defineGlyph, GlyphServer } from '@glyphp/server'
-import { GlyphClient, renderEnvelope, dataPreamble } from '@glyphp/client'
+
+import { dataPreamble, GlyphClient, renderEnvelope } from '@glyphp/client'
 import { verifyReceipt } from '@glyphp/core'
+import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { z } from 'zod'
 
 const PORT = 3104
@@ -74,9 +75,7 @@ async function main(): Promise<void> {
   console.log(dataPreamble().content)
 
   console.log('\n── 4. renderEnvelope — what the LLM sees ───')
-  console.log(
-    renderEnvelope(envelope, { verify: (e) => verifyReceipt(e.receipt!) })
-  )
+  console.log(renderEnvelope(envelope, { verify: (e) => verifyReceipt(e.receipt!) }))
 
   console.log('\nThe invisible characters are gone. The visible bait remains —')
   console.log('that is expected — but it can no longer hide, and it is sealed')

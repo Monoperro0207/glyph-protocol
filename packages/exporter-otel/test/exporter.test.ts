@@ -1,11 +1,11 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import type { CallReceipt } from '@glyphp/types'
 import {
   composeReceiptCallbacks,
   jsonlReceiptCallback,
-  otelReceiptCallback,
   type OtelTracerLike,
+  otelReceiptCallback,
 } from '../src/index.js'
 
 const sampleReceipt: CallReceipt = {
@@ -90,7 +90,7 @@ test('composeReceiptCallbacks fans out and survives a throwing inner callback', 
   const cb = composeReceiptCallbacks(
     otelReceiptCallback({ tracer }),
     throwing,
-    jsonlReceiptCallback({ write: (l) => lines.push(l) })
+    jsonlReceiptCallback({ write: (l) => lines.push(l) }),
   )
   // Silence the noisy error log for this assertion.
   const origError = console.error

@@ -12,24 +12,14 @@ export interface DiffResult {
  * how they differ. `ok` is false when the diff carries a breaking change, so
  * `glyph diff-card` can gate CI on an un-reviewed tool update.
  */
-export async function runDiffCard(
-  oldSource: string,
-  newSource: string
-): Promise<DiffResult> {
-  const [approved, next] = await Promise.all([
-    loadCard(oldSource),
-    loadCard(newSource),
-  ])
+export async function runDiffCard(oldSource: string, newSource: string): Promise<DiffResult> {
+  const [approved, next] = await Promise.all([loadCard(oldSource), loadCard(newSource)])
   const diff = diffCards(approved, next)
   return { ok: !diff.requiresApproval, report: formatDiff(approved, next, diff) }
 }
 
 /** Renders a CardDiff as a human-readable report. */
-export function formatDiff(
-  approved: GlyphCard,
-  next: GlyphCard,
-  diff: CardDiff
-): string {
+export function formatDiff(approved: GlyphCard, next: GlyphCard, diff: CardDiff): string {
   const lines = [
     `Comparing ${approved.name || '(unnamed card)'}`,
     `  old id: ${approved.id}`,
@@ -45,9 +35,7 @@ export function formatDiff(
   const width = Math.max(...diff.changes.map((c) => c.field.length))
   for (const c of diff.changes) {
     const tag = c.severity === 'breaking' ? 'BREAKING' : 'review  '
-    lines.push(
-      `  ${c.field.padEnd(width)}  ${tag}  ${fmt(c.before)} -> ${fmt(c.after)}`
-    )
+    lines.push(`  ${c.field.padEnd(width)}  ${tag}  ${fmt(c.before)} -> ${fmt(c.after)}`)
   }
 
   lines.push(
@@ -56,7 +44,7 @@ export function formatDiff(
     `  key changed:  ${diff.keyChanged ? 'yes' : 'no'}`,
     diff.requiresApproval
       ? 'REQUIRES APPROVAL — breaking changes present, re-approval needed'
-      : 'REVIEW — descriptive changes only, no breaking change'
+      : 'REVIEW — descriptive changes only, no breaking change',
   )
   return lines.join('\n')
 }

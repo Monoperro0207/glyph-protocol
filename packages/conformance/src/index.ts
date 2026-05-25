@@ -1,10 +1,16 @@
 export {
-  runConformance,
+  ALL_LEVELS,
+  formatBadgeJson,
   formatReport,
   formatReportMarkdown,
-  formatBadgeJson,
-  ALL_LEVELS,
+  runConformance,
 } from './conformance.js'
+export {
+  buildFixtureGlyphs,
+  FIXTURE_NAMES,
+  registerFixtures,
+} from './fixtures.js'
+export { validators } from './schemas.js'
 export type {
   CheckResult,
   ConformanceLevel,
@@ -14,9 +20,3 @@ export type {
   FixtureGlyphs,
   LevelSummary,
 } from './types.js'
-export { validators } from './schemas.js'
-export {
-  FIXTURE_NAMES,
-  buildFixtureGlyphs,
-  registerFixtures,
-} from './fixtures.js'

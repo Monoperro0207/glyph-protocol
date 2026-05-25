@@ -1,23 +1,14 @@
 #!/usr/bin/env node
-import { runInspect } from './commands/inspect.js'
-import { runVerify } from './commands/verify.js'
 import { runDiffCard } from './commands/diff.js'
-import { runInit } from './commands/init.js'
-import {
-  runPinsList,
-  runPinsApprove,
-  runPinsRevoke,
-} from './commands/pins.js'
-import { runManifestVerify } from './commands/manifest.js'
-import {
-  runKeysInit,
-  runKeysList,
-  runKeysRevoke,
-  runKeysRotate,
-} from './commands/keys.js'
-import { runImportMcp } from './commands/import-mcp/index.js'
 import { ALL_CLIENT_IDS } from './commands/import-mcp/clients/index.js'
+import { runImportMcp } from './commands/import-mcp/index.js'
 import type { ClientId } from './commands/import-mcp/types.js'
+import { runInit } from './commands/init.js'
+import { runInspect } from './commands/inspect.js'
+import { runKeysInit, runKeysList, runKeysRevoke, runKeysRotate } from './commands/keys.js'
+import { runManifestVerify } from './commands/manifest.js'
+import { runPinsApprove, runPinsList, runPinsRevoke } from './commands/pins.js'
+import { runVerify } from './commands/verify.js'
 
 const HELP = `glyph — Glyph Protocol CLI
 
@@ -62,7 +53,7 @@ const [command, ...args] = argv
 /** Parses --flag and --flag value pairs out of args, returning the rest. */
 function parseFlags(
   raw: string[],
-  withValue: string[] = []
+  withValue: string[] = [],
 ): { rest: string[]; flags: Record<string, string | boolean> } {
   const flags: Record<string, string | boolean> = {}
   const rest: string[] = []
@@ -189,20 +180,17 @@ try {
       }
       const manualCommand = flags.command as string | undefined
       const manualUrl = flags.url as string | undefined
-      const manual = manualCommand || manualUrl
-        ? {
-            command: manualCommand,
-            url: manualUrl,
-            bearerToken: flags['bearer-token'] as string | undefined,
-            name: flags.name as string | undefined,
-          }
-        : undefined
-      const portBase = flags['port-base']
-        ? Number(flags['port-base'] as string)
-        : 3100
-      const timeoutMs = flags['timeout-ms']
-        ? Number(flags['timeout-ms'] as string)
-        : 10_000
+      const manual =
+        manualCommand || manualUrl
+          ? {
+              command: manualCommand,
+              url: manualUrl,
+              bearerToken: flags['bearer-token'] as string | undefined,
+              name: flags.name as string | undefined,
+            }
+          : undefined
+      const portBase = flags['port-base'] ? Number(flags['port-base'] as string) : 3100
+      const timeoutMs = flags['timeout-ms'] ? Number(flags['timeout-ms'] as string) : 10_000
       if (!Number.isFinite(portBase) || portBase < 1 || portBase > 65535) {
         fail(`--port-base must be a valid port`)
       }
@@ -222,7 +210,7 @@ try {
       })
       if (!flags['dry-run']) {
         console.log(
-          `\n[glyph] done — ${result.imported.length} imported, ${result.skipped.length} skipped.`
+          `\n[glyph] done — ${result.imported.length} imported, ${result.skipped.length} skipped.`,
         )
       }
       break
@@ -246,9 +234,7 @@ try {
         process.exit(ok ? 0 : 1)
       }
       if (sub === 'rotate') {
-        const previousPrivateKey = flags['previous-private-key'] as
-          | string
-          | undefined
+        const previousPrivateKey = flags['previous-private-key'] as string | undefined
         if (!previousPrivateKey) {
           fail('keys rotate requires --previous-private-key <hex>')
         }
@@ -262,9 +248,7 @@ try {
       if (sub === 'revoke') {
         const fingerprint = rest[1]
         if (!fingerprint) fail('keys revoke requires a fingerprint')
-        const activePrivateKey = flags['active-private-key'] as
-          | string
-          | undefined
+        const activePrivateKey = flags['active-private-key'] as string | undefined
         if (!activePrivateKey) {
           fail('keys revoke requires --active-private-key <hex>')
         }

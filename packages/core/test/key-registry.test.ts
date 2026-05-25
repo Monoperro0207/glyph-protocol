@@ -1,14 +1,14 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { test } from 'node:test'
 import {
   buildKeyEntry,
   buildKeyRegistry,
+  FileKeyRegistry,
   fingerprintKey,
   generateKeyPair,
-  FileKeyRegistry,
   HttpKeyRegistry,
   resolveKey,
   StaticKeyRegistry,
@@ -83,7 +83,7 @@ test('a broken chain (signedBy mismatch) is rejected', () => {
   const a = generateKeyPair()
   const b = generateKeyPair()
   const c = generateKeyPair()
-  const fpA = fingerprintKey(a.publicKey)
+  const _fpA = fingerprintKey(a.publicKey)
 
   // B is signed by A — but we lie about signedBy pointing at C's fingerprint.
   const entryA = buildKeyEntry(a.publicKey, t0)

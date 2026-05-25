@@ -6,8 +6,9 @@
  * Hermes spawns this process — its stdout/stdin are the MCP transport.
  * Anything we write to stderr ends up in Hermes' MCP server log.
  */
-import { GlyphClient } from '@glyphp/client'
+
 import { runStdioBridge, runStdioBridgeLazy } from '@glyphp/adapter-mcp-server'
+import { GlyphClient } from '@glyphp/client'
 
 const baseUrl = process.env.GLYPH_SERVER_URL ?? 'http://127.0.0.1:3199'
 const mode = (process.env.BRIDGE_MODE ?? 'eager').toLowerCase()
@@ -26,9 +27,7 @@ while (true) {
   }
 }
 
-process.stderr.write(
-  `[bridge] connected to ${baseUrl} — serving MCP over stdio (mode=${mode})\n`
-)
+process.stderr.write(`[bridge] connected to ${baseUrl} — serving MCP over stdio (mode=${mode})\n`)
 if (mode === 'lazy') {
   await runStdioBridgeLazy(client, {
     serverName: 'glyph-bridge-lazy',

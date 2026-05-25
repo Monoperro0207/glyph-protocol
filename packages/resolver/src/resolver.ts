@@ -11,11 +11,45 @@ export interface Scorer {
 
 const STOPWORDS = new Set([
   // English
-  'the', 'a', 'an', 'to', 'of', 'for', 'in', 'on', 'and', 'or', 'with',
-  'my', 'is', 'it', 'that', 'this', 'how', 'do', 'can', 'find', 'get',
+  'the',
+  'a',
+  'an',
+  'to',
+  'of',
+  'for',
+  'in',
+  'on',
+  'and',
+  'or',
+  'with',
+  'my',
+  'is',
+  'it',
+  'that',
+  'this',
+  'how',
+  'do',
+  'can',
+  'find',
+  'get',
   // Spanish
-  'el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'para', 'por', 'en',
-  'con', 'mi', 'que', 'como', 'se', 'al',
+  'el',
+  'la',
+  'los',
+  'las',
+  'un',
+  'una',
+  'de',
+  'del',
+  'para',
+  'por',
+  'en',
+  'con',
+  'mi',
+  'que',
+  'como',
+  'se',
+  'al',
 ])
 
 function tokenize(text: string): string[] {
@@ -42,10 +76,7 @@ export class LexicalScorer implements Scorer {
       return entries.map((entry) => ({ entry, score: 0 }))
     }
     return entries.map((entry) => {
-      const strong = new Set([
-        ...tokenize(entry.name),
-        ...entry.tags.flatMap(tokenize),
-      ])
+      const strong = new Set([...tokenize(entry.name), ...entry.tags.flatMap(tokenize)])
       const intent = new Set(tokenize(entry.intent))
       let sum = 0
       for (const token of qTokens) {
@@ -72,7 +103,7 @@ export class GlyphResolver {
 
   async resolve(
     query: string,
-    options?: { limit?: number; minScore?: number }
+    options?: { limit?: number; minScore?: number },
   ): Promise<ResolverMatch[]> {
     const limit = options?.limit ?? 5
     const minScore = options?.minScore ?? 0

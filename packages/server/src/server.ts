@@ -1,23 +1,16 @@
 import { randomUUID } from 'node:crypto'
-import { Hono } from 'hono'
-import type { Context } from 'hono'
-import { serve } from '@hono/node-server'
+import type { GlyphKeyPair, KeyRegistrySource } from '@glyphp/core'
 import {
-  toLexiconEntry,
   applyDepth,
+  canonicalHash,
+  generateKeyPair,
+  sanitize,
   sealResult,
   signGlyph,
-  signReceipt,
   signManifest,
-  generateKeyPair,
-  canonicalHash,
-  sanitize,
+  signReceipt,
+  toLexiconEntry,
 } from '@glyphp/core'
-import type {
-  GlyphKeyPair,
-  KeyRegistrySource,
-} from '@glyphp/core'
-import { PROTOCOL_VERSION, MANIFEST_VERSION } from '@glyphp/types'
 import type {
   CallReceipt,
   ConfirmationTicket,
@@ -25,12 +18,16 @@ import type {
   HandshakeResponse,
   UpdateManifest,
 } from '@glyphp/types'
+import { MANIFEST_VERSION, PROTOCOL_VERSION } from '@glyphp/types'
+import { serve } from '@hono/node-server'
+import type { Context } from 'hono'
+import { Hono } from 'hono'
 import type { GlyphDefinition } from './define.js'
-import { authMiddleware, rateLimitMiddleware, buildVerify } from './middleware.js'
-import type { AuthConfig, RateLimitConfig } from './middleware.js'
-import { missingScopes } from './policy.js'
-import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { errorResponse } from './errors.js'
+import type { AuthConfig, RateLimitConfig } from './middleware.js'
+import { authMiddleware, buildVerify, rateLimitMiddleware } from './middleware.js'
+import type { CallerPrincipal, PolicyResolver } from './policy.js'
+import { missingScopes } from './policy.js'
 
 const SERVER_VERSION = '0.1.0'
 const RECEIPT_VERSION = '0.3'
@@ -75,11 +72,7 @@ async function readJson<T>(c: Context, maxBytes: number): Promise<T> {
   }
 }
 
-function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  onTimeout?: () => void
-): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout?: () => void): Promise<T> {
   let timer: NodeJS.Timeout | undefined
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
@@ -142,16 +135,13 @@ export class GlyphServer {
     this.onCall = options?.onCall
     this.keyRegistry = options?.keyRegistry
     this.policy = options?.policy
-    this.maxPendingConfirmations =
-      options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
+    this.maxPendingConfirmations = options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
     this.maxBodyBytes = options?.maxBodyBytes ?? MAX_BODY_BYTES
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
       this.keyPair = generateKeyPair()
-      console.warn(
-        '[glyph] No keyPair provided — generated an ephemeral one for this run.'
-      )
+      console.warn('[glyph] No keyPair provided — generated an ephemeral one for this run.')
     }
     console.log('[glyph] provider publicKey:', this.keyPair.publicKey)
     this.setupRoutes()
@@ -159,9 +149,7 @@ export class GlyphServer {
 
   register(glyph: GlyphDefinition<any, any>): this {
     if (this.glyphs.has(glyph.card.name)) {
-      throw new Error(
-        `A glyph named "${glyph.card.name}" is already registered`
-      )
+      throw new Error(`A glyph named "${glyph.card.name}" is already registered`)
     }
     const signedCard = {
       ...glyph.card,
@@ -186,13 +174,11 @@ export class GlyphServer {
       reason: string
       breaking: boolean
       securityImpact: 'none' | 'low' | 'high'
-    }
+    },
   ): this {
     const glyph = this.glyphs.get(toolName)
     if (!glyph) {
-      throw new Error(
-        `Cannot register a manifest for unknown glyph "${toolName}"`
-      )
+      throw new Error(`Cannot register a manifest for unknown glyph "${toolName}"`)
     }
     const base: Omit<UpdateManifest, 'signature'> = {
       manifestVersion: MANIFEST_VERSION,
@@ -241,16 +227,11 @@ export class GlyphServer {
           c,
           413,
           'PAYLOAD_TOO_LARGE',
-          'Request body exceeds the maximum allowed size'
+          'Request body exceeds the maximum allowed size',
         )
       }
       if (err instanceof MalformedJsonError) {
-        return errorResponse(
-          c,
-          400,
-          'MALFORMED_JSON',
-          'Request body is not valid JSON'
-        )
+        return errorResponse(c, 400, 'MALFORMED_JSON', 'Request body is not valid JSON')
       }
       console.error('[glyph] unhandled error:', err)
       return errorResponse(c, 500, 'INTERNAL_ERROR', 'Internal server error')
@@ -269,7 +250,7 @@ export class GlyphServer {
         ok: true,
         version: SERVER_VERSION,
         protocolVersion: PROTOCOL_VERSION,
-      })
+      }),
     )
 
     // RFC-0001 Key Registry endpoint. Returns 404 when the server has not
@@ -287,7 +268,7 @@ export class GlyphServer {
           c,
           500,
           'INTERNAL_ERROR',
-          err instanceof Error ? err.message : 'KeyRegistry failed'
+          err instanceof Error ? err.message : 'KeyRegistry failed',
         )
       }
     })
@@ -306,13 +287,11 @@ export class GlyphServer {
           {
             serverProtocolVersion: PROTOCOL_VERSION,
             clientProtocolVersion: body.protocolVersion ?? null,
-          }
+          },
         )
       }
 
-      const lexicon = Array.from(this.glyphs.values()).map((g) =>
-        toLexiconEntry(g.card)
-      )
+      const lexicon = Array.from(this.glyphs.values()).map((g) => toLexiconEntry(g.card))
       const response: HandshakeResponse = {
         protocolVersion: PROTOCOL_VERSION,
         sessionId: randomUUID(),
@@ -324,9 +303,7 @@ export class GlyphServer {
     })
 
     app.get('/lexicon', (c) => {
-      const lexicon = Array.from(this.glyphs.values()).map((g) =>
-        toLexiconEntry(g.card)
-      )
+      const lexicon = Array.from(this.glyphs.values()).map((g) => toLexiconEntry(g.card))
       return c.json(lexicon)
     })
 
@@ -334,17 +311,12 @@ export class GlyphServer {
       const name = c.req.param('name')
       const depthRaw = c.req.query('depth')
       const VALID_DEPTHS = ['minimal', 'standard', 'rich'] as const
-      if (
-        depthRaw !== undefined &&
-        !(VALID_DEPTHS as readonly string[]).includes(depthRaw)
-      ) {
-        return errorResponse(
-          c,
-          400,
-          'VALIDATION_FAILED',
-          'Invalid depth value',
-          { field: 'depth', expected: VALID_DEPTHS, got: depthRaw }
-        )
+      if (depthRaw !== undefined && !(VALID_DEPTHS as readonly string[]).includes(depthRaw)) {
+        return errorResponse(c, 400, 'VALIDATION_FAILED', 'Invalid depth value', {
+          field: 'depth',
+          expected: VALID_DEPTHS,
+          got: depthRaw,
+        })
       }
       const depth = (depthRaw as (typeof VALID_DEPTHS)[number] | undefined) ?? 'rich'
       const glyph = this.glyphs.get(name)
@@ -359,12 +331,7 @@ export class GlyphServer {
       }
       const manifest = this.manifests.get(name)
       if (!manifest) {
-        return errorResponse(
-          c,
-          404,
-          'NOT_FOUND',
-          'No update manifest for this glyph'
-        )
+        return errorResponse(c, 404, 'NOT_FOUND', 'No update manifest for this glyph')
       }
       return c.json(manifest)
     })
@@ -382,7 +349,7 @@ export class GlyphServer {
           400,
           'VALIDATION_FAILED',
           'Input validation failed',
-          parsed.error.issues
+          parsed.error.issues,
         )
       }
 
@@ -396,7 +363,7 @@ export class GlyphServer {
           403,
           'INSUFFICIENT_SCOPE',
           'Caller is missing one or more required scopes',
-          { glyph: name, missing: missingPrep }
+          { glyph: name, missing: missingPrep },
         )
       }
 
@@ -413,17 +380,14 @@ export class GlyphServer {
         for (const pending of this.pendingConfirmations.values()) {
           if (pending.expiresAt < earliestExpiry) earliestExpiry = pending.expiresAt
         }
-        const retryAfter = Math.max(
-          1,
-          Math.ceil((earliestExpiry - now) / 1000)
-        )
+        const retryAfter = Math.max(1, Math.ceil((earliestExpiry - now) / 1000))
         c.header('Retry-After', String(retryAfter))
         return errorResponse(
           c,
           503,
           'CONFIRMATION_BACKLOG_FULL',
           'Too many pending confirmations. Retry after the next ticket expires.',
-          { maxPendingConfirmations: this.maxPendingConfirmations }
+          { maxPendingConfirmations: this.maxPendingConfirmations },
         )
       }
 
@@ -466,7 +430,7 @@ export class GlyphServer {
           400,
           'VALIDATION_FAILED',
           'Input validation failed',
-          parsed.error.issues
+          parsed.error.issues,
         )
       }
 
@@ -482,7 +446,7 @@ export class GlyphServer {
           403,
           'INSUFFICIENT_SCOPE',
           'Caller is missing one or more required scopes',
-          { glyph: name, missing }
+          { glyph: name, missing },
         )
       }
 
@@ -504,7 +468,7 @@ export class GlyphServer {
               glyph: name,
               cost: glyph.card.cost,
               hint: `POST /glyphs/${name}/prepare to obtain a confirmation token`,
-            }
+            },
           )
         }
         const pending = this.pendingConfirmations.get(token)
@@ -513,7 +477,7 @@ export class GlyphServer {
             c,
             403,
             'INVALID_CONFIRMATION',
-            'Unknown or already-consumed confirmation token'
+            'Unknown or already-consumed confirmation token',
           )
         }
         this.pendingConfirmations.delete(token) // single-use
@@ -526,7 +490,7 @@ export class GlyphServer {
             c,
             403,
             'INVALID_CONFIRMATION',
-            'Expired or mismatched confirmation token'
+            'Expired or mismatched confirmation token',
           )
         }
       }
@@ -541,7 +505,7 @@ export class GlyphServer {
         result = await withTimeout(
           glyph.handler(parsed.data, { signal: controller.signal }),
           this.callTimeoutMs,
-          () => controller.abort()
+          () => controller.abort(),
         )
       } catch (err) {
         if (err instanceof HandlerTimeoutError) {
@@ -549,14 +513,14 @@ export class GlyphServer {
             c,
             504,
             'HANDLER_TIMEOUT',
-            `Handler exceeded the ${this.callTimeoutMs}ms timeout`
+            `Handler exceeded the ${this.callTimeoutMs}ms timeout`,
           )
         }
         return errorResponse(
           c,
           502,
           'HANDLER_ERROR',
-          err instanceof Error ? err.message : 'The handler threw an error'
+          err instanceof Error ? err.message : 'The handler threw an error',
         )
       }
       const latencyMs = Date.now() - start
@@ -568,7 +532,7 @@ export class GlyphServer {
           502,
           'OUTPUT_VALIDATION_FAILED',
           'Handler output did not match the declared output schema',
-          checked.error.issues
+          checked.error.issues,
         )
       }
 
@@ -611,7 +575,7 @@ export class GlyphServer {
         cleanOutput,
         latencyMs,
         glyph.card.provider,
-        inspection
+        inspection,
       )
       return c.json({ ...envelope, receipt })
     })

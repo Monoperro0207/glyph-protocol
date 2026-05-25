@@ -19,11 +19,7 @@
 // the same runtime work without the misleading type guard.
 type PlainValidator = (value: unknown) => boolean
 
-export type ConformanceLevel =
-  | 'discovery'
-  | 'execution'
-  | 'security'
-  | 'governance'
+export type ConformanceLevel = 'discovery' | 'execution' | 'security' | 'governance'
 
 export const ALL_LEVELS: readonly ConformanceLevel[] = [
   'discovery',
@@ -104,7 +100,7 @@ export type HttpFn = (
   method: string,
   path: string,
   body?: unknown,
-  extraHeaders?: Record<string, string>
+  extraHeaders?: Record<string, string>,
 ) => Promise<HttpResponse>
 
 /** Context handed to each level implementation. */

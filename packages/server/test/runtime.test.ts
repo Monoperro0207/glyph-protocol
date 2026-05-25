@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
@@ -28,7 +28,7 @@ const liar = defineGlyph({
   input: z.object({}),
   output: z.object({ value: z.number() }),
   provider: 'test',
-  handler: async () => ({ value: 'not a number' } as any),
+  handler: async () => ({ value: 'not a number' }) as any,
 })
 
 const thrower = defineGlyph({
@@ -92,7 +92,7 @@ async function call(name: string) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: {} }),
-    })
+    }),
   )
   return { status: res.status, body: (await res.json()) as any }
 }
@@ -135,7 +135,7 @@ test('a malformed JSON body → 400 MALFORMED_JSON', async () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{ this is not json',
-    })
+    }),
   )
   assert.equal(res.status, 400)
   const body = (await res.json()) as any
@@ -164,7 +164,7 @@ test('body larger than 1 MiB → 413 PAYLOAD_TOO_LARGE (Content-Length check)', 
         'content-length': String(2 * 1024 * 1024), // 2 MiB
       },
       body: JSON.stringify({ input: {} }),
-    })
+    }),
   )
   assert.equal(res.status, 413)
   const body = (await res.json()) as any
@@ -177,7 +177,7 @@ test('body within 1 MiB limit → parses normally', async () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: {} }),
-    })
+    }),
   )
   assert.equal(res.status, 200)
 })
@@ -192,7 +192,7 @@ test('body at exact limit → parses normally', async () => {
         'content-length': '1048576',
       },
       body: JSON.stringify({ input: {} }),
-    })
+    }),
   )
   assert.equal(res.status, 200)
 })
@@ -208,7 +208,7 @@ test('custom maxBodyBytes override → respects lower limit', async () => {
         'content-length': '101',
       },
       body: 'a',
-    })
+    }),
   )
   assert.equal(res.status, 413)
   const body = (await res.json()) as any
@@ -223,7 +223,7 @@ test('body without Content-Length → stream fallback rejects oversized payload'
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: huge,
-    })
+    }),
   )
   assert.equal(res.status, 413)
   const body = (await res.json()) as any

@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { Hono } from 'hono'
+import { test } from 'node:test'
 import type { MiddlewareHandler } from 'hono'
+import { Hono } from 'hono'
 import { authMiddleware, rateLimitMiddleware } from '../src/middleware.js'
 
 function appWith(mw: MiddlewareHandler): Hono {
@@ -81,14 +81,12 @@ test('rateLimitMiddleware does not let unverified tokens escape the limit', asyn
   // An attacker rotates a fresh fake token on every request. Each must land
   // in the shared IP bucket, not a brand-new per-token bucket.
   assert.equal(
-    (await app.request('/x', { headers: { Authorization: 'Bearer fake-1' } }))
-      .status,
-    200
+    (await app.request('/x', { headers: { Authorization: 'Bearer fake-1' } })).status,
+    200,
   )
   assert.equal(
-    (await app.request('/x', { headers: { Authorization: 'Bearer fake-2' } }))
-      .status,
-    429
+    (await app.request('/x', { headers: { Authorization: 'Bearer fake-2' } })).status,
+    429,
   )
 })
 

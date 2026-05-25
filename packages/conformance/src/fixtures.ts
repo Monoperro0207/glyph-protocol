@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { defineGlyph, GlyphServer } from '@glyphp/server'
 import type { GlyphDefinition } from '@glyphp/server'
+import { defineGlyph, type GlyphServer } from '@glyphp/server'
+import { z } from 'zod'
 import type { FixtureGlyphs } from './types.js'
 
 /**
@@ -92,10 +92,10 @@ export function buildFixtureGlyphs(): GlyphDefinition<any, any>[] {
     provider: 'conformance',
     // Deliberately violates the output schema: count is a string.
     handler: async () =>
-      ({ ok: 'not-a-boolean', count: 'three' } as unknown as {
+      ({ ok: 'not-a-boolean', count: 'three' }) as unknown as {
         ok: boolean
         count: number
-      }),
+      },
   })
 
   return [echo, requiresConfirmation, slow, invalidOutput]

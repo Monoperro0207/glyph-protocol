@@ -48,5 +48,11 @@ function slugFromCommand(parts: string[]): string {
   // For `npx -y @modelcontextprotocol/server-filesystem` pull the last
   // recognisable token.
   const last = parts[parts.length - 1] ?? 'mcp'
-  return last.split('/').pop()!.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'mcp'
+  return (
+    last
+      .split('/')
+      .pop()
+      ?.replace(/[^a-z0-9]+/gi, '-')
+      .toLowerCase() || 'mcp'
+  )
 }

@@ -7,22 +7,17 @@
  * `docs/conformance-badge.json`. Designed to be re-run on every push to
  * `main` from CI so the README badge reflects the latest state.
  */
-import { writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { GlyphServer } from '@glyphp/server'
 import {
-  buildKeyEntry,
-  buildKeyRegistry,
-  generateKeyPair,
-  StaticKeyRegistry,
-} from '@glyphp/core'
-import {
-  runConformance,
-  formatBadgeJson,
   FIXTURE_NAMES,
+  formatBadgeJson,
   registerFixtures,
+  runConformance,
 } from '@glyphp/conformance'
+import { buildKeyEntry, buildKeyRegistry, generateKeyPair, StaticKeyRegistry } from '@glyphp/core'
+import { GlyphServer } from '@glyphp/server'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -49,7 +44,7 @@ const badge = formatBadgeJson(report)
 const outDir = join(repoRoot, 'docs')
 await mkdir(outDir, { recursive: true })
 const outPath = join(outDir, 'conformance-badge.json')
-await writeFile(outPath, JSON.stringify(badge, null, 2) + '\n')
+await writeFile(outPath, `${JSON.stringify(badge, null, 2)}\n`)
 
 console.log(`wrote ${outPath}: ${JSON.stringify(badge)}`)
 if (!report.passed) {

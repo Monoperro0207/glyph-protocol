@@ -1,18 +1,9 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  computeGlyphId,
-  generateKeyPair,
-  signGlyph,
-  signManifest,
-} from '@glyphp/core'
-import { MANIFEST_VERSION } from '@glyphp/types'
+import { test } from 'node:test'
+import { computeGlyphId, generateKeyPair, signGlyph, signManifest } from '@glyphp/core'
 import type { GlyphCard, UpdateManifest } from '@glyphp/types'
-import {
-  GlyphClient,
-  GlyphVerificationError,
-  MemoryPinStore,
-} from '../src/index.js'
+import { MANIFEST_VERSION } from '@glyphp/types'
+import { GlyphClient, GlyphVerificationError, MemoryPinStore } from '../src/index.js'
 
 type KeyPair = { publicKey: string; privateKey: string }
 
@@ -112,7 +103,7 @@ test('getManifest rejects a manifest with an invalid signature', async () => {
   })
   await assert.rejects(
     () => client.getManifest('refund-payment'),
-    (e: unknown) => e instanceof GlyphVerificationError
+    (e: unknown) => e instanceof GlyphVerificationError,
   )
 })
 
@@ -130,6 +121,6 @@ test('getManifest rejects a manifest not signed by the pinned key', async () => 
   await client.approveCard(card)
   await assert.rejects(
     () => client.getManifest('refund-payment'),
-    (e: unknown) => e instanceof GlyphVerificationError
+    (e: unknown) => e instanceof GlyphVerificationError,
   )
 })

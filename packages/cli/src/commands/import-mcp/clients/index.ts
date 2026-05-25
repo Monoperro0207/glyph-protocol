@@ -1,9 +1,9 @@
 import type { ClientAdapter, ClientId } from '../types.js'
 import { claudeDesktopAdapter } from './claude-desktop.js'
-import { cursorAdapter } from './cursor.js'
 import { codexAdapter } from './codex.js'
-import { openclawAdapter } from './openclaw.js'
+import { cursorAdapter } from './cursor.js'
 import { hermesAgentAdapter } from './hermes-agent.js'
+import { openclawAdapter } from './openclaw.js'
 
 export const ADAPTERS: Record<ClientId, ClientAdapter> = {
   'claude-desktop': claudeDesktopAdapter,

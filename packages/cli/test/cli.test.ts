@@ -1,15 +1,15 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
 import type { GlyphCard, HandshakeResponse } from '@glyphp/types'
-import { runVerify } from '../src/commands/verify.js'
+import { z } from 'zod'
 import { runDiffCard } from '../src/commands/diff.js'
 import { runInit } from '../src/commands/init.js'
 import { formatCard, formatOverview } from '../src/commands/inspect.js'
+import { runVerify } from '../src/commands/verify.js'
 
 // A real, server-signed card to verify against.
 const server = new GlyphServer()
@@ -28,13 +28,11 @@ server.register(
     output: z.object({ greeting: z.string() }),
     provider: 'test',
     handler: async () => ({ greeting: 'hi' }),
-  })
+  }),
 )
 
 async function fetchCard(): Promise<GlyphCard> {
-  const res = await server.fetch(
-    new Request('http://glyph/glyphs/greet?depth=rich')
-  )
+  const res = await server.fetch(new Request('http://glyph/glyphs/greet?depth=rich'))
   return (await res.json()) as GlyphCard
 }
 

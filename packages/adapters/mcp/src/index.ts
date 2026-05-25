@@ -1,7 +1,7 @@
-import { z } from 'zod'
 import { compileJsonSchema, computeGlyphId } from '@glyphp/core'
-import type { GlyphCard } from '@glyphp/types'
 import type { GlyphDefinition } from '@glyphp/server'
+import type { GlyphCard } from '@glyphp/types'
+import { z } from 'zod'
 import type {
   JsonSchema,
   McpCallFn,
@@ -11,10 +11,10 @@ import type {
 } from './mcp-types.js'
 
 export type {
-  McpTool,
-  McpToolResult,
   McpCallFn,
   McpClientLike,
+  McpTool,
+  McpToolResult,
 } from './mcp-types.js'
 
 export interface McpAdapterOptions {
@@ -36,7 +36,7 @@ export interface McpAdapterOptions {
 export function glyphsFromMcpTools(
   tools: McpTool[],
   callTool: McpCallFn,
-  options?: McpAdapterOptions
+  options?: McpAdapterOptions,
 ): GlyphDefinition<any, any>[] {
   const provider = options?.provider ?? 'mcp'
   const outputValidation = options?.outputValidation ?? 'schema'
@@ -52,9 +52,7 @@ export function glyphsFromMcpTools(
       input: tool.inputSchema ?? { type: 'object' },
       output: tool.outputSchema ?? {},
       examples: [],
-      failureModes: [
-        { code: 'MCP_ERROR', description: 'The MCP tool call returned an error' },
-      ],
+      failureModes: [{ code: 'MCP_ERROR', description: 'The MCP tool call returned an error' }],
       provider,
     }
     const card: GlyphCard = {
@@ -84,11 +82,10 @@ export function glyphsFromMcpTools(
  */
 export async function glyphsFromMcpClient(
   client: McpClientLike,
-  options?: McpAdapterOptions
+  options?: McpAdapterOptions,
 ): Promise<GlyphDefinition<any, any>[]> {
   const { tools } = await client.listTools()
-  const callTool: McpCallFn = (name, args) =>
-    client.callTool({ name, arguments: args })
+  const callTool: McpCallFn = (name, args) => client.callTool({ name, arguments: args })
   return glyphsFromMcpTools(tools, callTool, options)
 }
 
@@ -109,10 +106,7 @@ function isDangerousName(name: string): boolean {
   return DANGEROUS_TOOL_WORDS.test(normalized)
 }
 
-function deriveCost(
-  toolName: string,
-  annotations?: McpToolAnnotations
-): GlyphCard['cost'] {
+function deriveCost(toolName: string, annotations?: McpToolAnnotations): GlyphCard['cost'] {
   // MCP annotations are advisory, not authority. A dangerous-looking tool
   // name overrides a benign readOnlyHint — a malicious server can lie.
   const dangerousName = isDangerousName(toolName)
@@ -129,7 +123,7 @@ function deriveCost(
 
 function buildHandler(
   toolName: string,
-  callTool: McpCallFn
+  callTool: McpCallFn,
 ): (input: Record<string, unknown>) => Promise<unknown> {
   return async (input: Record<string, unknown>): Promise<unknown> => {
     const result = await callTool(toolName, input ?? {})
@@ -155,9 +149,7 @@ function buildZodInput(schema?: JsonSchema): z.ZodTypeAny {
     return z.record(z.unknown())
   }
   const properties = schema.properties as Record<string, JsonSchema>
-  const required = new Set(
-    Array.isArray(schema.required) ? (schema.required as string[]) : []
-  )
+  const required = new Set(Array.isArray(schema.required) ? (schema.required as string[]) : [])
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const [key, propSchema] of Object.entries(properties)) {
     const field = jsonTypeToZod(propSchema)
@@ -179,9 +171,7 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
     const literals = enumValues.map((v) => z.literal(v as never))
     return literals.length === 1
       ? literals[0]
-      : z.union(
-          literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
-        )
+      : z.union(literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
   }
 
   switch (schema.type) {
@@ -202,21 +192,17 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
     case 'array': {
       const items = schema.items
       return z.array(
-        items && typeof items === 'object'
-          ? jsonTypeToZod(items as JsonSchema)
-          : z.unknown()
+        items && typeof items === 'object' ? jsonTypeToZod(items as JsonSchema) : z.unknown(),
       )
     }
     case 'object': {
       const props = schema.properties
       if (props && typeof props === 'object') {
         const required = new Set(
-          Array.isArray(schema.required) ? (schema.required as string[]) : []
+          Array.isArray(schema.required) ? (schema.required as string[]) : [],
         )
         const shape: Record<string, z.ZodTypeAny> = {}
-        for (const [key, prop] of Object.entries(
-          props as Record<string, JsonSchema>
-        )) {
+        for (const [key, prop] of Object.entries(props as Record<string, JsonSchema>)) {
           const field = jsonTypeToZod(prop)
           shape[key] = required.has(key) ? field : field.optional()
         }

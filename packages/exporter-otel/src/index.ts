@@ -22,7 +22,10 @@ import type { CallReceipt } from '@glyphp/types'
  * tracer without forcing a hard dep on the OTel API package.
  */
 export interface OtelTracerLike {
-  startSpan(name: string, options?: { attributes?: Record<string, unknown> }): {
+  startSpan(
+    name: string,
+    options?: { attributes?: Record<string, unknown> },
+  ): {
     setStatus(status: { code: number; message?: string }): unknown
     setAttribute?(key: string, value: unknown): unknown
     end(endTime?: number): void
@@ -84,7 +87,7 @@ export function jsonlReceiptCallback(opts: {
   write: (line: string) => void
 }): (receipt: CallReceipt) => void {
   return (receipt) => {
-    opts.write(JSON.stringify(receipt) + '\n')
+    opts.write(`${JSON.stringify(receipt)}\n`)
   }
 }
 

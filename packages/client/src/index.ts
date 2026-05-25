@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { diffCards, verifyGlyph, verifyManifest } from '@glyphp/core'
-import { PROTOCOL_VERSION } from '@glyphp/types'
 import type {
   CardDiff,
   ConfirmationTicket,
@@ -12,14 +11,15 @@ import type {
   SealedEnvelope,
   UpdateManifest,
 } from '@glyphp/types'
+import { PROTOCOL_VERSION } from '@glyphp/types'
 import type { PinStore } from './pins.js'
 
-export { renderEnvelope, dataPreamble } from './render.js'
-export type { RenderOptions } from './render.js'
-export { MemoryPinStore } from './pins.js'
+export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
 export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
-export type { Pin, CardDiff, UpdateManifest } from '@glyphp/types'
+export { MemoryPinStore } from './pins.js'
+export type { RenderOptions } from './render.js'
+export { dataPreamble, renderEnvelope } from './render.js'
 
 /** Thrown when a signed artifact (a card or a manifest) fails verification. */
 export class GlyphVerificationError extends Error {
@@ -38,7 +38,7 @@ export class GlyphRevokedError extends Error {
   readonly reason?: string
   constructor(toolName: string, reason?: string) {
     super(
-      `Tool "${toolName}" was revoked${reason ? ` (${reason})` : ''} — reinstate it with approveCard(card, { reinstate: true }) after review`
+      `Tool "${toolName}" was revoked${reason ? ` (${reason})` : ''} — reinstate it with approveCard(card, { reinstate: true }) after review`,
     )
     this.name = 'GlyphRevokedError'
     this.toolName = toolName
@@ -59,7 +59,7 @@ export class GlyphNotApprovedError extends Error {
     super(
       status === 'new'
         ? `Tool "${toolName}" is not approved — review its card and call approveCard()`
-        : `Tool "${toolName}" changed since approval — review the diff and re-approve`
+        : `Tool "${toolName}" changed since approval — review the diff and re-approve`,
     )
     this.name = 'GlyphNotApprovedError'
     this.toolName = toolName
@@ -124,7 +124,7 @@ export class GlyphClient {
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
-        'GlyphClient: secureMode requires a PinStore (use FilePinStore for persistence)'
+        'GlyphClient: secureMode requires a PinStore (use FilePinStore for persistence)',
       )
     }
     this.baseUrl = options.baseUrl.replace(/\/$/, '')
@@ -152,14 +152,9 @@ export class GlyphClient {
     return this.get<LexiconEntry[]>('/lexicon')
   }
 
-  async getCard(
-    name: string,
-    depth?: 'minimal' | 'standard' | 'rich'
-  ): Promise<GlyphCard> {
+  async getCard(name: string, depth?: 'minimal' | 'standard' | 'rich'): Promise<GlyphCard> {
     const query = depth ? `?depth=${depth}` : ''
-    const card = await this.get<GlyphCard>(
-      `/glyphs/${encodeURIComponent(name)}${query}`
-    )
+    const card = await this.get<GlyphCard>(`/glyphs/${encodeURIComponent(name)}${query}`)
     // A card that carries a signature must verify — present-but-invalid means
     // tampering. Depth-stripped cards carry none; they cannot be verified or
     // pinned, and the pin gate rejects them downstream.
@@ -173,34 +168,28 @@ export class GlyphClient {
   // Prepare a confirmation ticket — required before calling a glyph whose
   // card declares cost.requiresConfirmation.
   async prepare(name: string, input: unknown): Promise<ConfirmationTicket> {
-    return this.post<ConfirmationTicket>(
-      `/glyphs/${encodeURIComponent(name)}/prepare`,
-      { input }
-    )
+    return this.post<ConfirmationTicket>(`/glyphs/${encodeURIComponent(name)}/prepare`, { input })
   }
 
   async call<T = unknown>(
     name: string,
     input: unknown,
-    options?: { confirmationToken?: string }
+    options?: { confirmationToken?: string },
   ): Promise<SealedEnvelope & { payload: T }> {
     await this.ensureApproved(name)
     const callId = randomUUID()
-    const envelope = await this.post<SealedEnvelope>(
-      `/glyphs/${encodeURIComponent(name)}/call`,
-      {
-        input,
-        callId,
-        confirmationToken: options?.confirmationToken,
-      }
-    )
+    const envelope = await this.post<SealedEnvelope>(`/glyphs/${encodeURIComponent(name)}/call`, {
+      input,
+      callId,
+      confirmationToken: options?.confirmationToken,
+    })
     return envelope as SealedEnvelope & { payload: T }
   }
 
   async invoke<T = unknown>(
     name: string,
     input: unknown,
-    options?: { confirmationToken?: string }
+    options?: { confirmationToken?: string },
   ): Promise<T> {
     const envelope = await this.call<T>(name, input, options)
     return envelope.payload
@@ -231,10 +220,7 @@ export class GlyphClient {
    * Approving a tool that is currently revoked requires `{ reinstate: true }`,
    * so a revocation can never be cleared by accident.
    */
-  async approveCard(
-    card: GlyphCard,
-    options?: { reinstate?: boolean }
-  ): Promise<Pin> {
+  async approveCard(card: GlyphCard, options?: { reinstate?: boolean }): Promise<Pin> {
     if (!card.signature || !verifyGlyph(card)) {
       throw new GlyphVerificationError(`Card "${card.name}"`)
     }
@@ -263,7 +249,7 @@ export class GlyphClient {
     const pin = await store.get(toolName)
     if (!pin) {
       throw new Error(
-        `No pin for "${toolName}" — an unapproved tool is already blocked; nothing to revoke`
+        `No pin for "${toolName}" — an unapproved tool is already blocked; nothing to revoke`,
       )
     }
     if (pin.revokedAt) return pin
@@ -310,10 +296,9 @@ export class GlyphClient {
    */
   async getManifest(name: string): Promise<UpdateManifest | undefined> {
     const res = await this.fetchImpl(
-      new Request(
-        `${this.baseUrl}/glyphs/${encodeURIComponent(name)}/manifest`,
-        { headers: this.buildHeaders(false) }
-      )
+      new Request(`${this.baseUrl}/glyphs/${encodeURIComponent(name)}/manifest`, {
+        headers: this.buildHeaders(false),
+      }),
     )
     if (res.status === 404) return undefined
     if (!res.ok) {
@@ -369,7 +354,7 @@ export class GlyphClient {
     const res = await this.fetchImpl(
       new Request(`${this.baseUrl}${path}`, {
         headers: this.buildHeaders(false),
-      })
+      }),
     )
     if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
     return res.json() as Promise<T>
@@ -381,7 +366,7 @@ export class GlyphClient {
         method: 'POST',
         headers: this.buildHeaders(true),
         body: JSON.stringify(body),
-      })
+      }),
     )
     if (!res.ok) {
       const text = await res.text()

@@ -41,7 +41,7 @@ export class EmbeddingScorer implements Scorer {
  * (the successor to `@xenova/transformers`).
  */
 export async function createTransformersScorer(
-  model = 'Xenova/all-MiniLM-L6-v2'
+  model = 'Xenova/all-MiniLM-L6-v2',
 ): Promise<EmbeddingScorer> {
   // The indirect, string-typed specifier keeps this optional peer dependency
   // out of the static module graph and the type-check.
@@ -52,7 +52,7 @@ export async function createTransformersScorer(
   } catch {
     throw new Error(
       '@glyphp/resolver: the embedding scorer requires @huggingface/transformers. ' +
-        'Install it with: pnpm add @huggingface/transformers'
+        'Install it with: pnpm add @huggingface/transformers',
     )
   }
   const extractor = await transformers.pipeline('feature-extraction', model)

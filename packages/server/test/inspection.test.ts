@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { sanitize, verifyReceipt } from '@glyphp/core'
+import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
 // Invisible characters built at runtime so this file stays free of them.
@@ -33,7 +33,7 @@ async function call() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: {} }),
-    })
+    }),
   )
   return (await res.json()) as any
 }

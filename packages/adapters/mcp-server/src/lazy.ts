@@ -19,14 +19,12 @@
  * tools rather than see them all at once. If your model can't handle that,
  * use eager mode. Test, don't assume.
  */
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
 import type { GlyphClient } from '@glyphp/client'
 import type { GlyphCard, SealedEnvelope } from '@glyphp/types'
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
 export interface LazyBridgeOptions {
   serverName?: string
@@ -67,14 +65,14 @@ const META_TOOLS = [
 
 export function mcpServerFromGlyphLazy(
   client: GlyphClient,
-  options: LazyBridgeOptions = {}
+  options: LazyBridgeOptions = {},
 ): Server {
   const server = new Server(
     {
       name: options.serverName ?? 'glyph-mcp-bridge-lazy',
       version: options.serverVersion ?? '0.1.0',
     },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {} } },
   )
 
   // Card cache so describe/invoke don't re-fetch.
@@ -143,20 +141,15 @@ export function mcpServerFromGlyphLazy(
         if (!card) return errorResult(`unknown glyph: ${p.name}`)
         if (card.cost.requiresConfirmation) {
           return errorResult(
-            `glyph "${p.name}" requires confirmation; not supported via MCP bridge`
+            `glyph "${p.name}" requires confirmation; not supported via MCP bridge`,
           )
         }
-        const envelope = (await client.call(
-          p.name,
-          p.arguments ?? {}
-        )) as SealedEnvelope
+        const envelope = (await client.call(p.name, p.arguments ?? {})) as SealedEnvelope
         return envelopeToMcpResult(envelope)
       }
       return errorResult(`unknown meta-tool: ${name}`)
     } catch (err) {
-      return errorResult(
-        `lazy bridge error: ${err instanceof Error ? err.message : String(err)}`
-      )
+      return errorResult(`lazy bridge error: ${err instanceof Error ? err.message : String(err)}`)
     }
   })
 
@@ -177,9 +170,7 @@ function envelopeToMcpResult(envelope: SealedEnvelope): {
     {
       type: 'text',
       text:
-        typeof envelope.payload === 'string'
-          ? envelope.payload
-          : JSON.stringify(envelope.payload),
+        typeof envelope.payload === 'string' ? envelope.payload : JSON.stringify(envelope.payload),
     },
   ]
   const inspection = envelope.inspection
@@ -202,7 +193,7 @@ function envelopeToMcpResult(envelope: SealedEnvelope): {
 
 export async function runStdioBridgeLazy(
   client: GlyphClient,
-  options?: LazyBridgeOptions
+  options?: LazyBridgeOptions,
 ): Promise<Server> {
   const server = mcpServerFromGlyphLazy(client, options)
   await server.connect(new StdioServerTransport())

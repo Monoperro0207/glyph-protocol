@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { computeGlyphId, diffCards, generateKeyPair, signGlyph } from '../src/index.js'
+import { test } from 'node:test'
 import type { GlyphCard } from '@glyphp/types'
+import { computeGlyphId, diffCards, generateKeyPair, signGlyph } from '../src/index.js'
 
 const basePartial = {
   version: '1.0.0',
@@ -25,7 +25,7 @@ const basePartial = {
 
 function sign(
   partial: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'>,
-  keyPair = generateKeyPair()
+  keyPair = generateKeyPair(),
 ): GlyphCard {
   const card: GlyphCard = {
     ...partial,
@@ -57,7 +57,7 @@ test('diffCards classifies an intent change as review-only', () => {
   assert.equal(diff.requiresApproval, false)
   assert.deepEqual(
     diff.changes.map((c) => c.field),
-    ['intent']
+    ['intent'],
   )
   assert.equal(diff.changes[0].severity, 'review')
 })
@@ -65,10 +65,7 @@ test('diffCards classifies an intent change as review-only', () => {
 test('diffCards classifies a riskTier escalation as breaking', () => {
   const kp = generateKeyPair()
   const a = sign(basePartial, kp)
-  const b = sign(
-    { ...basePartial, cost: { ...basePartial.cost, riskTier: 'danger' } },
-    kp
-  )
+  const b = sign({ ...basePartial, cost: { ...basePartial.cost, riskTier: 'danger' } }, kp)
   const diff = diffCards(a, b)
   assert.equal(diff.requiresApproval, true)
   const change = diff.changes.find((c) => c.field === 'cost.riskTier')
@@ -88,7 +85,7 @@ test('diffCards detects a key swap that leaves the id unchanged', () => {
   assert.equal(diff.requiresApproval, true)
   assert.deepEqual(
     diff.changes.map((c) => c.field),
-    ['publicKey']
+    ['publicKey'],
   )
 })
 
@@ -100,7 +97,7 @@ test('diffCards flags an input schema change as breaking', () => {
       ...basePartial,
       input: { type: 'object', properties: { amount: { type: 'number' } } },
     },
-    kp
+    kp,
   )
   const diff = diffCards(a, b)
   const change = diff.changes.find((c) => c.field === 'input')

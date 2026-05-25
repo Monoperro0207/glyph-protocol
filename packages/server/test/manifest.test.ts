@@ -1,8 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { verifyManifest } from '@glyphp/core'
 import type { UpdateManifest } from '@glyphp/types'
+import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
 function buildServer(): GlyphServer {
@@ -22,18 +22,16 @@ function buildServer(): GlyphServer {
       output: z.object({ greeting: z.string() }),
       provider: 'test',
       handler: async () => ({ greeting: 'hi' }),
-    })
+    }),
   )
   return server
 }
 
 async function getManifest(
   server: GlyphServer,
-  name: string
+  name: string,
 ): Promise<{ status: number; body: any }> {
-  const res = await server.fetch(
-    new Request(`http://glyph/glyphs/${name}/manifest`)
-  )
+  const res = await server.fetch(new Request(`http://glyph/glyphs/${name}/manifest`))
   return { status: res.status, body: await res.json() }
 }
 
@@ -71,7 +69,7 @@ test('registerManifest throws for an unknown glyph', () => {
         breaking: false,
         securityImpact: 'none',
       }),
-    /unknown glyph/
+    /unknown glyph/,
   )
 })
 

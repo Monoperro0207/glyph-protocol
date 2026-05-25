@@ -1,8 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
+import { test } from 'node:test'
 import { verifyReceipt } from '@glyphp/core'
 import type { CallReceipt } from '@glyphp/types'
+import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
 const echo = defineGlyph({
@@ -31,7 +31,7 @@ async function call() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: { msg: 'hi' } }),
-    })
+    }),
   )
   return (await res.json()) as any
 }
@@ -74,7 +74,7 @@ test('callId is always server-generated UUID v4 even when client sends one', asy
         input: { msg: 'hi' },
         callId: 'attacker-chosen-value',
       }),
-    })
+    }),
   )
   const body = (await res.json()) as any
   assert.equal(res.status, 200)
@@ -83,7 +83,7 @@ test('callId is always server-generated UUID v4 even when client sends one', asy
   // callId must be a UUID v4 (36 chars with dashes at positions 8,13,18,23)
   assert.match(
     body.receipt.callId,
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
   )
 })
 
@@ -96,7 +96,7 @@ test('clientCallId is preserved when client sends callId', async () => {
         input: { msg: 'hi' },
         callId: 'client-tracker-123',
       }),
-    })
+    }),
   )
   const body = (await res.json()) as any
   assert.equal(res.status, 200)
@@ -111,7 +111,7 @@ test('no clientCallId field when client does not send callId', async () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: { msg: 'hi' } }),
-    })
+    }),
   )
   const body = (await res.json()) as any
   assert.equal(res.status, 200)

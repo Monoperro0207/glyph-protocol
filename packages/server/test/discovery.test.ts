@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
 
@@ -54,11 +54,7 @@ test('GET /glyphs/:name?depth=bogus → 400 VALIDATION_FAILED', async () => {
   assert.equal(res.body.error.code, 'VALIDATION_FAILED')
   assert.equal(res.body.error.details.field, 'depth')
   assert.equal(res.body.error.details.got, 'bogus')
-  assert.deepEqual(res.body.error.details.expected, [
-    'minimal',
-    'standard',
-    'rich',
-  ])
+  assert.deepEqual(res.body.error.details.expected, ['minimal', 'standard', 'rich'])
 })
 
 test('GET /glyphs/:name?depth= (empty string) → 400 VALIDATION_FAILED', async () => {

@@ -1,5 +1,4 @@
-import { FilePinStore } from '@glyphp/client'
-import { GlyphClient } from '@glyphp/client'
+import { FilePinStore, GlyphClient } from '@glyphp/client'
 import { loadCard } from './verify.js'
 
 export interface PinsResult {
@@ -19,9 +18,7 @@ function storeFor(file?: string): FilePinStore {
 }
 
 /** Lists every pin in the store, with status (approved/revoked) and tool id. */
-export async function runPinsList(options?: {
-  file?: string
-}): Promise<PinsResult> {
+export async function runPinsList(options?: { file?: string }): Promise<PinsResult> {
   const store = storeFor(options?.file)
   const pins = await store.list()
   if (pins.length === 0) {
@@ -32,9 +29,7 @@ export async function runPinsList(options?: {
     const status = pin.revokedAt ? 'revoked' : 'approved'
     const when = pin.revokedAt ?? pin.approvedAt
     const why = pin.revokeReason ? ` — ${pin.revokeReason}` : ''
-    lines.push(
-      `  ${pin.toolName.padEnd(28)} ${status.padEnd(9)} ${when}${why}`
-    )
+    lines.push(`  ${pin.toolName.padEnd(28)} ${status.padEnd(9)} ${when}${why}`)
     lines.push(`    id:        ${pin.card.id}`)
     lines.push(`    publicKey: ${pin.card.publicKey}`)
   }
@@ -47,7 +42,7 @@ export async function runPinsList(options?: {
  */
 export async function runPinsApprove(
   source: string,
-  options?: { file?: string; reinstate?: boolean }
+  options?: { file?: string; reinstate?: boolean },
 ): Promise<PinsResult> {
   if (!source) {
     return {
@@ -80,7 +75,7 @@ export async function runPinsApprove(
  */
 export async function runPinsRevoke(
   toolName: string,
-  options?: { file?: string; reason?: string }
+  options?: { file?: string; reason?: string },
 ): Promise<PinsResult> {
   if (!toolName) {
     return { ok: false, report: 'revoke requires a tool name' }

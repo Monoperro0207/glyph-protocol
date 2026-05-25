@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { glyphsFromOpenApi } from '../src/index.js'
 import type { OpenApiDoc } from '../src/openapi-types.js'
 
@@ -23,8 +23,7 @@ test('refuse implicit document URL by default', () => {
   }
   assert.throws(
     () => glyphsFromOpenApi(doc, {}),
-    (err: Error) =>
-      /baseUrl|server.?url|SSRF|trusted|opt.?in|explicit/i.test(err.message)
+    (err: Error) => /baseUrl|server.?url|SSRF|trusted|opt.?in|explicit/i.test(err.message),
   )
 })
 
@@ -63,8 +62,7 @@ test('allowedHosts filter rejects unknown hosts from document URL', () => {
         allowDocumentServerUrl: true,
         allowedHosts: ['safe.local'],
       }),
-    (err: Error) =>
-      /host|allowed|not in/i.test(err.message)
+    (err: Error) => /host|allowed|not in/i.test(err.message),
   )
 })
 

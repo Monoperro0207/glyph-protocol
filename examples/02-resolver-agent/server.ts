@@ -99,13 +99,7 @@ const cancelBooking = defineGlyph({
 })
 
 const server = new GlyphServer({ port: 3100 })
-for (const glyph of [
-  searchFlights,
-  bookFlight,
-  getWeather,
-  convertCurrency,
-  cancelBooking,
-]) {
+for (const glyph of [searchFlights, bookFlight, getWeather, convertCurrency, cancelBooking]) {
   server.register(glyph)
 }
 await server.start()

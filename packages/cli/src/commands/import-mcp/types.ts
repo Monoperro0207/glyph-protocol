@@ -19,12 +19,7 @@ export interface McpServerConfig {
     | { kind: 'http'; url: string; bearerToken?: string }
 }
 
-export type ClientId =
-  | 'claude-desktop'
-  | 'cursor'
-  | 'codex'
-  | 'openclaw'
-  | 'hermes-agent'
+export type ClientId = 'claude-desktop' | 'cursor' | 'codex' | 'openclaw' | 'hermes-agent'
 
 /**
  * A client adapter knows where its config file lives, whether one is

@@ -1,8 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { test } from 'node:test'
 import { computeGlyphId, generateKeyPair, signGlyph } from '@glyphp/core'
 import type { GlyphCard, Pin } from '@glyphp/types'
 import { FilePinStore, GlyphClient } from '../src/index.js'
@@ -98,7 +98,7 @@ test('FilePinStore rejects a file with the wrong version', async () => {
 test('secureMode requires a PinStore', () => {
   assert.throws(
     () => new GlyphClient({ baseUrl: 'http://x', secureMode: true }),
-    /secureMode requires a PinStore/
+    /secureMode requires a PinStore/,
   )
 })
 
@@ -109,6 +109,6 @@ test('secureMode passes when a PinStore is configured', () => {
         baseUrl: 'http://x',
         secureMode: true,
         pins: new FilePinStore('/tmp/glyph-test-noop.json'),
-      })
+      }),
   )
 })

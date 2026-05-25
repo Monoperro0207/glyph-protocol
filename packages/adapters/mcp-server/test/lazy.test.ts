@@ -1,8 +1,8 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { z } from 'zod'
-import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { test } from 'node:test'
 import { GlyphClient } from '@glyphp/client'
+import { defineGlyph, GlyphServer } from '@glyphp/server'
+import { z } from 'zod'
 import { mcpServerFromGlyphLazy } from '../src/lazy.js'
 
 async function harness() {
@@ -22,7 +22,7 @@ async function harness() {
       output: z.object({ sum: z.number() }),
       provider: 'test',
       handler: async ({ a, b }) => ({ sum: a + b }),
-    })
+    }),
   )
   server.register(
     defineGlyph({
@@ -39,7 +39,7 @@ async function harness() {
       output: z.object({ ok: z.boolean() }),
       provider: 'test',
       handler: async () => ({ ok: true }),
-    })
+    }),
   )
 
   const client = new GlyphClient({
@@ -87,7 +87,7 @@ test('glyph_index returns name/intent/riskTier for every card', async () => {
   assert.equal(parsed.length, 2)
   const add = parsed.find((c) => c.name === 'math.add')
   assert.ok(add)
-  assert.equal(add!.riskTier, 'safe')
+  assert.equal(add?.riskTier, 'safe')
 })
 
 test('glyph_describe returns the full card', async () => {
