@@ -15,6 +15,60 @@ const addFormats = (
   (addFormatsImport as any).default ?? addFormatsImport
 ) as (ajv: unknown, formats?: string[] | object) => unknown
 
+/** Thrown when a JSON Schema exceeds the complexity limits. */
+export class SchemaComplexityError extends Error {
+  constructor(
+    message: string,
+    public readonly detail: { nodes: number; depth: number; maxNodes: number; maxDepth: number }
+  ) {
+    super(message)
+    this.name = 'SchemaComplexityError'
+  }
+}
+
+/**
+ * Recursively walks a JSON Schema value and counts:
+ *   - `nodes`: every object encountered (including the root)
+ *   - `depth`: maximum nesting depth (root is depth 1)
+ *
+ * Throws `SchemaComplexityError` if either limit is exceeded.
+ */
+export function validateSchemaComplexity(
+  schema: unknown,
+  maxNodes = 1000,
+  maxDepth = 32
+): void {
+  let totalNodes = 0
+  let maxSeenDepth = 0
+
+  function walk(node: unknown, depth: number): void {
+    if (depth > maxSeenDepth) maxSeenDepth = depth
+    if (node === null || typeof node !== 'object') return
+    totalNodes++
+    if (totalNodes > maxNodes) {
+      throw new SchemaComplexityError(
+        `SCHEMA_TOO_COMPLEX: schema has at least ${totalNodes} nodes (max ${maxNodes})`,
+        { nodes: totalNodes, depth: maxSeenDepth, maxNodes, maxDepth }
+      )
+    }
+    if (depth > maxDepth) {
+      throw new SchemaComplexityError(
+        `SCHEMA_TOO_COMPLEX: schema depth ${depth} exceeds maximum ${maxDepth}`,
+        { nodes: totalNodes, depth, maxNodes, maxDepth }
+      )
+    }
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1)
+    } else {
+      for (const value of Object.values(node as Record<string, unknown>)) {
+        walk(value, depth + 1)
+      }
+    }
+  }
+
+  walk(schema, 1)
+}
+
 /**
  * Compiles a JSON Schema (draft 2020-12) into a Zod-compatible validator.
  *
@@ -47,6 +101,8 @@ export function compileJsonSchema(schema: unknown): z.ZodTypeAny {
     coerceTypes: false,
   })
   addFormats(ajv)
+
+  validateSchemaComplexity(schema)
 
   let validate: ReturnType<(typeof ajv)['compile']>
   try {
