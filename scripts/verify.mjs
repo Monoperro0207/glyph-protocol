@@ -39,7 +39,7 @@ if (full) {
   if (existsSync(pythonDir)) {
     steps.push({
       name: 'python sdk',
-      cmd: 'python',
+      cmd: '.venv/bin/python',
       args: ['-m', 'pytest', '-q'],
       cwd: pythonDir,
       optional: true,
