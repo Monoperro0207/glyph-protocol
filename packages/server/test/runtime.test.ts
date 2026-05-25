@@ -214,3 +214,18 @@ test('custom maxBodyBytes override → respects lower limit', async () => {
   const body = (await res.json()) as any
   assert.equal(body.error.code, 'PAYLOAD_TOO_LARGE')
 })
+
+test('body without Content-Length → stream fallback rejects oversized payload', async () => {
+  // No Content-Length header — readJson must measure the body from the stream
+  const huge = 'x'.repeat(2 * 1024 * 1024) // 2 MiB
+  const res = await server.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: huge,
+    })
+  )
+  assert.equal(res.status, 413)
+  const body = (await res.json()) as any
+  assert.equal(body.error.code, 'PAYLOAD_TOO_LARGE')
+})

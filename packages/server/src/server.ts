@@ -57,9 +57,20 @@ async function readJson<T>(c: Context, maxBytes: number): Promise<T> {
     }
   }
   try {
+    // When Content-Length is absent, read the full body and measure its byte size
+    // as a defense-in-depth fallback before parsing.
+    if (!contentLength) {
+      const raw = await c.req.raw.clone().arrayBuffer()
+      if (raw.byteLength > maxBytes) {
+        throw new PayloadTooLargeError()
+      }
+      const text = new TextDecoder().decode(raw)
+      return JSON.parse(text) as T
+    }
     return (await c.req.json()) as T
   } catch (err) {
     if (err instanceof PayloadTooLargeError) throw err
+    if (err instanceof SyntaxError) throw new MalformedJsonError()
     throw new MalformedJsonError()
   }
 }
