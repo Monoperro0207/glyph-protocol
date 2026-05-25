@@ -1,5 +1,23 @@
 # @glyphp/core
 
+## 1.2.0
+
+### Minor Changes
+
+- 44caa8c: Add `validateSchemaComplexity()` — a recursive pre-compile guard that rejects JSON Schemas with more than 1000 nodes or deeper than 32 levels before they reach AJV. Schemas exceeding the limit throw `SchemaComplexityError` with `code: 'SCHEMA_TOO_COMPLEX'`. Valid schemas pass through without change. This protects against adversarial schemas imported via the OpenAPI or MCP adapters.
+- 1df7009: Add GlyphSigner abstraction and FROST threshold signatures
+
+  - `GlyphSigner` interface abstracts card/manifest/receipt signing
+  - `Ed25519Signer` preserves current single-key behavior (default)
+  - `FrostSigner` enables M-of-N threshold signing via FROST (RFC 9591)
+  - `@myecoria/frost-ed25519-blake2b-wasm` for Zcash Foundation reference impl
+  - `GlyphServer` accepts optional `signer: GlyphSigner`, backward compatible
+
+### Patch Changes
+
+- Updated dependencies [44caa8c]
+  - @glyphp/types@1.2.0
+
 ## 1.1.0
 
 ### Minor Changes

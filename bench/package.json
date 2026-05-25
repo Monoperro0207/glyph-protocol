@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/bench",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Reproducible multi-model benchmark for Glyph Protocol",
   "license": "Apache-2.0",
