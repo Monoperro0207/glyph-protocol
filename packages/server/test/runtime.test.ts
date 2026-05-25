@@ -154,3 +154,63 @@ test('the handler abort signal fires when the call times out', async () => {
   assert.equal(res.body.error.code, 'HANDLER_TIMEOUT')
   assert.equal(abortFired, true)
 })
+
+test('body larger than 1 MiB → 413 PAYLOAD_TOO_LARGE (Content-Length check)', async () => {
+  const res = await server.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': String(2 * 1024 * 1024), // 2 MiB
+      },
+      body: JSON.stringify({ input: {} }),
+    })
+  )
+  assert.equal(res.status, 413)
+  const body = (await res.json()) as any
+  assert.equal(body.error.code, 'PAYLOAD_TOO_LARGE')
+})
+
+test('body within 1 MiB limit → parses normally', async () => {
+  const res = await server.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ input: {} }),
+    })
+  )
+  assert.equal(res.status, 200)
+})
+
+test('body at exact limit → parses normally', async () => {
+  // Content-Length at 1 MiB (1_048_576) should be accepted
+  const res = await server.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': '1048576',
+      },
+      body: JSON.stringify({ input: {} }),
+    })
+  )
+  assert.equal(res.status, 200)
+})
+
+test('custom maxBodyBytes override → respects lower limit', async () => {
+  const lowLimitServer = new GlyphServer({ maxBodyBytes: 100 })
+  lowLimitServer.register(honest)
+  const res = await lowLimitServer.fetch(
+    new Request('http://glyph/glyphs/honest/call', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': '101',
+      },
+      body: 'a',
+    })
+  )
+  assert.equal(res.status, 413)
+  const body = (await res.json()) as any
+  assert.equal(body.error.code, 'PAYLOAD_TOO_LARGE')
+})

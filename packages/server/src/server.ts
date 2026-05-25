@@ -37,17 +37,29 @@ const RECEIPT_VERSION = '0.3'
 const CONFIRMATION_TTL_MS = 5 * 60_000
 const MAX_PENDING_CONFIRMATIONS = 10_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
+const MAX_BODY_BYTES = 1_048_576
 
 class HandlerTimeoutError extends Error {}
 
 /** Thrown when a request body cannot be parsed as JSON. */
 class MalformedJsonError extends Error {}
 
-/** Reads and parses a JSON request body, normalizing a parse failure. */
-async function readJson<T>(c: Context): Promise<T> {
+/** Thrown when the request body exceeds the size limit. */
+class PayloadTooLargeError extends Error {}
+
+/** Reads and parses a JSON request body, enforcing a size limit. */
+async function readJson<T>(c: Context, maxBytes: number): Promise<T> {
+  const contentLength = c.req.header('content-length')
+  if (contentLength) {
+    const length = Number.parseInt(contentLength, 10)
+    if (!Number.isNaN(length) && length > maxBytes) {
+      throw new PayloadTooLargeError()
+    }
+  }
   try {
     return (await c.req.json()) as T
-  } catch {
+  } catch (err) {
+    if (err instanceof PayloadTooLargeError) throw err
     throw new MalformedJsonError()
   }
 }
@@ -84,6 +96,7 @@ export class GlyphServer {
   private keyRegistry?: KeyRegistrySource
   private policy?: PolicyResolver
   private maxPendingConfirmations: number
+  private maxBodyBytes: number
 
   constructor(options?: {
     port?: number
@@ -108,6 +121,8 @@ export class GlyphServer {
     policy?: PolicyResolver
     /** Hard cap on the number of unexpired pending confirmations (default 10_000). */
     maxPendingConfirmations?: number
+    /** Max request body size in bytes (default 1_048_576 = 1 MiB). */
+    maxBodyBytes?: number
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
@@ -118,6 +133,7 @@ export class GlyphServer {
     this.policy = options?.policy
     this.maxPendingConfirmations =
       options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
+    this.maxBodyBytes = options?.maxBodyBytes ?? MAX_BODY_BYTES
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -209,6 +225,14 @@ export class GlyphServer {
     const { app } = this
 
     app.onError((err, c) => {
+      if (err instanceof PayloadTooLargeError) {
+        return errorResponse(
+          c,
+          413,
+          'PAYLOAD_TOO_LARGE',
+          'Request body exceeds the maximum allowed size'
+        )
+      }
       if (err instanceof MalformedJsonError) {
         return errorResponse(
           c,
@@ -258,7 +282,7 @@ export class GlyphServer {
     })
 
     app.post('/handshake', async (c) => {
-      const body = await readJson<HandshakeRequest>(c)
+      const body = await readJson<HandshakeRequest>(c, this.maxBodyBytes)
 
       // Protocol version negotiation. While Glyph is 0.x, every minor is
       // potentially breaking — client and server must speak the same version.
@@ -339,7 +363,7 @@ export class GlyphServer {
       const glyph = this.glyphs.get(name)
       if (!glyph) return errorResponse(c, 404, 'NOT_FOUND', 'Glyph not found')
 
-      const body = await readJson<{ input: unknown }>(c)
+      const body = await readJson<{ input: unknown }>(c, this.maxBodyBytes)
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
         return errorResponse(
@@ -420,7 +444,7 @@ export class GlyphServer {
         input: unknown
         callId?: string
         confirmationToken?: string
-      }>(c)
+      }>(c, this.maxBodyBytes)
       const clientCallId = body.callId
       const callId = randomUUID()
 
