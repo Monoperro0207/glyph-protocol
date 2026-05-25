@@ -158,6 +158,14 @@ On `register()`, a server signs the card's `id` with its ed25519 key and embeds
 [`CallReceipt`](schemas/call-receipt.schema.json), returned inside the
 `SealedEnvelope`.
 
+**Receipt versioning.** `CallReceipt.receiptVersion` tracks the receipt
+format. As of version **0.3**, the `callId` is always server-generated
+(`randomUUID()` v4) — the server owns the audit identity. An optional
+`clientCallId` field preserves the client-supplied value for correlation.
+This change is documented in [RFC-0005](rfcs/RFC-0005-receipt-callid.md).
+Receipts at 0.2 (where `callId` could be client-controlled) remain valid
+but are no longer produced by the reference server.
+
 Tool output is **data, never instructions**. Before delivery the server strips
 provably-invisible and dangerous characters from every string in the payload —
 the Unicode tag block, zero-width characters, bidirectional overrides, and
