@@ -7,6 +7,7 @@ export type GlyphErrorCode =
   | 'VALIDATION_FAILED'
   | 'CONFIRMATION_REQUIRED'
   | 'INVALID_CONFIRMATION'
+  | 'CONFIRMATION_BACKLOG_FULL'
   | 'OUTPUT_VALIDATION_FAILED'
   | 'HANDLER_ERROR'
   | 'HANDLER_TIMEOUT'
@@ -15,9 +16,10 @@ export type GlyphErrorCode =
   | 'RATE_LIMITED'
   | 'PROTOCOL_VERSION_UNSUPPORTED'
   | 'MALFORMED_JSON'
+  | 'PAYLOAD_TOO_LARGE'
   | 'INTERNAL_ERROR'
 
-type ErrorStatus = 400 | 401 | 403 | 404 | 426 | 429 | 500 | 502 | 504
+type ErrorStatus = 400 | 401 | 403 | 404 | 413 | 426 | 429 | 500 | 502 | 503 | 504
 
 /** Builds a versioned GlyphError response: { error: { code, message, details? } }. */
 export function errorResponse(
