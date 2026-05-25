@@ -69,19 +69,19 @@
 
 ## Phase 4: Documentation & Hygiene (PR 3)
 
-- [ ] 4.1 `spec/rfcs/RFC-0005-receipt-callid.md` — Follow RFC-0004 structure: Status, Author, Date, Summary, Motivation, Specification, Migration, References.
+- [x] 4.1 `spec/rfcs/RFC-0005-receipt-callid.md` — Follow RFC-0004 structure: Status, Author, Date, Summary, Motivation, Specification, Migration, References.
   - Specs: rfc-0005-receipt-callid (2 scenarios).
 
-- [ ] 4.2 Repo hygiene — `CODEOWNERS` (`* @Monoperro0207`), `.github/dependabot.yml` (npm, weekly, grouped), `.github/PULL_REQUEST_TEMPLATE.md` (checklist: verify, RFC, schema).
+- [x] 4.2 Repo hygiene — `CODEOWNERS` (`* @Monoperro0207`), `.github/dependabot.yml` (npm, weekly, grouped), `.github/PULL_REQUEST_TEMPLATE.md` (checklist: verify, RFC, schema).
   - Read `CONTRIBUTING.md`, `GOVERNANCE.md` for existing patterns. Specs: repo-hygiene (3 scenarios).
 
-- [ ] 4.3 `ARCHITECTURE.md` (Mermaid + trust boundaries) + `docs/threat-to-tests.md` (STRIDE → test mapping).
+- [x] 4.3 `ARCHITECTURE.md` (Mermaid + trust boundaries) + `docs/threat-to-tests.md` (STRIDE → test mapping).
   - Source: `spec/protocol.md`, `spec/trust.md`, `spec/security.md`, `packages/conformance/`.
 
-- [ ] 4.4 `spec/protocol.md` + `CHANGELOG-PROTOCOL.md` — Document RECEIPT_VERSION 0.3 semantic change.
+- [x] 4.4 `spec/protocol.md` + `CHANGELOG-PROTOCOL.md` — Document RECEIPT_VERSION 0.3 semantic change.
 
 ## Phase 5: Changesets & Verification
 
-- [ ] 5.1 `pnpm changeset` — `@glyphp/server` (minor), `@glyphp/types` (minor), `@glyphp/core` (minor), `@glyphp/adapter-openapi` (MAJOR).
+- [x] 5.1 `pnpm changeset` — `@glyphp/server` (minor), `@glyphp/types` (minor), `@glyphp/core` (minor), `@glyphp/adapter-openapi` (MAJOR).
 
-- [ ] 5.2 Run `pnpm verify`, `pnpm verify:full`, `pnpm audit --prod`. All must pass.
+- [x] 5.2 Run `pnpm verify`, `pnpm verify:full`, `pnpm audit --prod`. All must pass.
