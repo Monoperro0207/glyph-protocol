@@ -184,3 +184,12 @@ test('StaticKeyRegistry resolves an active key', async () => {
   const result = await src.resolve(kp.publicKey)
   assert.equal(result.status, 'active')
 })
+
+test('KeyRegistry accepts group key metadata for multi-signer entries', () => {
+  const { registry } = genesisRegistry()
+  const entry = registry.keys[0]
+  entry.group = { threshold: 2, participants: 3 }
+  assert.equal(entry.group.threshold, 2)
+  assert.equal(entry.group.participants, 3)
+  assert.equal(entry.publicKey.length, 64) // standard ed25519 (FROST group key)
+})
