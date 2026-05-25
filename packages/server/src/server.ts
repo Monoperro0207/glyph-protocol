@@ -33,8 +33,9 @@ import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { errorResponse } from './errors.js'
 
 const SERVER_VERSION = '0.1.0'
-const RECEIPT_VERSION = '0.2'
+const RECEIPT_VERSION = '0.3'
 const CONFIRMATION_TTL_MS = 5 * 60_000
+const MAX_PENDING_CONFIRMATIONS = 10_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
 
 class HandlerTimeoutError extends Error {}
@@ -82,6 +83,7 @@ export class GlyphServer {
   private onCall?: (receipt: CallReceipt) => void
   private keyRegistry?: KeyRegistrySource
   private policy?: PolicyResolver
+  private maxPendingConfirmations: number
 
   constructor(options?: {
     port?: number
@@ -104,6 +106,8 @@ export class GlyphServer {
      * `spec/rfcs/RFC-0002-policy-layer.md`.
      */
     policy?: PolicyResolver
+    /** Hard cap on the number of unexpired pending confirmations (default 10_000). */
+    maxPendingConfirmations?: number
   }) {
     this.port = options?.port ?? 3100
     this.auth = options?.auth
@@ -112,6 +116,8 @@ export class GlyphServer {
     this.onCall = options?.onCall
     this.keyRegistry = options?.keyRegistry
     this.policy = options?.policy
+    this.maxPendingConfirmations =
+      options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
     if (options?.keyPair) {
       this.keyPair = options.keyPair
     } else {
@@ -360,10 +366,30 @@ export class GlyphServer {
       }
 
       const now = Date.now()
-      if (this.pendingConfirmations.size > 1000) {
-        for (const [token, pending] of this.pendingConfirmations) {
-          if (now >= pending.expiresAt) this.pendingConfirmations.delete(token)
+      // Unconditional sweep: expired entries are always cleaned before
+      // checking the hard limit so short-lived spikes self-recover.
+      for (const [token, pending] of this.pendingConfirmations) {
+        if (now >= pending.expiresAt) this.pendingConfirmations.delete(token)
+      }
+
+      if (this.pendingConfirmations.size >= this.maxPendingConfirmations) {
+        // Pick the earliest expiring entry to derive a reasonable Retry-After.
+        let earliestExpiry = Infinity
+        for (const pending of this.pendingConfirmations.values()) {
+          if (pending.expiresAt < earliestExpiry) earliestExpiry = pending.expiresAt
         }
+        const retryAfter = Math.max(
+          1,
+          Math.ceil((earliestExpiry - now) / 1000)
+        )
+        c.header('Retry-After', String(retryAfter))
+        return errorResponse(
+          c,
+          503,
+          'CONFIRMATION_BACKLOG_FULL',
+          'Too many pending confirmations. Retry after the next ticket expires.',
+          { maxPendingConfirmations: this.maxPendingConfirmations }
+        )
       }
 
       const confirmationToken = randomUUID()
@@ -395,7 +421,8 @@ export class GlyphServer {
         callId?: string
         confirmationToken?: string
       }>(c)
-      const callId = body.callId ?? randomUUID()
+      const clientCallId = body.callId
+      const callId = randomUUID()
 
       const parsed = glyph.inputSchema.safeParse(body.input)
       if (!parsed.success) {
@@ -529,6 +556,7 @@ export class GlyphServer {
         latencyMs,
         timestamp: new Date().toISOString(),
         serverPublicKey: this.keyPair.publicKey,
+        ...(clientCallId ? { clientCallId } : {}),
       }
       const receipt: CallReceipt = {
         ...receiptBase,
