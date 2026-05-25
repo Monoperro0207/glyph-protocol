@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import type { GlyphKeyPair, KeyRegistrySource } from '@glyphp/core'
+import type { GlyphKeyPair, GlyphSigner, KeyRegistrySource } from '@glyphp/core'
 import {
+  Ed25519Signer,
   applyDepth,
   canonicalHash,
   generateKeyPair,
   sanitize,
   sealResult,
-  signGlyph,
-  signManifest,
-  signReceipt,
   toLexiconEntry,
 } from '@glyphp/core'
 import type {
@@ -92,7 +90,7 @@ export class GlyphServer {
     { glyphName: string; inputHash: string; expiresAt: number }
   >()
   private port: number
-  private keyPair: GlyphKeyPair
+  private signer: GlyphSigner
   private auth?: AuthConfig
   private rateLimit?: RateLimitConfig
   private callTimeoutMs: number
@@ -105,6 +103,8 @@ export class GlyphServer {
   constructor(options?: {
     port?: number
     keyPair?: GlyphKeyPair
+    /** Pluggable signer — when provided, takes precedence over keyPair. */
+    signer?: GlyphSigner
     auth?: AuthConfig
     rateLimit?: RateLimitConfig
     callTimeoutMs?: number
@@ -137,13 +137,16 @@ export class GlyphServer {
     this.policy = options?.policy
     this.maxPendingConfirmations = options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
     this.maxBodyBytes = options?.maxBodyBytes ?? MAX_BODY_BYTES
-    if (options?.keyPair) {
-      this.keyPair = options.keyPair
+    if (options?.signer) {
+      this.signer = options.signer
+    } else if (options?.keyPair) {
+      this.signer = new Ed25519Signer(options.keyPair)
     } else {
-      this.keyPair = generateKeyPair()
+      const kp = generateKeyPair()
+      this.signer = new Ed25519Signer(kp)
       console.warn('[glyph] No keyPair provided — generated an ephemeral one for this run.')
     }
-    console.log('[glyph] provider publicKey:', this.keyPair.publicKey)
+    console.log('[glyph] provider publicKey:', this.signer.publicKey)
     this.setupRoutes()
   }
 
@@ -153,8 +156,8 @@ export class GlyphServer {
     }
     const signedCard = {
       ...glyph.card,
-      publicKey: this.keyPair.publicKey,
-      signature: signGlyph(glyph.card, this.keyPair.privateKey),
+      publicKey: this.signer.publicKey,
+      signature: this.signer.signGlyphSync(glyph.card),
     }
     this.glyphs.set(signedCard.name, { ...glyph, card: signedCard })
     return this
@@ -189,11 +192,11 @@ export class GlyphServer {
       breaking: manifest.breaking,
       securityImpact: manifest.securityImpact,
       issuedAt: new Date().toISOString(),
-      serverPublicKey: this.keyPair.publicKey,
+      serverPublicKey: this.signer.publicKey,
     }
     this.manifests.set(toolName, {
       ...base,
-      signature: signManifest(base, this.keyPair.privateKey),
+      signature: this.signer.signManifestSync(base),
     })
     return this
   }
@@ -554,12 +557,12 @@ export class GlyphServer {
         provider: glyph.card.provider,
         latencyMs,
         timestamp: new Date().toISOString(),
-        serverPublicKey: this.keyPair.publicKey,
+        serverPublicKey: this.signer.publicKey,
         ...(clientCallId ? { clientCallId } : {}),
       }
       const receipt: CallReceipt = {
         ...receiptBase,
-        signature: signReceipt(receiptBase, this.keyPair.privateKey),
+        signature: await this.signer.signReceipt(receiptBase),
       }
       if (this.onCall) {
         try {
