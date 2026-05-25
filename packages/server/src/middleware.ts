@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono'
 import { getConnInfo } from '@hono/node-server/conninfo'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { errorResponse } from './errors.js'
 
 export interface AuthConfig {
@@ -17,11 +18,27 @@ function bearerToken(c: Context): string {
   return header.startsWith('Bearer ') ? header.slice(7) : ''
 }
 
+/** SHA-256 hash of a string — produces fixed-length 32-byte output. */
+function sha256(input: string): Buffer {
+  return createHash('sha256').update(input).digest()
+}
+
 /** Resolves an AuthConfig to a single token-verification predicate. */
 export function buildVerify(config: AuthConfig): (token: string) => boolean {
-  return (
-    config.verify ?? ((token: string) => (config.tokens ?? []).includes(token))
-  )
+  if (config.verify) return config.verify
+
+  // Constant-time token comparison: SHA-256 hashes both sides to
+  // a fixed 32-byte output, then uses crypto.timingSafeEqual to
+  // eliminate length and prefix-timing leaks.
+  const storedHashes = (config.tokens ?? []).map((t) => sha256(t))
+  return (token: string): boolean => {
+    const tokenHash = sha256(token)
+    for (const storedHash of storedHashes) {
+      // timingSafeEqual requires equal-length buffers; SHA-256 guarantees 32.
+      if (timingSafeEqual(tokenHash, storedHash)) return true
+    }
+    return false
+  }
 }
 
 /**
