@@ -100,6 +100,8 @@ export interface SealedEnvelope {
 export interface CallReceipt {
   receiptVersion: string
   callId: string
+  /** Optional client-supplied call identifier, preserved for correlation. */
+  clientCallId?: string
   glyphId: string
   glyphName: string
   inputHash: string
