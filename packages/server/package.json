@@ -46,11 +46,11 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@glyphp/types": "workspace:*",
     "@glyphp/core": "workspace:*",
+    "@glyphp/types": "workspace:*",
+    "@hono/node-server": "^2.0.4",
     "hono": "^4.3.9",
     "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.23.0",
-    "@hono/node-server": "^1.11.4"
+    "zod-to-json-schema": "^3.23.0"
   }
 }
