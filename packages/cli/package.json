@@ -47,9 +47,12 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@glyphp/adapter-mcp": "workspace:*",
     "@glyphp/client": "workspace:*",
     "@glyphp/core": "workspace:*",
-    "@glyphp/types": "workspace:*"
+    "@glyphp/types": "workspace:*",
+    "@iarna/toml": "^2.2.5",
+    "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
     "@glyphp/server": "workspace:*",
