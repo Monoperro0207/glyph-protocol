@@ -12,6 +12,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,6 +34,20 @@ function run(cmd, args, cwd) {
   }
 }
 
+async function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(0, () => {
+      const address = server.address()
+      server.close(() => {
+        if (address && typeof address === 'object') resolve(address.port)
+        else reject(new Error('failed to allocate a free port'))
+      })
+    })
+  })
+}
+
 // Every publishable package, in dependency order.
 const PKG_DIRS = [
   'packages/types',
@@ -46,7 +61,7 @@ const PKG_DIRS = [
   'packages/adapters/mcp',
 ]
 
-const SMOKE_APP = `import { GlyphServer, defineGlyph } from '@glyphp/server'
+const SMOKE_APP = (port) => `import { GlyphServer, defineGlyph } from '@glyphp/server'
 import { GlyphClient } from '@glyphp/client'
 import { verifyReceipt } from '@glyphp/core'
 import { z } from 'zod'
@@ -61,7 +76,7 @@ const greet = defineGlyph({
   handler: async ({ name }) => ({ message: 'Hello, ' + name + '!' }),
 })
 
-const PORT = 3199
+const PORT = ${port}
 const server = new GlyphServer({ port: PORT })
 server.register(greet)
 await server.start()
@@ -114,7 +129,7 @@ try {
     const { name } = JSON.parse(readFileSync(join(repoRoot, dir, 'package.json'), 'utf8'))
     if (name !== '@glyphp/cli') deps[name] = tarballOf[name]
   }
-  deps['zod'] = '^3.23.8'
+  deps.zod = '^3.23.8'
 
   writeFileSync(
     join(proj, 'package.json'),
@@ -129,7 +144,8 @@ try {
       2,
     )}\n`,
   )
-  writeFileSync(join(proj, 'smoke.mjs'), SMOKE_APP)
+  const port = await freePort()
+  writeFileSync(join(proj, 'smoke.mjs'), SMOKE_APP(port))
 
   console.log('[smoke] installing tarballs into an external project…')
   // Use npm — pnpm overrides do not reliably override transitive version

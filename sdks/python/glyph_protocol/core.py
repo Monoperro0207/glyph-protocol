@@ -63,6 +63,10 @@ _BIDI_RE = re.compile(r"[‪-‮⁦-⁩]")
 _CTRL_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]")
 
 
+def _escape_path_token(token: str) -> str:
+    return token.replace("~", "~0").replace("/", "~1")
+
+
 def _sanitize_string(s: str, path: str) -> tuple[str, list[dict]]:
     findings: list[dict] = []
 
@@ -99,7 +103,7 @@ def _sanitize_value(value: Any, path: str) -> tuple[Any, list[dict]]:
         out_d: dict[str, Any] = {}
         findings = []
         for k, v in value.items():
-            nv, f = _sanitize_value(v, f"{path}/{k}")
+            nv, f = _sanitize_value(v, f"{path}/{_escape_path_token(str(k))}")
             out_d[k] = nv
             findings.extend(f)
         return out_d, findings

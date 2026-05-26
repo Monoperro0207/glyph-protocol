@@ -74,6 +74,7 @@
       "properties": {
         "receiptVersion": { "type": "string" },
         "callId": { "type": "string" },
+        "clientCallId": { "type": "string" },
         "glyphId": { "type": "string" },
         "glyphName": { "type": "string" },
         "inputHash": { "type": "string" },

@@ -74,8 +74,11 @@ test('a rotation chain — old key signs new key — verifies end to end', () =>
   })
 
   assert.equal(verifyKeyRegistry(registry), true)
-  assert.equal(resolveKey(registry, a.publicKey).status, 'retired')
-  assert.equal(resolveKey(registry, b.publicKey).status, 'active')
+  assert.equal(
+    resolveKey(registry, a.publicKey, new Date('2026-03-01T00:00:00Z')).status,
+    'retired',
+  )
+  assert.equal(resolveKey(registry, b.publicKey, new Date('2026-07-01T00:00:00Z')).status, 'active')
 })
 
 test('a broken chain (signedBy mismatch) is rejected', () => {
@@ -327,6 +330,54 @@ test('verifyKeyRegistry rejects invalid chain signature', () => {
     activePrivateKey: b.privateKey,
   })
   assert.equal(verifyKeyRegistry(registry), false)
+})
+
+test('resolveKey rejects revoked retired keys at resolution time', () => {
+  const t0 = new Date('2026-01-01T00:00:00Z').toISOString()
+  const t1 = new Date('2026-06-01T00:00:00Z').toISOString()
+  const a = generateKeyPair()
+  const b = generateKeyPair()
+  const entryA = buildKeyEntry(a.publicKey, t0)
+  const entryB = buildKeyEntry(b.publicKey, t1, {
+    fingerprint: entryA.fingerprint,
+    privateKey: a.privateKey,
+  })
+  const registry = buildKeyRegistry({
+    serverId: 'acme.test',
+    entries: [{ ...entryA, validUntil: t1, revokedAt: '2026-07-01T00:00:00Z' }, entryB],
+    activePrivateKey: b.privateKey,
+  })
+
+  const result = resolveKey(registry, a.publicKey, new Date('2026-08-01T00:00:00Z'))
+  assert.equal(result.status, 'revoked')
+})
+
+test('resolveKey rejects expired retired keys at resolution time', () => {
+  const t0 = new Date('2026-01-01T00:00:00Z').toISOString()
+  const t1 = new Date('2026-06-01T00:00:00Z').toISOString()
+  const a = generateKeyPair()
+  const b = generateKeyPair()
+  const entryA = buildKeyEntry(a.publicKey, t0)
+  const entryB = buildKeyEntry(b.publicKey, t1, {
+    fingerprint: entryA.fingerprint,
+    privateKey: a.privateKey,
+  })
+  const registry = buildKeyRegistry({
+    serverId: 'acme.test',
+    entries: [{ ...entryA, validUntil: t1 }, entryB],
+    activePrivateKey: b.privateKey,
+  })
+
+  const historical = resolveKey(registry, a.publicKey, new Date('2026-03-01T00:00:00Z'))
+  const expired = resolveKey(registry, a.publicKey, new Date('2026-08-01T00:00:00Z'))
+  assert.equal(historical.status, 'retired')
+  assert.equal(expired.status, 'expired')
+})
+
+test('resolveKey rejects future-dated keys at resolution time', () => {
+  const { kp, registry } = genesisRegistry()
+  const result = resolveKey(registry, kp.publicKey, new Date('2025-01-01T00:00:00Z'))
+  assert.equal(result.status, 'not-yet-valid')
 })
 
 test('verifyKeyRegistry rejects revoked active key', () => {

@@ -1,33 +1,33 @@
 # Versioning matrix
 
 Glyph Protocol coordinates several artifacts that ship at their own cadence: the
-wire protocol, the TypeScript packages, the Python SDK on PyPI, and the Go
-module. This page is the single source of truth for which versions
-interoperate.
+wire protocol, TypeScript packages, the Python SDK on PyPI, and the Go module.
+Use package metadata (`packages/*/package.json`, `sdks/python/pyproject.toml`,
+and Go module tags) as the source of truth for exact release numbers.
 
-## Current matrix
+## Current compatibility
 
-| Layer | Current version | Source |
+| Layer | Compatibility line | Source |
 |---|---|---|
 | Wire protocol | **1.0** (stable) | [`spec/protocol.md`](../spec/protocol.md) |
-| `@glyphp/core`, `@glyphp/server`, `@glyphp/types`, `@glyphp/cli` | **1.1.0** | [npm](https://www.npmjs.com/org/glyphp) |
-| `@glyphp/client`, `@glyphp/conformance`, `@glyphp/resolver`, `@glyphp/adapter-mcp`, `@glyphp/adapter-mcp-server`, `@glyphp/adapter-openapi` | **1.0.1** | [npm](https://www.npmjs.com/org/glyphp) |
-| `@glyphp/integration-vercel-ai`, `@glyphp/integration-langchain`, `@glyphp/integration-llamaindex`, `@glyphp/integration-openai-agents` | **1.1.1** | [npm](https://www.npmjs.com/org/glyphp) |
-| `@glyphp/exporter-otel` | **0.2.0** | [npm](https://www.npmjs.com/package/@glyphp/exporter-otel) |
-| `glyph-protocol` (Python) | **1.0.0** | [PyPI](https://pypi.org/project/glyph-protocol/) |
-| `github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol` | **v1.0.0** | [git tag](https://github.com/Monoperro0207/glyph-protocol/releases/tag/sdks%2Fgo%2Fglyphprotocol%2Fv1.0.0) |
+| npm `@glyphp/*` packages | **1.x** unless package metadata declares a newer major | `packages/*/package.json` + npm |
+| `@glyphp/exporter-otel` | **0.x** additive exporter package | `packages/exporter-otel/package.json` + npm |
+| Python `glyph-protocol` | **1.0.x** | [`sdks/python/pyproject.toml`](../sdks/python/pyproject.toml) + PyPI |
+| Go `glyphprotocol` module | **v1.0.x** | `sdks/go/glyphprotocol` tags |
 
 ## Compatibility statement
 
 A consumer using **wire protocol 1.0** can talk to:
-- any npm package on the **1.x** line of `@glyphp/*`,
-- any `@glyphp/integration-*` package on the **1.x** line,
-- `@glyphp/exporter-otel` on the **0.x** line (additive, peer to the rest),
+
+- npm packages on their compatible **1.x** line unless a package intentionally
+  declared a newer major for package-level behavior,
+- integration packages on the **1.x** line,
+- `@glyphp/exporter-otel` on the **0.x** line,
 - the Python SDK on the **1.0.x** line,
 - the Go SDK on the **v1.0.x** line.
 
-```
-wire 1.0  ↔  npm @glyphp/* 1.x  ↔  py glyph-protocol 1.0.x  ↔  go glyphprotocol v1.0.x
+```text
+wire 1.0  ↔  npm @glyphp/* compatible lines  ↔  py glyph-protocol 1.0.x  ↔  go glyphprotocol v1.0.x
 ```
 
 A handshake against a server speaking a different major wire protocol is
@@ -40,17 +40,15 @@ rejected at the `POST /handshake` step with `426 PROTOCOL_VERSION_UNSUPPORTED`.
   that fall back gracefully when missing) stay on the same major. See
   [`CHANGELOG-PROTOCOL.md`](../CHANGELOG-PROTOCOL.md).
 - **npm packages** follow [semver](https://semver.org/) and are released
-  through Changesets. The published package metadata carries
-  [npm provenance](https://docs.npmjs.com/generating-provenance-statements) via
+  through Changesets. The published package metadata carries npm provenance via
   GitHub OIDC.
-- **Python SDK** follows semver and is published to PyPI from CI.
+- **Python SDK** follows semver and is published to PyPI through the approved
+  release path.
 - **Go SDK** follows Go module versioning under
-  `sdks/go/glyphprotocol/v1.0.0` style tags.
+  `sdks/go/glyphprotocol/vX.Y.Z` style tags.
 
-## Upgrading
+## Keeping this page current
 
-The minor and patch bumps inside each row above are non-breaking by policy. The
-breaking changes that would force a major bump in the npm packages (or a new
-wire-protocol number) are listed up-front in the changeset PR description and
-in `CHANGELOG-PROTOCOL.md`. Consumers should pin to the major they target and
-let minor/patch bumps in.
+Do not hardcode patch/minor package versions here. Exact numbers drift every
+Changesets release; link to package metadata instead. If a compatibility line
+changes, update this page in the same PR as the major/wire compatibility change.

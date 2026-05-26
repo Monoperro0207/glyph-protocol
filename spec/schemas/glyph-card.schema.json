@@ -93,6 +93,11 @@
       "type": "string",
       "description": "Who authored the tool's behavior. A claim, not a proven identity — see spec/trust.md."
     },
+    "requiredScopes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional policy scopes required to invoke this glyph. Enters canonical card content."
+    },
     "attestation": {
       "type": "object",
       "additionalProperties": false,

@@ -92,8 +92,9 @@ def test_verify_receipt_round_trip() -> None:
     priv = Ed25519PrivateKey.generate()
     pub = _hex_pub(priv)
     base = {
-        "receiptVersion": "0.2",
-        "callId": "call-1",
+        "receiptVersion": "0.3",
+        "callId": "550e8400-e29b-41d4-a716-446655440000",
+        "clientCallId": "client-call-1",
         "glyphId": "0" * 64,
         "glyphName": "echo",
         "inputHash": "1" * 64,
@@ -106,7 +107,9 @@ def test_verify_receipt_round_trip() -> None:
         "serverPublicKey": pub,
     }
     sig = _sign(priv, canonical_hash(base))
-    assert verify_receipt({**base, "signature": sig}) is True
+    receipt = {**base, "signature": sig}
+    assert verify_receipt(receipt) is True
+    assert verify_receipt({**receipt, "clientCallId": "tampered"}) is False
 
 
 def test_verify_key_registry_round_trip() -> None:
