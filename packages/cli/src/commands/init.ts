@@ -107,6 +107,7 @@ const server = new GlyphServer({
   auth: { tokens: [authToken] },
   rateLimit: { windowMs: 60_000, max: 200 },
   keyRegistry: new StaticKeyRegistry(registry),
+  strictProduction: true,
   // Persist every call's signed receipt to your audit log here:
   onCall: (receipt) => console.log(JSON.stringify(receipt)),
 })

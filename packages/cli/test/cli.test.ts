@@ -103,6 +103,19 @@ test('init scaffolds a project and refuses to overwrite', async () => {
   })
 })
 
+test('init production-server profile includes strictProduction in scaffold', async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, 'prod')
+    await runInit(target, { profile: 'production-server' })
+    const { readFile } = await import('node:fs/promises')
+    const server = await readFile(join(target, 'server.ts'), 'utf8')
+    assert.match(server, /strictProduction:\s*true/)
+    assert.match(server, /keyPair/)
+    assert.match(server, /auth/)
+    assert.match(server, /rateLimit/)
+  })
+})
+
 test('init mcp-bridge profile scaffolds an MCP-aware server', async () => {
   await withTempDir(async (dir) => {
     const target = join(dir, 'mcp')
