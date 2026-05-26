@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.38% </span>
+                <span class="strong">92.53% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>124/130</span>
+                <span class='fraction'>124/134</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.38% </span>
+                <span class="strong">92.53% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>124/130</span>
+                <span class='fraction'>124/134</span>
             </div>
         
             
@@ -193,7 +193,11 @@
 <a name='L128'></a><a href='#L128'>128</a>
 <a name='L129'></a><a href='#L129'>129</a>
 <a name='L130'></a><a href='#L130'>130</a>
-<a name='L131'></a><a href='#L131'>131</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -290,6 +294,10 @@
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -349,7 +357,7 @@ export interface GlyphsAsLlamaIndexToolsOptions {
 &nbsp;
 export async function glyphsAsLlamaIndexTools(
   client: GlyphClient,
-  options: GlyphsAsLlamaIndexToolsOptions = {}
+  options: GlyphsAsLlamaIndexToolsOptions = {},
 ): Promise&lt;LlamaIndexGlyphTool[]&gt; {
   const lexicon = await client.getLexicon()
   const tools: LlamaIndexGlyphTool[] = []
@@ -366,7 +374,7 @@ export async function glyphsAsLlamaIndexTools(
 export function fromLexicon(
   client: GlyphClient,
   lexicon: LexiconEntry[],
-  options: GlyphsAsLlamaIndexToolsOptions = {}
+  options: GlyphsAsLlamaIndexToolsOptions = {},
 ): LlamaIndexGlyphTool[] {
   return lexicon.map((entry) =&gt; ({
     name: entry.name,
@@ -379,7 +387,7 @@ export function fromLexicon(
 async function buildTool(
   client: GlyphClient,
   entry: LexiconEntry,
-  options: GlyphsAsLlamaIndexToolsOptions
+  options: GlyphsAsLlamaIndexToolsOptions,
 ): Promise&lt;LlamaIndexGlyphTool&gt; {
   let parameters: LlamaIndexGlyphTool['parameters'] = { type: 'object', properties: {} }
   try {
@@ -387,7 +395,7 @@ async function buildTool(
     parameters = mapToObjectSchema(card.input)
 <span class="branch-0 cbranch-no" title="branch not covered" >  } catch (err) {</span>
 <span class="cstat-no" title="statement not covered" >    console.warn(</span>
-<span class="cstat-no" title="statement not covered" >      `[@glyphp/integration-llamaindex] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`</span>
+<span class="cstat-no" title="statement not covered" >      `[@glyphp/integration-llamaindex] could not fetch card for "${entry.name}"; LLM will receive raw JSON. ${(err as Error).message ?? err}`,</span>
 <span class="cstat-no" title="statement not covered" >    )</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
   return {
@@ -420,13 +428,17 @@ function mapToObjectSchema(input: unknown): LlamaIndexGlyphTool['parameters'] {
     }
   }
 <span class="branch-0 cbranch-no" title="branch not covered" >  if (!input) return { type: 'object', properties: {} }</span>
-<span class="cstat-no" title="statement not covered" >  return { type: 'object', properties: { value: input as Record&lt;string, unknown&gt; }, required: ['value'] }</span>
+<span class="cstat-no" title="statement not covered" >  return {</span>
+<span class="cstat-no" title="statement not covered" >    type: 'object',</span>
+<span class="cstat-no" title="statement not covered" >    properties: { value: input as Record&lt;string, unknown&gt; },</span>
+<span class="cstat-no" title="statement not covered" >    required: ['value'],</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
 }
 &nbsp;
 function makeFn(
   client: GlyphClient,
   name: string,
-  options: GlyphsAsLlamaIndexToolsOptions
+  options: GlyphsAsLlamaIndexToolsOptions,
 ): LlamaIndexGlyphTool['fn'] {
   return async (input) =&gt; {
     const envelope = await client.call(name, input).catch(async (err) =&gt; {
@@ -460,7 +472,7 @@ function makeFn(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

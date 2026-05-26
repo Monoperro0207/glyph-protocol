@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.55% </span>
+                <span class="strong">98.24% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>68/69</span>
+                <span class='fraction'>56/57</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.55% </span>
+                <span class="strong">98.24% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>68/69</span>
+                <span class='fraction'>56/57</span>
             </div>
         
             
@@ -120,19 +120,7 @@
 <a name='L55'></a><a href='#L55'>55</a>
 <a name='L56'></a><a href='#L56'>56</a>
 <a name='L57'></a><a href='#L57'>57</a>
-<a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a>
-<a name='L64'></a><a href='#L64'>64</a>
-<a name='L65'></a><a href='#L65'>65</a>
-<a name='L66'></a><a href='#L66'>66</a>
-<a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a>
-<a name='L69'></a><a href='#L69'>69</a>
-<a name='L70'></a><a href='#L70'>70</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L58'></a><a href='#L58'>58</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -151,12 +139,6 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -168,12 +150,6 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -215,24 +191,14 @@ export interface DiffResult {
  * how they differ. `ok` is false when the diff carries a breaking change, so
  * `glyph diff-card` can gate CI on an un-reviewed tool update.
  */
-export async function runDiffCard(
-  oldSource: string,
-  newSource: string
-): Promise&lt;DiffResult&gt; {
-  const [approved, next] = await Promise.all([
-    loadCard(oldSource),
-    loadCard(newSource),
-  ])
+export async function runDiffCard(oldSource: string, newSource: string): Promise&lt;DiffResult&gt; {
+  const [approved, next] = await Promise.all([loadCard(oldSource), loadCard(newSource)])
   const diff = diffCards(approved, next)
   return { ok: !diff.requiresApproval, report: formatDiff(approved, next, diff) }
 }
 &nbsp;
 /** Renders a CardDiff as a human-readable report. */
-export function formatDiff(
-  approved: GlyphCard,
-  next: GlyphCard,
-  diff: CardDiff
-): string {
+export function formatDiff(approved: GlyphCard, next: GlyphCard, diff: CardDiff): string {
   const lines = [
     `Comparing ${approved.<span class="branch-0 cbranch-no" title="branch not covered" >name || '(unnamed card)'}</span>`,
     `  old id: ${approved.id}`,
@@ -248,9 +214,7 @@ export function formatDiff(
   const width = Math.max(...diff.changes.map((c) =&gt; c.field.length))
   for (const c of diff.changes) {
     const tag = c.severity === 'breaking' ? <span class="branch-0 cbranch-no" title="branch not covered" >'BREAKING' : 'review  '</span>
-    lines.push(
-      `  ${c.field.padEnd(width)}  ${tag}  ${fmt(c.before)} -&gt; ${fmt(c.after)}`
-    )
+    lines.push(`  ${c.field.padEnd(width)}  ${tag}  ${fmt(c.before)} -&gt; ${fmt(c.after)}`)
   }
 &nbsp;
   lines.push(
@@ -259,7 +223,7 @@ export function formatDiff(
     `  key changed:  ${diff.<span class="branch-0 cbranch-no" title="branch not covered" >keyChanged ? 'yes' : '</span>no'}`,
     diff.requiresApproval
       ? <span class="branch-0 cbranch-no" title="branch not covered" >'REQUIRES APPROVAL — breaking changes present, re-approval needed'</span>
-<span class="cstat-no" title="statement not covered" >      : 'REVIEW — descriptive changes only, no breaking change'</span>
+<span class="cstat-no" title="statement not covered" >      : 'REVIEW — descriptive changes only, no breaking change',</span>
   )
   return lines.join('\n')
 }
@@ -277,7 +241,7 @@ function fmt(value: unknown): string {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

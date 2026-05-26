@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.88% </span>
+                <span class="strong">84.06% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>155/187</span>
+                <span class='fraction'>153/182</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.88% </span>
+                <span class="strong">84.06% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>155/187</span>
+                <span class='fraction'>153/182</span>
             </div>
         
             
@@ -245,12 +245,7 @@
 <a name='L180'></a><a href='#L180'>180</a>
 <a name='L181'></a><a href='#L181'>181</a>
 <a name='L182'></a><a href='#L182'>182</a>
-<a name='L183'></a><a href='#L183'>183</a>
-<a name='L184'></a><a href='#L184'>184</a>
-<a name='L185'></a><a href='#L185'>185</a>
-<a name='L186'></a><a href='#L186'>186</a>
-<a name='L187'></a><a href='#L187'>187</a>
-<a name='L188'></a><a href='#L188'>188</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L183'></a><a href='#L183'>183</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -361,8 +356,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
@@ -413,9 +406,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -440,7 +430,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { GlyphDefinition } from '@glyphp/server'
-import type { McpServerConfig, ImportedServer } from './types.js'
+import type { ImportedServer, McpServerConfig } from './types.js'
 &nbsp;
 /**
  * Writes the per-MCP project directory: `server.ts`, `package.json`,
@@ -452,7 +442,7 @@ export async function emitServerProject(
   config: McpServerConfig,
   glyphs: GlyphDefinition&lt;any, any&gt;[],
   port: number,
-  outDir: string
+  outDir: string,
 ): Promise&lt;ImportedServer&gt; {
   await mkdir(outDir, { recursive: true })
 &nbsp;
@@ -520,30 +510,28 @@ console.log('[glyph] ${config.name} bridge live on http://localhost:${port} with
 }
 &nbsp;
 function renderPackageJson(config: McpServerConfig): string {
-  return (
-    JSON.stringify(
-      {
-        name: `glyph-bridge-${config.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`,
-        version: '0.0.1',
-        private: true,
-        type: 'module',
-        scripts: {
-          dev: 'tsx server.ts',
-        },
-        dependencies: {
-          '@glyphp/adapter-mcp': '^1.0.0',
-          '@glyphp/server': '^1.1.0',
-          '@modelcontextprotocol/sdk': '^1.0.0',
-        },
-        devDependencies: {
-          tsx: '^4.11.0',
-          typescript: '^5.4.0',
-        },
+  return `${JSON.stringify(
+    {
+      name: `glyph-bridge-${config.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`,
+      version: '0.0.1',
+      private: true,
+      type: 'module',
+      scripts: {
+        dev: 'tsx server.ts',
       },
-      null,
-      2
-    ) + '\n'
-  )
+      dependencies: {
+        '@glyphp/adapter-mcp': '^1.0.0',
+        '@glyphp/server': '^1.1.0',
+        '@modelcontextprotocol/sdk': '^1.0.0',
+      },
+      devDependencies: {
+        tsx: '^4.11.0',
+        typescript: '^5.4.0',
+      },
+    },
+    null,
+    2,
+  )}\n`
 }
 &nbsp;
 function renderEnvExample(config: McpServerConfig): string {
@@ -565,7 +553,7 @@ function renderEnvExample(config: McpServerConfig): string {
 function renderReadme(
   config: McpServerConfig,
   port: number,
-  cards: ImportedServer['cards']
+  cards: ImportedServer['cards'],
 ): string {
   const dangerCount = cards.filter((c) =&gt; c.riskTier === 'danger').length
   const cautionCount = cards.filter((c) =&gt; c.riskTier === 'caution').length
@@ -579,7 +567,7 @@ function renderReadme(
     '',
     '```bash',
     'pnpm install',
-    'pnpm run dev   # arranca el bridge en http://localhost:' + port,
+    `pnpm run dev   # arranca el bridge en http://localhost:${port}`,
     '```',
     '',
     '## Tools',
@@ -588,7 +576,7 @@ function renderReadme(
     '',
     ...cards.map(
       (c) =&gt;
-        `- \`${c.name}\` — risk: **${c.riskTier}**${c.requiresConfirmation ? ' • requires confirmation' : ''}`
+        `- \`${c.name}\` — risk: **${c.riskTier}**${c.requiresConfirmation ? ' • requires confirmation' : ''}`,
     ),
     '',
     '## ⚠ Review before production',
@@ -600,10 +588,7 @@ function renderReadme(
   ].join('\n')
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function emitTopLevelIndex(</span></span>
-<span class="cstat-no" title="statement not covered" >  outDir: string,</span>
-<span class="cstat-no" title="statement not covered" >  imported: ImportedServer[]</span>
-<span class="cstat-no" title="statement not covered" >): Promise&lt;void&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function emitTopLevelIndex(outDir: string, imported: ImportedServer[]): Promise&lt;void&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const lines = [</span>
 <span class="cstat-no" title="statement not covered" >    `# Glyph imports`,</span>
 <span class="cstat-no" title="statement not covered" >    '',</span>
@@ -618,7 +603,7 @@ function renderReadme(
 <span class="cstat-no" title="statement not covered" >    '|---|---|--:|--:|---|',</span>
 <span class="cstat-no" title="statement not covered" >    ...imported.map(</span>
 <span class="cstat-no" title="statement not covered" >      (s) =&gt;</span>
-<span class="cstat-no" title="statement not covered" >        `| \`${s.config.name}\` | ${s.config.source} | ${s.port} | ${s.toolCount} | \`${s.outputDir}/\` |`</span>
+<span class="cstat-no" title="statement not covered" >        `| \`${s.config.name}\` | ${s.config.source} | ${s.port} | ${s.toolCount} | \`${s.outputDir}/\` |`,</span>
 <span class="cstat-no" title="statement not covered" >    ),</span>
 <span class="cstat-no" title="statement not covered" >    '',</span>
 <span class="cstat-no" title="statement not covered" >  ]</span>
@@ -631,7 +616,7 @@ function renderReadme(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

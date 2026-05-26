@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>85/85</span>
+                <span class='fraction'>116/116</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>85/85</span>
+                <span class='fraction'>116/116</span>
             </div>
         
             
@@ -148,7 +148,69 @@
 <a name='L83'></a><a href='#L83'>83</a>
 <a name='L84'></a><a href='#L84'>84</a>
 <a name='L85'></a><a href='#L85'>85</a>
-<a name='L86'></a><a href='#L86'>86</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -246,11 +308,45 @@ export interface Scorer {
 &nbsp;
 const STOPWORDS = new Set([
   // English
-  'the', 'a', 'an', 'to', 'of', 'for', 'in', 'on', 'and', 'or', 'with',
-  'my', 'is', 'it', 'that', 'this', 'how', 'do', 'can', 'find', 'get',
+  'the',
+  'a',
+  'an',
+  'to',
+  'of',
+  'for',
+  'in',
+  'on',
+  'and',
+  'or',
+  'with',
+  'my',
+  'is',
+  'it',
+  'that',
+  'this',
+  'how',
+  'do',
+  'can',
+  'find',
+  'get',
   // Spanish
-  'el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'para', 'por', 'en',
-  'con', 'mi', 'que', 'como', 'se', 'al',
+  'el',
+  'la',
+  'los',
+  'las',
+  'un',
+  'una',
+  'de',
+  'del',
+  'para',
+  'por',
+  'en',
+  'con',
+  'mi',
+  'que',
+  'como',
+  'se',
+  'al',
 ])
 &nbsp;
 function tokenize(text: string): string[] {
@@ -277,10 +373,7 @@ export class LexicalScorer implements Scorer {
       return entries.map((entry) =&gt; ({ entry, score: 0 }))
     }
     return entries.map((entry) =&gt; {
-      const strong = new Set([
-        ...tokenize(entry.name),
-        ...entry.tags.flatMap(tokenize),
-      ])
+      const strong = new Set([...tokenize(entry.name), ...entry.tags.flatMap(tokenize)])
       const intent = new Set(tokenize(entry.intent))
       let sum = 0
       for (const token of qTokens) {
@@ -307,7 +400,7 @@ export class GlyphResolver {
 &nbsp;
   async resolve(
     query: string,
-    options?: { limit?: number; minScore?: number }
+    options?: { limit?: number; minScore?: number },
   ): Promise&lt;ResolverMatch[]&gt; {
     const limit = options?.limit ?? 5
     const minScore = options?.minScore ?? 0
@@ -325,7 +418,7 @@ export class GlyphResolver {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

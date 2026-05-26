@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.26% </span>
+                <span class="strong">76.92% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>54/69</span>
+                <span class='fraction'>50/65</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.26% </span>
+                <span class="strong">76.92% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>54/69</span>
+                <span class='fraction'>50/65</span>
             </div>
         
             
@@ -128,11 +128,7 @@
 <a name='L63'></a><a href='#L63'>63</a>
 <a name='L64'></a><a href='#L64'>64</a>
 <a name='L65'></a><a href='#L65'>65</a>
-<a name='L66'></a><a href='#L66'>66</a>
-<a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a>
-<a name='L69'></a><a href='#L69'>69</a>
-<a name='L70'></a><a href='#L70'>70</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L66'></a><a href='#L66'>66</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -197,14 +193,10 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { glyphsFromMcpClient } from '@glyphp/adapter-mcp'
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { glyphsFromMcpClient } from '@glyphp/adapter-mcp'
 import type { GlyphDefinition } from '@glyphp/server'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { McpServerConfig } from './types.js'
 &nbsp;
 /**
@@ -218,7 +210,7 @@ import type { McpServerConfig } from './types.js'
  */
 export async function importOneServer(
   config: McpServerConfig,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise&lt;GlyphDefinition&lt;any, any&gt;[]&gt; {
   if (config.transport.kind === 'http') <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >    // HTTP/SSE transport isn't fully covered by the v1 of this importer —</span>
@@ -226,7 +218,7 @@ export async function importOneServer(
 <span class="cstat-no" title="statement not covered" >    // (StreamableHTTP vs SSE) shift faster than we want to bake in. Surface</span>
 <span class="cstat-no" title="statement not covered" >    // a clear error so the user can switch to stdio for now.</span>
 <span class="cstat-no" title="statement not covered" >    throw new Error(</span>
-<span class="cstat-no" title="statement not covered" >      'HTTP/SSE transport not yet wired in import-mcp v1 — use --command for stdio or stay tuned for v2.'</span>
+<span class="cstat-no" title="statement not covered" >      'HTTP/SSE transport not yet wired in import-mcp v1 — use --command for stdio or stay tuned for v2.',</span>
 <span class="cstat-no" title="statement not covered" >    )</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
   const transport = new StdioClientTransport({
@@ -243,7 +235,7 @@ export async function importOneServer(
 <span class="branch-0 cbranch-no" title="branch not covered" >    const glyphs = await withTimeout(</span>
 <span class="cstat-no" title="statement not covered" >      glyphsFromMcpClient(client, { provider: `mcp:${config.name}` }),</span>
 <span class="cstat-no" title="statement not covered" >      timeoutMs,</span>
-<span class="cstat-no" title="statement not covered" >      'listTools'</span>
+<span class="cstat-no" title="statement not covered" >      'listTools',</span>
 <span class="cstat-no" title="statement not covered" >    )</span>
 <span class="cstat-no" title="statement not covered" >    return glyphs</span>
   } finally {
@@ -255,11 +247,7 @@ export async function importOneServer(
   }
 }
 &nbsp;
-async function withTimeout&lt;T&gt;(
-  p: Promise&lt;T&gt;,
-  ms: number,
-  stage: string
-): Promise&lt;T&gt; {
+async function withTimeout&lt;T&gt;(p: Promise&lt;T&gt;, ms: number, stage: string): Promise&lt;T&gt; {
   let to: NodeJS.Timeout | undefined
   const timeout = new Promise&lt;never&gt;((_, reject) =&gt; {
     to = setTimeout(() =&gt; reject(new Error(`${stage} timed out after ${ms}ms`)), ms)
@@ -277,7 +265,7 @@ async function withTimeout&lt;T&gt;(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

@@ -331,6 +331,40 @@ describe('security level', () => {
     const res = await securityLevel(ctx())
     deepStrictEqual(find(res, 'security.rateLimit').status, 'skipped')
   })
+
+  it('secure call success http throws → catch path', async () => {
+    const echo = 'echo'
+    const res = await executionLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http() {
+          throw new Error('refused')
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'execution.call.success').status, 'failed')
+  })
+
+  it('execution call input validation throws → catch path', async () => {
+    const echo = 'echo'
+    let call = 0
+    const res = await executionLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          call++
+          if (call === 1) {
+            // valid call succeeds
+            return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+          }
+          throw new Error('input validation failed')
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'execution.call.inputValidation').status, 'failed')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -408,6 +442,79 @@ describe('governance level', () => {
       }),
     )
     deepStrictEqual(find(res, 'governance.keyRegistry').status, 'skipped')
+  })
+
+  it('key registry returns non-200 non-404 → failed', async () => {
+    const echo = 'echo'
+    const res = await governanceLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          if (path.includes('/keys')) return { status: 500, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
+          return okJson({ id: 'ee'.repeat(32), name: echo })
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'governance.keyRegistry').status, 'failed')
+  })
+
+  it('key registry http throws → catch path', async () => {
+    const echo = 'echo'
+    const res = await governanceLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          if (path.includes('/keys')) throw new Error('network error')
+          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
+          return okJson({ id: 'ee'.repeat(32), name: echo })
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'governance.keyRegistry').status, 'failed')
+    deepStrictEqual(find(res, 'governance.keyRegistry').detail, 'network error')
+  })
+
+  it('manifest http throws → catch path', async () => {
+    const echo = 'echo'
+    const res = await governanceLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          if (path.includes('/manifest')) throw new Error('timeout')
+          if (path.includes('/keys')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
+          return okJson({ id: 'ee'.repeat(32), name: echo })
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'governance.manifest').status, 'failed')
+  })
+
+  it('empty lexicon → all governance checks skipped', async () => {
+    const res = await governanceLevel(ctx({ lexiconNames: [] }))
+    deepStrictEqual(find(res, 'governance.card.depthIdentity').status, 'skipped')
+    deepStrictEqual(find(res, 'governance.manifest').status, 'skipped')
+  })
+
+  it('card depth identity catch error', async () => {
+    const echo = 'echo'
+    const res = await governanceLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          if (path.includes('?depth=')) throw new Error('connection refused')
+          return okJson({})
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'governance.card.depthIdentity').status, 'failed')
   })
 })
 

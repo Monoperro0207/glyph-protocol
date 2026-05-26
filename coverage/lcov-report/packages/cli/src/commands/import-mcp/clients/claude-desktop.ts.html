@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.21% </span>
+                <span class="strong">75% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>79/101</span>
+                <span class='fraction'>78/104</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.21% </span>
+                <span class="strong">75% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>79/101</span>
+                <span class='fraction'>78/104</span>
             </div>
         
             
@@ -164,7 +164,10 @@
 <a name='L99'></a><a href='#L99'>99</a>
 <a name='L100'></a><a href='#L100'>100</a>
 <a name='L101'></a><a href='#L101'>101</a>
-<a name='L102'></a><a href='#L102'>102</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -184,6 +187,10 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -229,7 +236,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
@@ -285,13 +291,17 @@ function claudeDesktopConfigPath(): string {
     case 'darwin':
       return join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
 <span class="branch-0 cbranch-no" title="branch not covered" >    case 'win32':</span>
-<span class="cstat-no" title="statement not covered" >      return join(process.env.APPDATA ?? join(home, 'AppData', 'Roaming'), 'Claude', 'claude_desktop_config.json')</span>
+<span class="cstat-no" title="statement not covered" >      return join(</span>
+<span class="cstat-no" title="statement not covered" >        process.env.APPDATA ?? join(home, 'AppData', 'Roaming'),</span>
+<span class="cstat-no" title="statement not covered" >        'Claude',</span>
+<span class="cstat-no" title="statement not covered" >        'claude_desktop_config.json',</span>
+<span class="cstat-no" title="statement not covered" >      )</span>
 <span class="cstat-no" title="statement not covered" >    default:</span>
 <span class="cstat-no" title="statement not covered" >      // Linux build is unofficial but uses XDG.</span>
 <span class="cstat-no" title="statement not covered" >      return join(</span>
 <span class="cstat-no" title="statement not covered" >        process.env.XDG_CONFIG_HOME ?? join(home, '.config'),</span>
 <span class="cstat-no" title="statement not covered" >        'Claude',</span>
-<span class="cstat-no" title="statement not covered" >        'claude_desktop_config.json'</span>
+<span class="cstat-no" title="statement not covered" >        'claude_desktop_config.json',</span>
 <span class="cstat-no" title="statement not covered" >      )</span>
   }
 }
@@ -320,18 +330,17 @@ export const claudeDesktopAdapter: ClientAdapter = {
  */
 export function parseClaudeDesktopJson(
   raw: string,
-  source: 'claude-desktop' | 'cursor'
+  source: 'claude-desktop' | 'cursor',
 ): McpServerConfig[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch (e) {
     throw new Error(
-      `failed to parse ${source} config as JSON: ${e instanceof Error ? e.<span class="branch-0 cbranch-no" title="branch not covered" >message : String(e)}</span>`
+      `failed to parse ${source} config as JSON: ${e instanceof Error ? e.<span class="branch-0 cbranch-no" title="branch not covered" >message : String(e)}</span>`,
     )
   }
-  const servers =
-    (parsed as { mcpServers?: Record&lt;string, unknown&gt; } | null)?.<span class="branch-0 cbranch-no" title="branch not covered" >mcpServers ?? {}</span>
+  const servers = (parsed as { mcpServers?: Record&lt;string, unknown&gt; } | null)?.<span class="branch-0 cbranch-no" title="branch not covered" >mcpServers ?? {}</span>
   const out: McpServerConfig[] = []
   for (const [name, entry] of Object.entries(servers)) {
     if (!entry || typeof entry !== 'object') continue
@@ -357,8 +366,8 @@ export function parseClaudeDesktopJson(
           e.env &amp;&amp; typeof e.env === 'object'
             ? Object.fromEntries(
                 Object.entries(e.env as Record&lt;string, unknown&gt;).filter(
-                  ([, v]) =&gt; typeof v === 'string'
-                ) as [string, string][]
+                  ([, v]) =&gt; typeof v === 'string',
+                ) as [string, string][],
               )
             : undefined,
       },
@@ -373,7 +382,7 @@ export function parseClaudeDesktopJson(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../../../prettify.js"></script>
         <script>

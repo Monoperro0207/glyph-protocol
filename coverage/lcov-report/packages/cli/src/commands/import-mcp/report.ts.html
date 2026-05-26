@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.38% </span>
+                <span class="strong">98.21% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>61/62</span>
+                <span class='fraction'>55/56</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.38% </span>
+                <span class="strong">98.21% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>61/62</span>
+                <span class='fraction'>55/56</span>
             </div>
         
             
@@ -119,13 +119,7 @@
 <a name='L54'></a><a href='#L54'>54</a>
 <a name='L55'></a><a href='#L55'>55</a>
 <a name='L56'></a><a href='#L56'>56</a>
-<a name='L57'></a><a href='#L57'>57</a>
-<a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L57'></a><a href='#L57'>57</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -133,9 +127,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -162,9 +153,6 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -195,10 +183,7 @@ import type { ImportResult } from './types.js'
  * Writes IMPORT_REPORT.md summarising imported vs skipped MCPs and listing
  * any cards that the heuristic tagged as danger/caution for review.
  */
-export async function emitReport(
-  outDir: string,
-  result: ImportResult
-): Promise&lt;string&gt; {
+export async function emitReport(outDir: string, result: ImportResult): Promise&lt;string&gt; {
   const lines: string[] = [
     `# Glyph MCP import report — ${new Date().toISOString()}`,
     '',
@@ -210,7 +195,7 @@ export async function emitReport(
   } else {
     for (const s of result.imported) {
       lines.push(
-        `- \`${s.config.name}\` (${s.config.source}) → \`${s.outputDir}/\`, port ${s.port}, ${s.toolCount} tools`
+        `- \`${s.config.name}\` (${s.config.source}) → \`${s.outputDir}/\`, port ${s.port}, ${s.toolCount} tools`,
       )
     }
   }
@@ -223,12 +208,9 @@ export async function emitReport(
     }
   }
 &nbsp;
-  const review = result.imported
-    .flatMap((s) =&gt;
-      s.cards
-        .filter((c) =&gt; c.riskTier !== 'safe')
-        .map((c) =&gt; ({ server: s.config.name, ...c }))
-    )
+  const review = result.imported.flatMap((s) =&gt;
+    s.cards.filter((c) =&gt; c.riskTier !== 'safe').map((c) =&gt; ({ server: s.config.name, ...c })),
+  )
   lines.push('', `## ⚠ Review before production (${review.length} cards)`, '')
   if (review.length === 0) {
     lines.push('All imported cards are tagged `safe` by the heuristic.')
@@ -236,17 +218,17 @@ export async function emitReport(
     lines.push(
       'The MCP adapter infers cost/risk from tool names and MCP annotations.',
       'Audit the following before letting agents call them:',
-      ''
+      '',
     )
     for (const c of review) {
       lines.push(
-        `- \`${c.server}.${c.name}\` → **${c.riskTier}**${c.requiresConfirmation ? <span class="branch-0 cbranch-no" title="branch not covered" >' + requires confirmation' : ''}</span>`
+        `- \`${c.server}.${c.name}\` → **${c.riskTier}**${c.requiresConfirmation ? <span class="branch-0 cbranch-no" title="branch not covered" >' + requires confirmation' : ''}</span>`,
       )
     }
   }
 &nbsp;
   const path = join(outDir, 'IMPORT_REPORT.md')
-  await writeFile(path, lines.join('\n') + '\n', 'utf8')
+  await writeFile(path, `${lines.join('\n')}\n`, 'utf8')
   return path
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -256,7 +238,7 @@ export async function emitReport(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-25T06:43:06.534Z
+                at 2026-05-26T08:34:05.081Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>
