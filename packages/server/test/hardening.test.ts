@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { after, before, test } from 'node:test'
 import { z } from 'zod'
 import { defineGlyph, GlyphServer } from '../src/index.js'
+
+const savedEnv = { NODE_ENV: process.env.NODE_ENV }
 
 const ping = defineGlyph({
   name: 'ping',
@@ -51,4 +53,147 @@ test('rotating fake bearer tokens cannot escape the rate limit', async () => {
   await server.fetch(lexicon('fake-2'))
   const third = await server.fetch(lexicon('fake-3'))
   assert.equal(third.status, 429)
+})
+
+// ── Production Hardening (PRODHARDEN-001) ────────────────────────────────
+
+function productionServer(opts: Record<string, unknown> = {}) {
+  return new GlyphServer({
+    auth: { tokens: ['prod-token'] },
+    rateLimit: { windowMs: 60_000, max: 200 },
+    keyPair: {
+      publicKey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      privateKey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    },
+    ...opts,
+  })
+}
+
+test('PRODHARDEN-001: production with all configs → starts successfully', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    const server = productionServer({ strictProduction: true })
+    assert.ok(server instanceof GlyphServer)
+    // The server should have been constructed without errors
+    assert.ok(server.fetch)
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production + missing auth → throws when strictProduction true', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    assert.throws(
+      () =>
+        productionServer({
+          strictProduction: true,
+          auth: undefined,
+        }),
+      /auth/,
+    )
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production + missing rateLimit → throws when strictProduction true', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    assert.throws(
+      () =>
+        productionServer({
+          strictProduction: true,
+          rateLimit: undefined,
+        }),
+      /rateLimit/,
+    )
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production + missing keyPair and signer → throws when strictProduction true', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    assert.throws(
+      () =>
+        productionServer({
+          strictProduction: true,
+          keyPair: undefined,
+        }),
+      /keyPair|signer/,
+    )
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production + strictProduction false → warns but starts with missing configs', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    const server = productionServer({
+      strictProduction: false,
+      auth: undefined,
+      rateLimit: undefined,
+    })
+    assert.ok(server instanceof GlyphServer)
+    assert.ok(server.fetch)
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: non-production env → no checks, current behavior preserved', () => {
+  delete process.env.NODE_ENV
+  try {
+    // No keyPair, no auth, no rateLimit — should work in dev
+    const server = new GlyphServer()
+    assert.ok(server instanceof GlyphServer)
+    assert.ok(server.fetch)
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production error message names the missing configs', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    assert.throws(
+      () =>
+        new GlyphServer({
+          strictProduction: true,
+          keyPair: {
+            publicKey: 'aa'.repeat(32),
+            privateKey: 'bb'.repeat(32),
+          },
+        }),
+      (err: Error) => err.message.includes('auth') && err.message.includes('rateLimit'),
+    )
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
+})
+
+test('PRODHARDEN-001: production with custom signer instead of keyPair → accepted', () => {
+  process.env.NODE_ENV = 'production'
+  try {
+    // A signer satisfies the key stability requirement without a keyPair
+    const signer = {
+      publicKey: 'cc'.repeat(32),
+      signGlyphSync: () => 'sig',
+      signReceipt: async () => 'sig',
+      signManifestSync: () => 'sig',
+    }
+    const server = new GlyphServer({
+      strictProduction: true,
+      signer: signer as any,
+      auth: { tokens: ['t'] },
+      rateLimit: { windowMs: 60_000, max: 10 },
+    })
+    assert.ok(server instanceof GlyphServer)
+    assert.ok(server.fetch)
+  } finally {
+    process.env.NODE_ENV = savedEnv.NODE_ENV
+  }
 })
