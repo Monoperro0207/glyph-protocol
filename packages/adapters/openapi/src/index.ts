@@ -13,6 +13,56 @@ import type {
 
 const HTTP_METHODS: HttpMethod[] = ['get', 'post', 'put', 'patch', 'delete']
 
+const SENSITIVE_PARAMS = new Set([
+  'api_key',
+  'apikey',
+  'key',
+  'token',
+  'access_token',
+  'secret',
+  'password',
+  'authorization',
+])
+
+/**
+ * Redact sensitive query parameter values in a URL string.
+ *
+ * Replaces values of known secret parameters (api_key, token, etc.) and any
+ * caller-supplied extra names (e.g. OpenAPI security scheme names in query
+ * position) with `***`. Returns the original URL unchanged when there are no
+ * query parameters or no sensitive ones to redact.
+ */
+export function redactUrl(url: string, extraSensitiveParams?: string[]): string {
+  const questionIdx = url.indexOf('?')
+  if (questionIdx === -1) return url
+
+  const extraSet = new Set(extraSensitiveParams?.map((p) => p.toLowerCase()) ?? [])
+  const base = url.slice(0, questionIdx)
+  const queryString = url.slice(questionIdx + 1)
+
+  // URLSearchParams decodes values, so we reconstruct the query string from
+  // its entries to avoid leaking encoded secrets through the raw substring.
+  const params = new URLSearchParams(queryString)
+  let changed = false
+  const redacted = new URLSearchParams()
+
+  for (const [key, value] of params.entries()) {
+    const isSensitive =
+      SENSITIVE_PARAMS.has(key.toLowerCase()) || extraSet.has(key.toLowerCase())
+    if (isSensitive) {
+      redacted.append(key, '***')
+      changed = true
+    } else {
+      redacted.append(key, value)
+    }
+  }
+
+  if (!changed) return url
+
+  const qs = redacted.toString()
+  return qs ? `${base}?${qs}` : base
+}
+
 /**
  * Auth credentials supplied by the adapter operator. The OpenAPI document
  * names the schemes (under `components.securitySchemes`); the operator
@@ -296,6 +346,15 @@ function buildHandler(
   const params = op.parameters ?? []
   const effectiveSecurity = op.security ?? security.documentSecurity
 
+  // Collect OpenAPI security scheme names that land in query position so
+  // we can redact them from error messages.
+  const querySchemeNames: string[] = []
+  for (const [, scheme] of Object.entries(security.securitySchemes)) {
+    if (scheme.type === 'apiKey' && scheme.in === 'query' && scheme.name) {
+      querySchemeNames.push(scheme.name)
+    }
+  }
+
   return async (input: Record<string, unknown>): Promise<unknown> => {
     let url = baseUrl.replace(/\/$/, '') + path
     const query = new URLSearchParams()
@@ -338,7 +397,9 @@ function buildHandler(
 
     const res = await fetch(url, init)
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status} from ${init.method} ${url}`)
+      throw new Error(
+        `HTTP ${res.status} from ${init.method} ${redactUrl(url, querySchemeNames)}`,
+      )
     }
     return parseResponse(res)
   }
