@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { compileJsonSchema } from '../src/json-schema-validator.js'
+import {
+  compileJsonSchema,
+  SchemaCompilationError,
+} from '../src/json-schema-validator.js'
 
 // --- helpers ---
 
@@ -74,4 +77,70 @@ test('valid schema compiles without error', () => {
 test('empty/absent schema still passes through', () => {
   const validator = compileJsonSchema({})
   assert.equal(validator.safeParse('anything').success, true)
+})
+
+// --- SCHEMALIMIT-COMPILE-001: fail-fast on uncompileable schemas ---
+
+test('invalid schema that AJV cannot compile throws SchemaCompilationError', () => {
+  // A pattern with an unterminated character class causes new RegExp("[") to
+  // throw, which AJV propagates during compile().
+  const badSchema = { type: 'string', pattern: '[' }
+  assert.throws(
+    () => compileJsonSchema(badSchema),
+    SchemaCompilationError,
+  )
+  // Also verify the error message mentions the failure
+  assert.throws(
+    () => compileJsonSchema(badSchema),
+    (err: Error) =>
+      err instanceof SchemaCompilationError &&
+      err.message.includes('SCHEMA_COMPILATION_FAILED'),
+  )
+})
+
+test('outputValidation: none returns z.unknown() passthrough for bad schema', () => {
+  const badSchema = { type: 'string', pattern: '[' }
+  const validator = compileJsonSchema(badSchema, { outputValidation: 'none' })
+  assert.equal(typeof validator.safeParse, 'function')
+  // Passthrough: accepts anything
+  assert.equal(validator.safeParse('anything').success, true)
+  assert.equal(validator.safeParse(42).success, true)
+  assert.equal(validator.safeParse({ complex: true }).success, true)
+})
+
+test('outputValidation: none returns z.unknown() passthrough even for valid schema', () => {
+  const schema = { type: 'object', properties: { name: { type: 'string' } } }
+  const validator = compileJsonSchema(schema, { outputValidation: 'none' })
+  // Passthrough: accepts anything, doesn't validate
+  assert.equal(validator.safeParse({ name: 'test' }).success, true)
+  assert.equal(validator.safeParse(123).success, true)
+})
+
+test('another invalid schema (bad regex escape) also throws SchemaCompilationError', () => {
+  // Single backslash is an invalid regex escape — AJV throws
+  const badSchema = { type: 'string', pattern: '\\' }
+  assert.throws(
+    () => compileJsonSchema(badSchema),
+    SchemaCompilationError,
+  )
+  assert.throws(
+    () => compileJsonSchema(badSchema),
+    (err: Error) =>
+      err instanceof SchemaCompilationError &&
+      err.message.includes('SCHEMA_COMPILATION_FAILED'),
+  )
+})
+
+test('compileJsonSchema includes the underlying AJV error as cause', () => {
+  const badSchema = { type: 'string', pattern: '[' }
+  try {
+    compileJsonSchema(badSchema)
+    assert.fail('Expected SchemaCompilationError to be thrown')
+  } catch (err) {
+    assert.ok(err instanceof SchemaCompilationError)
+    assert.ok((err as SchemaCompilationError).cause instanceof Error)
+    assert.ok(
+      (err as SchemaCompilationError).cause!.message.includes('character class'),
+    )
+  }
 })
