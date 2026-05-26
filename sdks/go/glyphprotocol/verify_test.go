@@ -72,6 +72,15 @@ func TestVerifyGlyphDetectsTamper(t *testing.T) {
 	}
 }
 
+func TestVerifyGlyphDetectsRequiredScopesTamper(t *testing.T) {
+	card, _ := buildSignedCard(t)
+	card["requiredScopes"] = []any{"files:read"}
+	ok, _ := VerifyGlyph(card)
+	if ok {
+		t.Fatal("card with tampered requiredScopes should not verify")
+	}
+}
+
 func TestVerifyReceiptRoundTrip(t *testing.T) {
 	pubHex, priv := newKeyPair(t)
 	base := map[string]any{

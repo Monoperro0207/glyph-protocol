@@ -28,11 +28,18 @@ envelope = client.call("greet", {"name": "World"})
 assert verify_receipt(envelope["receipt"])
 ```
 
-## Compatibility
+## Compatibility and feature parity
 
 This SDK targets **Glyph Protocol 1.0** and is tested against the canonical
 test vectors under `spec/canonical/` in the main repo — so a value canonicalized
 or signed in Python verifies bit-identical to its TypeScript and Go counterparts.
+
+Receipts use `receiptVersion` 0.3: servers generate the authoritative `callId`,
+and callers may pass an optional client correlation id.
+
+Python currently covers protocol verification and client calls. TypeScript-only
+features include Provider Trust Resolver enforcement, attestation verifier
+plugins/policy gates, `GlyphServer`, and experimental FROST signing.
 
 See `spec/protocol.md` and `spec/rfcs/RFC-0001-key-registry.md` for the
 normative protocol.

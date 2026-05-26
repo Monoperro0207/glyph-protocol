@@ -81,6 +81,13 @@ def test_verify_glyph_detects_signature_swap() -> None:
     assert verify_glyph(card) is False
 
 
+def test_verify_glyph_detects_required_scopes_tamper() -> None:
+    priv = Ed25519PrivateKey.generate()
+    card = _build_card(priv)
+    card["requiredScopes"] = ["files:read"]
+    assert verify_glyph(card) is False
+
+
 def test_verify_receipt_round_trip() -> None:
     priv = Ed25519PrivateKey.generate()
     pub = _hex_pub(priv)

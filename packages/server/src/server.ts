@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import type { GlyphKeyPair, GlyphSigner, KeyRegistrySource } from '@glyphp/core'
 import {
-  Ed25519Signer,
   applyDepth,
   canonicalHash,
+  Ed25519Signer,
   generateKeyPair,
   sanitize,
   sealResult,
@@ -16,7 +16,7 @@ import type {
   HandshakeResponse,
   UpdateManifest,
 } from '@glyphp/types'
-import { MANIFEST_VERSION, PROTOCOL_VERSION } from '@glyphp/types'
+import { MANIFEST_VERSION, PROTOCOL_VERSION, RECEIPT_VERSION } from '@glyphp/types'
 import { serve } from '@hono/node-server'
 import type { Context } from 'hono'
 import { Hono } from 'hono'
@@ -28,7 +28,6 @@ import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { missingScopes } from './policy.js'
 
 const SERVER_VERSION = '0.1.0'
-const RECEIPT_VERSION = '0.3'
 const CONFIRMATION_TTL_MS = 5 * 60_000
 const MAX_PENDING_CONFIRMATIONS = 10_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000

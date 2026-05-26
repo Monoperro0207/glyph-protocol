@@ -5,6 +5,11 @@ import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { z } from 'zod'
 import { mcpServerFromGlyph } from '../src/index.js'
 
+type McpToolResult = {
+  isError?: boolean
+  content: Array<{ type: string; text: string }>
+}
+
 /**
  * Builds a Glyph server with a fixed set of tools, a Glyph client wired into
  * it via in-process fetch (no network), and the MCP bridge over that client.
@@ -184,7 +189,13 @@ test('MCP name collision — two glyphs normalizing to same name', async () => {
     defineGlyph({
       name: 'my.tool',
       intent: 'First',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.any(),
       provider: 'test',
@@ -193,9 +204,15 @@ test('MCP name collision — two glyphs normalizing to same name', async () => {
   )
   server.register(
     defineGlyph({
-      name: 'my-tool',
+      name: 'my/tool',
       intent: 'Second',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.any(),
       provider: 'test',
@@ -208,11 +225,13 @@ test('MCP name collision — two glyphs normalizing to same name', async () => {
   })
   await client.connect()
   // mcpServerFromGlyph should throw at tools/list time because my.tool
-  // and my-tool both normalize to my_tool via sanitizeMcpName.
+  // and my/tool both normalize to my_tool via sanitizeMcpName.
   // The collision is detected in loadCards() during alias registration.
-  assert.throws(() => {
-    mcpServerFromGlyph(client)
-  }, /MCP name collision/)
+  const bridge = mcpServerFromGlyph(client) as unknown as {
+    _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
+  }
+  const listHandler = bridge._requestHandlers.get('tools/list')!
+  await assert.rejects(() => listHandler({ method: 'tools/list' }), /MCP name collision/)
 })
 
 test('glyph call that throws is caught and returned as MCP error', async () => {
@@ -221,11 +240,19 @@ test('glyph call that throws is caught and returned as MCP error', async () => {
     defineGlyph({
       name: 'boom',
       intent: 'Will throw',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.any(),
       provider: 'test',
-      handler: async () => { throw new Error('deliberate') },
+      handler: async () => {
+        throw new Error('deliberate')
+      },
     }),
   )
   const client = new GlyphClient({
@@ -237,20 +264,23 @@ test('glyph call that throws is caught and returned as MCP error', async () => {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
   const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = await callHandler({
+  const result = (await callHandler({
     method: 'tools/call',
     params: { name: 'boom', arguments: {} },
-  })
+  })) as McpToolResult
   assert.equal(result.isError, true)
-  assert.match(result.content[0].text, /Glyph call failed/)
-  assert.match(result.content[0].text, /deliberate/)
+  assert.match(result.content[0]!.text, /Glyph call failed/)
+  assert.match(result.content[0]!.text, /deliberate/)
 })
 
 test('lexicon is cached across multiple tools/list calls', async () => {
   const h = await harness()
   const r1 = (await h.callListTools()) as { tools: Array<{ name: string }> }
   const r2 = (await h.callListTools()) as { tools: Array<{ name: string }> }
-  assert.deepEqual(r1.tools.map(t => t.name), r2.tools.map(t => t.name))
+  assert.deepEqual(
+    r1.tools.map((t) => t.name),
+    r2.tools.map((t) => t.name),
+  )
   assert.equal(r1.tools.length, 2)
 })
 
@@ -260,7 +290,13 @@ test('glyph with string output payload is handled', async () => {
     defineGlyph({
       name: 'txt',
       intent: 'Returns string',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.string(),
       provider: 'test',
@@ -276,11 +312,11 @@ test('glyph with string output payload is handled', async () => {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
   const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = await callHandler({
+  const result = (await callHandler({
     method: 'tools/call',
     params: { name: 'txt', arguments: {} },
-  })
-  assert.ok(result.content[0].text.includes('just text'))
+  })) as McpToolResult
+  assert.ok(result.content[0]!.text.includes('just text'))
   assert.ok(!result.isError)
 })
 
@@ -290,7 +326,13 @@ test('sanitized output appends inspection note to MCP content', async () => {
     defineGlyph({
       name: 'invisible',
       intent: 'Returns string with hidden chars',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.string(),
       provider: 'test',
@@ -306,11 +348,11 @@ test('sanitized output appends inspection note to MCP content', async () => {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
   const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = await callHandler({
+  const result = (await callHandler({
     method: 'tools/call',
     params: { name: 'invisible', arguments: {} },
-  })
-  assert.ok(result.content[0].text.includes('hello'))
-  const sanitizedNote = result.content.find((b: any) => b.text.includes('[glyph: sanitized'))
+  })) as McpToolResult
+  assert.ok(result.content[0]!.text.includes('hello'))
+  const sanitizedNote = result.content.find((b) => b.text.includes('[glyph: sanitized'))
   assert.ok(sanitizedNote, 'expected sanitization note')
 })

@@ -162,7 +162,7 @@ func ResolveKey(registry map[string]any, publicKeyHex string) ResolveResult {
 
 var cardCanonicalFields = []string{
 	"version", "name", "intent", "tags", "cost", "idempotent",
-	"input", "output", "examples", "failureModes", "provider", "attestation",
+	"input", "output", "examples", "failureModes", "provider", "requiredScopes", "attestation",
 }
 
 func computeGlyphID(card map[string]any) (string, error) {

@@ -1,6 +1,6 @@
 # RFC-0001: Key Registry, Rotation and Revocation
 
-- **Status:** Draft
+- **Status:** Implemented (V1)
 - **Targets:** Glyph Protocol 1.0
 - **Author:** Patrick Espino
 - **Created:** 2026-05-23

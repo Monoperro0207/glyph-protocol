@@ -21,10 +21,17 @@ if ok, _ := glyphprotocol.VerifyGlyph(card); !ok {
 }
 ```
 
-## Cross-language compatibility
+## Compatibility and feature parity
 
 The Go SDK is tested against the canonical test vectors in
 `spec/canonical/*-vectors.json` — so a value canonicalized or signed in Go
 verifies bit-identical to its TypeScript and Python counterparts.
+
+Receipts use `receiptVersion` 0.3: servers generate the authoritative `callId`,
+and callers may pass an optional client correlation id.
+
+Go currently covers protocol verification and client calls. TypeScript-only
+features include Provider Trust Resolver enforcement, attestation verifier
+plugins/policy gates, `GlyphServer`, and experimental FROST signing.
 
 Run `go test ./...` from this directory to verify.

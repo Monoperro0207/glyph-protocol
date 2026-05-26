@@ -1,4 +1,4 @@
-export { MANIFEST_VERSION, PROTOCOL_VERSION } from './protocol.js'
+export { MANIFEST_VERSION, PROTOCOL_VERSION, RECEIPT_VERSION } from './protocol.js'
 export type {
   CallReceipt,
   CardAttestation,
