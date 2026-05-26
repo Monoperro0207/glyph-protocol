@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { CardAttestation, GlyphCard } from '@glyphp/types'
 import {
+  AttestationVerifierRegistry,
   computeGlyphId,
+  DigestVerifier,
   diffCards,
   generateKeyPair,
   signGlyph,
   verifyAttestation,
   verifyGlyph,
 } from '../src/index.js'
+import type { AttestationResult } from '../src/index.js'
 
 const baseCard = {
   version: '1.0.0',
@@ -130,4 +133,176 @@ test('verifyAttestation distinguishes well-formed from recognized', () => {
   })
   assert.equal(known.ok, true)
   assert.equal(known.recognized, true)
+})
+
+// ---------------------------------------------------------------------------
+// DigestVerifier tests
+// ---------------------------------------------------------------------------
+
+const VALID_SHA256 = 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+
+function makeCard(attestation?: CardAttestation): GlyphCard {
+  const partial = { ...baseCard, attestation }
+  const keyPair = generateKeyPair()
+  const card: GlyphCard = {
+    ...partial,
+    id: computeGlyphId(partial),
+    createdAt: '2026-05-25T00:00:00.000Z',
+    publicKey: keyPair.publicKey,
+  }
+  card.signature = signGlyph(card, keyPair.privateKey)
+  return card
+}
+
+test('DigestVerifier accepts valid sha256 digest', async () => {
+  const verifier = new DigestVerifier()
+  assert.equal(verifier.type, 'container-digest')
+
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: VALID_SHA256 }),
+  })
+
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, true)
+  assert.equal(result.type, 'container-digest')
+  assert.equal(result.details?.digest, VALID_SHA256)
+})
+
+test('DigestVerifier rejects malformed digest — wrong prefix', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: 'sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+  assert.notEqual(result.error, undefined)
+})
+
+test('DigestVerifier rejects malformed digest — too short', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: 'sha256:abc123' }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+})
+
+test('DigestVerifier rejects malformed digest — invalid hex chars', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: 'sha256:zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz' }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+})
+
+test('DigestVerifier returns details with digest value on success', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: VALID_SHA256 }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, true)
+  assert.equal(result.details?.digest, VALID_SHA256)
+  // details must contain the validated digest
+  assert.equal(typeof result.details?.digest, 'string')
+})
+
+test('DigestVerifier rejects missing attestation', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard(undefined)
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+  assert.notEqual(result.error, undefined)
+})
+
+test('DigestVerifier rejects invalid JSON payload', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: 'not-valid-json',
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+  assert.notEqual(result.error, undefined)
+})
+
+test('DigestVerifier rejects payload without digest field', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ other: 'value' }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+})
+
+test('DigestVerifier rejects non-string digest value', async () => {
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: 12345 }),
+  })
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+  assert.notEqual(result.error, undefined)
+})
+
+test('DigestVerifier handles attestation of different type gracefully', async () => {
+  // The verifier is selected by registry, not by attestation.type.
+  // It should still try to parse and validate whatever payload is there.
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'sigstore-bundle',
+    payload: JSON.stringify({ digest: VALID_SHA256 }),
+  })
+  // Even though the attestation type is different, the payload still has a valid digest.
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, true)
+})
+
+// ---------------------------------------------------------------------------
+// AttestationVerifierRegistry tests
+// ---------------------------------------------------------------------------
+
+test('AttestationVerifierRegistry registers and retrieves a verifier', () => {
+  const registry = new AttestationVerifierRegistry()
+  const digestVerifier = new DigestVerifier()
+
+  registry.register(digestVerifier)
+
+  const retrieved = registry.get('container-digest')
+  assert.notEqual(retrieved, undefined)
+  assert.equal(retrieved!.type, 'container-digest')
+})
+
+test('AttestationVerifierRegistry returns undefined for unknown type', () => {
+  const registry = new AttestationVerifierRegistry()
+  assert.equal(registry.get('nonexistent'), undefined)
+})
+
+test('AttestationVerifierRegistry lists all registered types', () => {
+  const registry = new AttestationVerifierRegistry()
+  assert.deepEqual(registry.list(), [])
+
+  registry.register(new DigestVerifier())
+  assert.deepEqual(registry.list(), ['container-digest'])
+})
+
+test('AttestationVerifierRegistry overwrites duplicate type registration', () => {
+  const registry = new AttestationVerifierRegistry()
+  const first = new DigestVerifier()
+  registry.register(first)
+
+  // Register a second DigestVerifier — should overwrite
+  const second = new DigestVerifier()
+  registry.register(second)
+
+  assert.equal(registry.get('container-digest'), second)
+  assert.equal(registry.list().length, 1)
 })
