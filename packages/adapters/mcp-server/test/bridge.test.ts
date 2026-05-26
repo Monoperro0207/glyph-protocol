@@ -177,3 +177,140 @@ test('an unknown tool returns an MCP error', async () => {
   assert.equal(result.isError, true)
   assert.match(result.content[0]?.text, /Unknown Glyph tool/)
 })
+
+test('MCP name collision — two glyphs normalizing to same name', async () => {
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'my.tool',
+      intent: 'First',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.any(),
+      provider: 'test',
+      handler: async () => ({}),
+    }),
+  )
+  server.register(
+    defineGlyph({
+      name: 'my-tool',
+      intent: 'Second',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.any(),
+      provider: 'test',
+      handler: async () => ({}),
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+  // mcpServerFromGlyph should throw at tools/list time because my.tool
+  // and my-tool both normalize to my_tool via sanitizeMcpName.
+  // The collision is detected in loadCards() during alias registration.
+  assert.throws(() => {
+    mcpServerFromGlyph(client)
+  }, /MCP name collision/)
+})
+
+test('glyph call that throws is caught and returned as MCP error', async () => {
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'boom',
+      intent: 'Will throw',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.any(),
+      provider: 'test',
+      handler: async () => { throw new Error('deliberate') },
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+  const bridge = mcpServerFromGlyph(client) as unknown as {
+    _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
+  }
+  const callHandler = bridge._requestHandlers.get('tools/call')!
+  const result = await callHandler({
+    method: 'tools/call',
+    params: { name: 'boom', arguments: {} },
+  })
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /Glyph call failed/)
+  assert.match(result.content[0].text, /deliberate/)
+})
+
+test('lexicon is cached across multiple tools/list calls', async () => {
+  const h = await harness()
+  const r1 = (await h.callListTools()) as { tools: Array<{ name: string }> }
+  const r2 = (await h.callListTools()) as { tools: Array<{ name: string }> }
+  assert.deepEqual(r1.tools.map(t => t.name), r2.tools.map(t => t.name))
+  assert.equal(r1.tools.length, 2)
+})
+
+test('glyph with string output payload is handled', async () => {
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'txt',
+      intent: 'Returns string',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.string(),
+      provider: 'test',
+      handler: async () => 'just text',
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+  const bridge = mcpServerFromGlyph(client) as unknown as {
+    _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
+  }
+  const callHandler = bridge._requestHandlers.get('tools/call')!
+  const result = await callHandler({
+    method: 'tools/call',
+    params: { name: 'txt', arguments: {} },
+  })
+  assert.ok(result.content[0].text.includes('just text'))
+  assert.ok(!result.isError)
+})
+
+test('sanitized output appends inspection note to MCP content', async () => {
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'invisible',
+      intent: 'Returns string with hidden chars',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.string(),
+      provider: 'test',
+      handler: async () => 'hello\u200Bworld', // zero-width space
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+  const bridge = mcpServerFromGlyph(client) as unknown as {
+    _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
+  }
+  const callHandler = bridge._requestHandlers.get('tools/call')!
+  const result = await callHandler({
+    method: 'tools/call',
+    params: { name: 'invisible', arguments: {} },
+  })
+  assert.ok(result.content[0].text.includes('hello'))
+  const sanitizedNote = result.content.find((b: any) => b.text.includes('[glyph: sanitized'))
+  assert.ok(sanitizedNote, 'expected sanitization note')
+})
