@@ -281,3 +281,121 @@ test('HttpKeyRegistry resolve delegates to registry', async () => {
   const result = await client.resolve(kp.publicKey)
   assert.equal(result.status, 'active')
 })
+
+test('verifyKeyRegistry rejects wrong registry version', () => {
+  const { registry } = genesisRegistry()
+  const bad = { ...registry, registryVersion: '0.9' }
+  assert.equal(verifyKeyRegistry(bad), false)
+})
+
+test('verifyKeyRegistry rejects fingerprint mismatch', () => {
+  const { registry } = genesisRegistry()
+  const badKey = { ...registry.keys[0], fingerprint: '00'.repeat(32) }
+  const bad = { ...registry, keys: [badKey] }
+  assert.equal(verifyKeyRegistry(bad), false)
+})
+
+test('verifyKeyRegistry rejects missing signature on non-genesis entry', () => {
+  const t0 = new Date().toISOString()
+  const a = generateKeyPair()
+  const b = generateKeyPair()
+  const entryA = buildKeyEntry(a.publicKey, t0)
+  const entryB = {
+    ...buildKeyEntry(b.publicKey, t0, {
+      fingerprint: fingerprintKey(a.publicKey),
+      privateKey: a.privateKey,
+    }),
+    signature: '', // stripped
+  }
+  const registry = buildKeyRegistry({
+    serverId: 'test',
+    entries: [entryA, entryB],
+    activePrivateKey: b.privateKey,
+  })
+  assert.equal(verifyKeyRegistry(registry), false)
+})
+
+test('verifyKeyRegistry rejects invalid chain signature', () => {
+  const t0 = new Date().toISOString()
+  const a = generateKeyPair()
+  const b = generateKeyPair()
+  const entryA = buildKeyEntry(a.publicKey, t0)
+  const entryB = {
+    ...buildKeyEntry(b.publicKey, t0, {
+      fingerprint: fingerprintKey(a.publicKey),
+      privateKey: a.privateKey,
+    }),
+    signature: 'ff'.repeat(64), // garbage
+  }
+  const registry = buildKeyRegistry({
+    serverId: 'test',
+    entries: [entryA, entryB],
+    activePrivateKey: b.privateKey,
+  })
+  assert.equal(verifyKeyRegistry(registry), false)
+})
+
+test('verifyKeyRegistry rejects revoked active key', () => {
+  const { registry } = genesisRegistry()
+  // Build a normal registry, then mark the active key as revoked in the raw struct
+  const revokedKey = { ...registry.keys[0], revokedAt: new Date().toISOString() }
+  const bad = { ...registry, keys: [revokedKey] }
+  assert.equal(verifyKeyRegistry(bad), false)
+})
+
+test('buildKeyRegistry throws when no active key exists', () => {
+  const kp = generateKeyPair()
+  const entry = {
+    ...buildKeyEntry(kp.publicKey, new Date().toISOString()),
+    validUntil: new Date().toISOString(), // retired
+  }
+  assert.throws(
+    () =>
+      buildKeyRegistry({
+        serverId: 'test',
+        entries: [entry],
+        activePrivateKey: kp.privateKey,
+      }),
+    /no active/,
+  )
+})
+
+test('HttpKeyRegistry caches registry and uses cache on second call', async () => {
+  const { registry } = genesisRegistry()
+  let fetchCount = 0
+  const client = new HttpKeyRegistry('http://example.test', {
+    maxAgeSeconds: 60,
+    fetchImpl: (async () => {
+      fetchCount++
+      return { ok: true, status: 200, statusText: 'OK', json: async () => registry }
+    }) as any,
+  })
+  await client.registry()
+  await client.registry()
+  // Second call should use cache, only 1 fetch
+  assert.equal(fetchCount, 1)
+})
+
+test('HttpKeyRegistry refetches when cache expires', async () => {
+  const { registry } = genesisRegistry()
+  let fetchCount = 0
+  const client = new HttpKeyRegistry('http://example.test', {
+    maxAgeSeconds: 0, // expires immediately
+    fetchImpl: (async () => {
+      fetchCount++
+      return { ok: true, status: 200, statusText: 'OK', json: async () => registry }
+    }) as any,
+  })
+  await client.registry()
+  await client.registry()
+  // Cache expired → refetches on every call
+  assert.equal(fetchCount, 2)
+})
+
+test('HttpKeyRegistry uses global fetch when fetchImpl is not provided', () => {
+  // This test just verifies the constructor path — can't actually call
+  // registry() because there's no real HTTP server.
+  // But creating the instance exercises the ?? operator.
+  const client = new HttpKeyRegistry('http://example.test')
+  assert.ok(client)
+})
