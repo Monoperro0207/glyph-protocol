@@ -12,6 +12,7 @@ import {
   signReceipt,
   toLexiconEntry,
   verifyGlyph,
+  verifyManifest,
   verifyReceipt,
 } from '../src/index.js'
 
@@ -277,4 +278,30 @@ test('sanitize is idempotent — re-sanitizing a clean value finds nothing', () 
 test('sanitize records the JSON-Pointer path of each finding', () => {
   const { report } = sanitize({ outer: { inner: `v${ZW}` } })
   assert.equal(report.findings[0]?.path, '/outer/inner')
+})
+
+test('verifyGlyph catches invalid hex and returns false', () => {
+  const card = buildCard()
+  card.publicKey = 'not-hex'
+  assert.equal(verifyGlyph(card), false)
+})
+
+test('verifyReceipt catches invalid hex and returns false', () => {
+  assert.equal(verifyReceipt({ glyphId: 'x', callId: 'y', signature: 'not-hex', serverPublicKey: 'z' } as any), false)
+})
+
+test('verifyManifest catches invalid signature and returns false', () => {
+  const result = verifyManifest({
+    manifestVersion: '1',
+    toolName: 't',
+    previousCardId: 'a',
+    newCardId: 'b',
+    reason: 'r',
+    breaking: false,
+    securityImpact: 'none',
+    issuedAt: 'now',
+    serverPublicKey: 'ff'.repeat(32),
+    signature: 'not-hex',
+  } as any)
+  assert.equal(result, false)
 })
