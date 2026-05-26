@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { computeGlyphId, generateKeyPair, signGlyph } from '@glyphp/core'
-import type { GlyphCard } from '@glyphp/types'
+import { canonicalHash, computeGlyphId, generateKeyPair, signGlyph, signReceipt } from '@glyphp/core'
+import type { CallReceipt, GlyphCard } from '@glyphp/types'
 import {
   GlyphClient,
   GlyphNotApprovedError,
@@ -259,6 +259,160 @@ test('inspectLexicon flags new, unchanged and changed tools', async () => {
   assert.equal(report[2].status, 'changed')
 })
 
+// ---------------------------------------------------------------------------
+// P0-4: secureMode strict enforcement
+// ---------------------------------------------------------------------------
+
+test('secureMode: intent metadata change requires approval (no auto-approve)', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const original = makeCard({ keyPair, intent: 'Refund a payment', riskTier: 'safe' })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(original),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(original)
+
+  // Same key, different intent — in secureMode this must NOT auto-approve.
+  const intentChanged = makeCard({ keyPair, intent: 'Process a payment refund', riskTier: 'safe' })
+  const smClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(intentChanged),
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => smClient.call(intentChanged.name, {}),
+    (e: unknown) =>
+      e instanceof GlyphNotApprovedError && e.status === 'changed',
+  )
+})
+
+test('secureMode: examples metadata change requires approval (no auto-approve)', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+
+  // Build a card with non-empty examples.
+  const origPartial = {
+    version: '1.0.0',
+    name: 'refund-payment',
+    intent: 'Refund a payment',
+    tags: ['billing'],
+    cost: {
+      latency: 'fast' as const,
+      sideEffects: true,
+      reversible: false,
+      riskTier: 'safe' as const,
+      requiresConfirmation: false,
+    },
+    idempotent: false,
+    input: { type: 'object' },
+    output: { type: 'object' },
+    examples: [{ description: 'Happy path', input: {}, output: { ok: true } }],
+    failureModes: [],
+    provider: 'acme.payments',
+  }
+  const original: GlyphCard = {
+    ...origPartial,
+    id: computeGlyphId(origPartial),
+    createdAt: '2026-05-22T00:00:00.000Z',
+    publicKey: keyPair.publicKey,
+  }
+  original.signature = signGlyph(original, keyPair.privateKey)
+
+  const pins2 = new MemoryPinStore()
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(original),
+    pins: pins2,
+    secureMode: true,
+  })
+  await client.approveCard(original)
+
+  // Change examples — review-only field, but secureMode blocks auto-approve.
+  const exChanged = {
+    ...origPartial,
+    examples: [{ description: 'Sad path edge case', input: { reason: 'fraud' }, output: { ok: false } }],
+  }
+  const exChangedCard: GlyphCard = {
+    ...exChanged,
+    id: computeGlyphId(exChanged),
+    createdAt: '2026-05-22T00:00:00.000Z',
+    publicKey: keyPair.publicKey,
+  }
+  exChangedCard.signature = signGlyph(exChangedCard, keyPair.privateKey)
+
+  const smClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(exChangedCard),
+    pins: pins2,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => smClient.call(exChangedCard.name, {}),
+    (e: unknown) =>
+      e instanceof GlyphNotApprovedError && e.status === 'changed',
+  )
+})
+
+test('secureMode + autoApproveReviewChanges: intent change auto-approves', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const original = makeCard({ keyPair, intent: 'Refund a payment', riskTier: 'safe' })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(original),
+    pins,
+    secureMode: true,
+    autoApproveReviewChanges: true,
+  })
+  await client.approveCard(original)
+
+  // With autoApproveReviewChanges, review-only changes auto-approve again.
+  const intentChanged = makeCard({ keyPair, intent: 'Process a payment refund', riskTier: 'safe' })
+  const smClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(intentChanged),
+    pins,
+    secureMode: true,
+    autoApproveReviewChanges: true,
+  })
+  const result = await smClient.call(intentChanged.name, {})
+  assert.ok(result.payload !== undefined, 'with autoApproveReviewChanges, intent change should auto-approve')
+})
+
+test('secureMode: provider change still requires approval (breaking field)', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const original = makeCard({ keyPair, riskTier: 'safe' })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(original),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(original)
+
+  // Provider change is a breaking field regardless of mode.
+  const provChanged = { ...makeCard({ keyPair, riskTier: 'safe' }), provider: 'other.provider' }
+  provChanged.id = computeGlyphId(provChanged)
+  provChanged.signature = signGlyph(provChanged, keyPair.privateKey)
+
+  const smClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(provChanged),
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => smClient.call(provChanged.name, {}),
+    (e: unknown) =>
+      e instanceof GlyphNotApprovedError && e.status === 'changed' && e.diff?.requiresApproval === true,
+  )
+})
+
 test('call() auto-approves non-breaking changes and blocks breaking ones', async () => {
   // Approve a card, then evolve it with a non-breaking change (intent rewording).
   // The client should auto-update the pin and execute without throwing.
@@ -294,4 +448,235 @@ test('call() auto-approves non-breaking changes and blocks breaking ones', async
     () => blockClient.call(escalated.name, {}),
     GlyphNotApprovedError,
   )
+})
+
+// ---------------------------------------------------------------------------
+// Receipt-enabled mock server — returns a signed receipt in the envelope.
+// ---------------------------------------------------------------------------
+
+function serveWithReceipt(
+  card: GlyphCard,
+  keyPair: { publicKey: string; privateKey: string },
+  overrides?: Partial<CallReceipt>,
+): typeof fetch {
+  return async (input) => {
+    const url = (input as Request).url
+    const json = (data: unknown): Response =>
+      new Response(JSON.stringify(data), {
+        headers: { 'content-type': 'application/json' },
+      })
+    if (url.endsWith('/call')) {
+      const payload = { ok: true }
+      const inspection = { modified: false, findings: [] as const }
+      const receiptBase: Omit<CallReceipt, 'signature'> = {
+        receiptVersion: '0.3',
+        callId: 'c1',
+        glyphId: card.id,
+        glyphName: card.name,
+        inputHash: canonicalHash({}),
+        outputHash: canonicalHash(payload),
+        inspectionHash: canonicalHash(inspection),
+        riskTier: card.cost.riskTier,
+        provider: card.provider,
+        latencyMs: 1,
+        timestamp: new Date().toISOString(),
+        serverPublicKey: keyPair.publicKey,
+        ...overrides,
+      }
+      const receipt: CallReceipt = {
+        ...receiptBase,
+        signature: signReceipt(receiptBase, keyPair.privateKey),
+      }
+      return json({
+        type: 'data',
+        glyphId: card.id,
+        callId: 'c1',
+        payload,
+        meta: { latencyMs: 1, provider: card.provider, timestamp: '' },
+        inspection,
+        receipt,
+      })
+    }
+    if (url.endsWith(`/glyphs/${encodeURIComponent(card.name)}`)) {
+      return json(card)
+    }
+    return new Response('not found', { status: 404 })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// P0-5: Auto receipt verification
+// ---------------------------------------------------------------------------
+
+test('secureMode: receipt with altered payload rejects', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  // Tamper the outputHash in the receipt so it doesn't match the payload.
+  const wrongHash = canonicalHash({ tampered: true })
+  const tamperFetcher = serveWithReceipt(card, keyPair, { outputHash: wrongHash })
+  const tamperClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: tamperFetcher,
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => tamperClient.call(card.name, {}),
+    /receipt/i,
+  )
+})
+
+test('secureMode: receipt signed by wrong key rejects', async () => {
+  const keyPair = generateKeyPair()
+  const wrongKeyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  // Build a receipt signed by a different key — the serverPublicKey won't
+  // match the card's pinned publicKey.
+  const payload = { ok: true }
+  const inspection = { modified: false, findings: [] as const }
+  const receiptBase: Omit<CallReceipt, 'signature'> = {
+    receiptVersion: '0.3',
+    callId: 'c1',
+    glyphId: card.id,
+    glyphName: card.name,
+    inputHash: canonicalHash({}),
+    outputHash: canonicalHash(payload),
+    inspectionHash: canonicalHash(inspection),
+    riskTier: card.cost.riskTier,
+    provider: card.provider,
+    latencyMs: 1,
+    timestamp: new Date().toISOString(),
+    serverPublicKey: wrongKeyPair.publicKey,
+  }
+  const badReceipt: CallReceipt = {
+    ...receiptBase,
+    signature: signReceipt(receiptBase, wrongKeyPair.privateKey),
+  }
+  // A fetch that returns the bad receipt.
+  const badFetch: typeof fetch = async (input) => {
+    const url = (input as Request).url
+    const json = (data: unknown): Response =>
+      new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
+    if (url.endsWith('/call')) {
+      return json({
+        type: 'data',
+        glyphId: card.id,
+        callId: 'c1',
+        payload,
+        meta: { latencyMs: 1, provider: card.provider, timestamp: '' },
+        inspection,
+        receipt: badReceipt,
+      })
+    }
+    if (url.endsWith(`/glyphs/${encodeURIComponent(card.name)}`)) return json(card)
+    return new Response('not found', { status: 404 })
+  }
+  const badClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: badFetch,
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => badClient.call(card.name, {}),
+    /receipt/i,
+  )
+})
+
+test('secureMode: altered inspection rejected', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  // Tamper the inspectionHash so it doesn't match the actual inspection.
+  const wrongHash = canonicalHash({ modified: true, findings: [] })
+  const tamperFetcher = serveWithReceipt(card, keyPair, { inspectionHash: wrongHash })
+  const tamperClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: tamperFetcher,
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => tamperClient.call(card.name, {}),
+    /receipt/i,
+  )
+})
+
+test('secureMode: glyphId mismatch rejected', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  // Tamper the glyphId so it doesn't match the approved card.
+  const tamperFetcher = serveWithReceipt(card, keyPair, { glyphId: 'wrong-id' })
+  const tamperClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: tamperFetcher,
+    pins,
+    secureMode: true,
+  })
+  await assert.rejects(
+    () => tamperClient.call(card.name, {}),
+    /receipt/i,
+  )
+})
+
+test('verifyReceipts: false skips receipt verification', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair),
+    pins,
+    secureMode: true,
+    verifyReceipts: false,
+  })
+  await client.approveCard(card)
+
+  // Even with a tampered outputHash, verifyReceipts: false skips the check.
+  const wrongHash = canonicalHash({ tampered: true })
+  const tamperFetcher = serveWithReceipt(card, keyPair, { outputHash: wrongHash })
+  const tamperClient = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: tamperFetcher,
+    pins,
+    secureMode: true,
+    verifyReceipts: false,
+  })
+  const result = await tamperClient.call(card.name, {})
+  assert.ok(result.payload !== undefined, 'verifyReceipts: false should skip verification')
 })

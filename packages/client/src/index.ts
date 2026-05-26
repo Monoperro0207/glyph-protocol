@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { diffCards, verifyGlyph, verifyManifest } from '@glyphp/core'
+import { canonicalHash, diffCards, verifyGlyph, verifyManifest, verifyReceipt as coreVerifyReceipt } from '@glyphp/core'
 import type {
   CardDiff,
+  CallReceipt,
   ConfirmationTicket,
   GlyphCard,
   HandshakeRequest,
@@ -91,6 +92,9 @@ export class GlyphClient {
   private extraHeaders: Record<string, string>
   private fetchImpl: typeof fetch
   private pins?: PinStore
+  private secureMode: boolean
+  private autoApproveReviewChanges: boolean
+  private verifyReceipts: boolean
   /** Per-session cache of verified rich cards, keyed by tool name. */
   private cardCache = new Map<string, GlyphCard>()
 
@@ -121,6 +125,20 @@ export class GlyphClient {
      * the recommended posture.
      */
     secureMode?: boolean
+    /**
+     * When secureMode is active, review-only card changes (intent, tags,
+     * examples, etc.) are blocked by default. Set this to `true` to restore
+     * the auto-approve behaviour for review-only changes while keeping all
+     * other secureMode protections.
+     */
+    autoApproveReviewChanges?: boolean
+    /**
+     * When secureMode is active, receipts included in call responses are
+     * verified against the pinned card's key and content before the payload
+     * is returned to the caller. Defaults to `true` in secureMode. Set to
+     * `false` to opt out (e.g. for servers that don't sign receipts yet).
+     */
+    verifyReceipts?: boolean
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
@@ -134,6 +152,9 @@ export class GlyphClient {
     this.extraHeaders = options.headers ?? {}
     this.fetchImpl = options.fetch ?? globalThis.fetch
     this.pins = options.pins
+    this.secureMode = options.secureMode ?? false
+    this.autoApproveReviewChanges = options.autoApproveReviewChanges ?? false
+    this.verifyReceipts = options.verifyReceipts ?? true
   }
 
   async connect(options?: {
@@ -183,6 +204,12 @@ export class GlyphClient {
       callId,
       confirmationToken: options?.confirmationToken,
     })
+    // In secureMode with receipt verification enabled (the default), validate
+    // the receipt against the pinned card before returning the payload.
+    if (this.secureMode && this.verifyReceipts && this.pins) {
+      const card = this.cardCache.get(name)
+      if (card) this.verifyReceipt(envelope, card)
+    }
     return envelope as SealedEnvelope & { payload: T }
   }
 
@@ -317,6 +344,43 @@ export class GlyphClient {
     return manifest
   }
 
+  /**
+   * Verifies a call receipt against the pinned card's key and content.
+   * Called during call() when secureMode is active and verifyReceipts is
+   * not explicitly disabled. Throws GlyphVerificationError on any mismatch.
+   */
+  private verifyReceipt(envelope: SealedEnvelope, card: GlyphCard): void {
+    const receipt = envelope.receipt as CallReceipt | undefined
+    if (!receipt) return // No receipt to verify — skip silently.
+
+    // (a) The receipt must be signed by the pinned key, not some other key.
+    if (receipt.serverPublicKey !== card.publicKey) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+
+    // (b) Signature integrity — reuses core's ed25519 verification.
+    if (!coreVerifyReceipt(receipt)) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+
+    // (c) The receipt must attest to the card we approved.
+    if (receipt.glyphId !== card.id) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+
+    // (d) outputHash must match the actual payload we received.
+    const actualOutputHash = canonicalHash(envelope.payload)
+    if (actualOutputHash !== receipt.outputHash) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+
+    // (e) inspectionHash must match the actual inspection in the envelope.
+    const actualInspectionHash = canonicalHash(envelope.inspection ?? {})
+    if (actualInspectionHash !== receipt.inspectionHash) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+  }
+
   private requirePins(): PinStore {
     if (!this.pins) {
       throw new Error('GlyphClient was constructed without a PinStore')
@@ -341,10 +405,17 @@ export class GlyphClient {
     if (inspection.status === 'revoked') {
       throw new GlyphRevokedError(name, inspection.pin?.revokeReason)
     }
+    // In secureMode, review-only changes (intent, tags, examples) are NOT
+    // auto-approved unless the caller explicitly opted in via
+    // `autoApproveReviewChanges`. Even descriptive metadata can affect tool
+    // selection by AI agents, so the default is strict.
+    if (this.secureMode && !this.autoApproveReviewChanges) {
+      // Fall through to the throw below — every change requires human approval.
+    }
     // Auto-approve non-breaking changes (e.g. intent rewording, example updates).
     // Breaking changes — key swaps, risk escalation, schema changes — still
     // require explicit human re-approval.
-    if (inspection.status === 'changed' && inspection.diff && !inspection.diff.requiresApproval) {
+    else if (inspection.status === 'changed' && inspection.diff && !inspection.diff.requiresApproval) {
       if (inspection.pin) {
         const updated: Pin = { ...inspection.pin, card, approvedAt: new Date().toISOString() }
         await this.pins.set(updated)
