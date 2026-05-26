@@ -1,8 +1,11 @@
 export {
   ALL_LEVELS,
+  DEFAULT_PROFILE,
   formatBadgeJson,
   formatReport,
   formatReportMarkdown,
+  PROFILE_LEVELS,
+  resolveProfile,
   runConformance,
 } from './conformance.js'
 export {
@@ -15,6 +18,7 @@ export type {
   CheckResult,
   ConformanceLevel,
   ConformanceOptions,
+  ConformanceProfile,
   ConformanceReport,
   FetchLike,
   FixtureGlyphs,
