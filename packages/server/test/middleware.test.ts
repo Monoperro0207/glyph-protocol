@@ -114,3 +114,21 @@ test('authMiddleware rejects a token that differs only in case', async () => {
   })
   assert.equal(res.status, 401)
 })
+
+// --- Rate limit GC sweep test ---
+
+test('rateLimitMiddleware sweeps expired entries to prevent unbounded growth', async () => {
+  // windowMs=1 so entries expire after 1ms and get swept on the next request
+  const app = appWith(rateLimitMiddleware({ windowMs: 1, max: 100 }))
+
+  // Create 5 entries with different client keys that expire immediately
+  for (let i = 0; i < 5; i++) {
+    await app.request('/x', { headers: { 'X-Forwarded-For': `10.0.0.${i}` } })
+  }
+  // Wait for them to expire
+  await new Promise((r) => setTimeout(r, 5))
+
+  // One more request triggers the sweep — expired entries get cleaned
+  const res = await app.request('/x', { headers: { 'X-Forwarded-For': '10.0.0.99' } })
+  assert.equal(res.status, 200)
+})

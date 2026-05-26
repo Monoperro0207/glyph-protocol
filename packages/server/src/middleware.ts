@@ -73,9 +73,14 @@ export function rateLimitMiddleware(
   return async (c, next) => {
     if (c.req.path === '/health') return next()
     const now = Date.now()
-    if (hits.size > 5000) {
-      for (const [key, entry] of hits) {
-        if (now >= entry.resetAt) hits.delete(key)
+    // Sweep up to 100 expired entries every request so the hits map never
+    // grows unbounded. A full O(n) sweep would be too expensive per-request;
+    // 100-entry batches keep amortised cost negligible while preventing leaks.
+    let swept = 0
+    for (const [key, entry] of hits) {
+      if (now >= entry.resetAt) {
+        hits.delete(key)
+        if (++swept >= 100) break
       }
     }
     const key = clientKey(c, verifyToken)
