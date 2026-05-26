@@ -27,6 +27,17 @@ export class SchemaComplexityError extends Error {
   }
 }
 
+/** Thrown when a JSON Schema cannot be compiled by AJV. */
+export class SchemaCompilationError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: Error,
+  ) {
+    super(message)
+    this.name = 'SchemaCompilationError'
+  }
+}
+
 /**
  * Recursively walks a JSON Schema value and counts:
  *   - `nodes`: every object encountered (including the root)
@@ -67,6 +78,18 @@ export function validateSchemaComplexity(schema: unknown, maxNodes = 1000, maxDe
 }
 
 /**
+ * Options for `compileJsonSchema`.
+ */
+export interface CompileJsonSchemaOptions {
+  /**
+   * When `'none'`, output validation is disabled — the returned validator
+   * passes through any value (`z.unknown()`). Use this escape hatch only when
+   * you explicitly intend to skip output validation.
+   */
+  outputValidation?: 'none'
+}
+
+/**
  * Compiles a JSON Schema (draft 2020-12) into a Zod-compatible validator.
  *
  * The protocol promises that a server validates handler output against the
@@ -79,8 +102,19 @@ export function validateSchemaComplexity(schema: unknown, maxNodes = 1000, maxDe
  * The result accepts any JSON value and emits per-error Zod issues with paths
  * derived from `instancePath`, so downstream code (and the
  * `OUTPUT_VALIDATION_FAILED` error response) gets useful diagnostics.
+ *
+ * @throws {SchemaCompilationError} When the schema cannot be compiled by AJV
+ *   and `outputValidation` is not set to `'none'`.
  */
-export function compileJsonSchema(schema: unknown): z.ZodTypeAny {
+export function compileJsonSchema(
+  schema: unknown,
+  opts?: CompileJsonSchemaOptions,
+): z.ZodTypeAny {
+  if (opts?.outputValidation === 'none') {
+    // Explicit opt-out: skip validation entirely, return passthrough.
+    return z.unknown()
+  }
+
   if (
     schema === undefined ||
     schema === null ||
@@ -104,9 +138,11 @@ export function compileJsonSchema(schema: unknown): z.ZodTypeAny {
   let validate: ReturnType<(typeof ajv)['compile']>
   try {
     validate = ajv.compile(schema as object)
-  } catch {
-    // A malformed schema should not crash the server; degrade to passthrough.
-    return z.unknown()
+  } catch (cause) {
+    throw new SchemaCompilationError(
+      `SCHEMA_COMPILATION_FAILED: the JSON Schema could not be compiled by AJV — ${(cause as Error).message}`,
+      cause instanceof Error ? cause : undefined,
+    )
   }
 
   return z.unknown().superRefine((value, ctx) => {

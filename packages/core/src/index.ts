@@ -415,7 +415,8 @@ export function sanitize(value: unknown): {
   return { value: cleaned, report: { modified: findings.length > 0, findings } }
 }
 
-export { compileJsonSchema } from './json-schema-validator.js'
+export { compileJsonSchema, SchemaCompilationError } from './json-schema-validator.js'
+export type { CompileJsonSchemaOptions } from './json-schema-validator.js'
 export type { KeyRegistrySource, ResolveResult } from './key-registry.js'
 export {
   buildKeyEntry,

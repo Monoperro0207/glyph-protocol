@@ -14,9 +14,11 @@ A server signs every card and every receipt with an ed25519 key.
   previously issued cards and receipts no longer verify.
 - **Protect the private key.** Treat it like any signing secret — load it from
   a secret manager or environment variable, never commit it.
-- A compromised key cannot yet be revoked (see `trust.md`). Rotating it
-  re-signs cards under a new identity; consumers that pinned the old key must
-  be updated.
+- A compromised key can be revoked via the KeyRegistry: set `revokedAt` on
+  its entry and `resolveKey()` will report `status: 'revoked'` (see
+  [trust.md §Key rotation and revocation](trust.md#key-rotation-and-revocation),
+  RFC-0001). Rotating it re-signs cards under a new identity; consumers that
+  pinned the old key must be updated.
 
 ## Transport
 
