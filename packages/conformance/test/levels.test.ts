@@ -646,3 +646,84 @@ describe('discovery level', () => {
     deepStrictEqual(schemaCheck.status, 'passed')
   })
 })
+
+// Execution catch block tests
+it('execution call throws → all checks fail', async () => {
+  const echo = 'my-echo'
+  const res = await executionLevel(
+    ctx({
+      fixtures: { echo },
+      lexiconNames: [echo],
+      http() {
+        throw new Error('connection refused')
+      },
+    }),
+  )
+  for (const c of ['execution.call.success', 'execution.call.envelope', 'execution.call.receipt', 'execution.call.sanitization']) {
+    deepStrictEqual(find(res, c).status, 'failed')
+  }
+})
+
+it('execution output validation throws → catch path', async () => {
+  const echo = 'echo'
+  const bad = 'bad-output'
+  let call = 0
+  const res = await executionLevel(
+    ctx({
+      fixtures: { echo, invalidOutput: bad },
+      lexiconNames: [echo, bad],
+      http(method, path) {
+        call++
+        if (call <= 3) return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+        if (call === 4) return glyphErr(400, 'VALIDATION_FAILED')
+        if (call === 5) return glyphErr(400, 'MALFORMED_JSON')
+        throw new Error('output validation crashed')
+      },
+    }),
+  )
+  deepStrictEqual(find(res, 'execution.call.outputValidation').status, 'failed')
+})
+
+// Security catch block tests
+it('security confirmation bogus token throws → catch path', async () => {
+  const reqConf = 'danger-tool'
+  const res = await securityLevel(
+    ctx({
+      fixtures: { requiresConfirmation: reqConf },
+      lexiconNames: [reqConf],
+      http(method, path) {
+        if (path.includes(reqConf)) throw new Error('server crash')
+        return okJson({})
+      },
+    }),
+  )
+  deepStrictEqual(find(res, 'security.confirmation.required').status, 'failed')
+})
+
+it('security timeout catch error → reports failure', async () => {
+  const slow = 'slow-tool'
+  const res = await securityLevel(
+    ctx({
+      fixtures: { slow },
+      lexiconNames: [slow],
+      http() {
+        throw new Error('timeout check failed')
+      },
+    }),
+  )
+  deepStrictEqual(find(res, 'security.timeout').status, 'failed')
+})
+
+it('security rateLimit throws → catch path', async () => {
+  const echo = 'echo'
+  const res = await securityLevel(
+    ctx({
+      fixtures: { echo },
+      lexiconNames: [echo],
+      http() {
+        throw new Error('burst overflow')
+      },
+    }),
+  )
+  deepStrictEqual(find(res, 'security.rateLimit').status, 'failed')
+})
