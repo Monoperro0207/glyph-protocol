@@ -23,6 +23,7 @@ import type {
 import { PROTOCOL_VERSION } from '@glyphp/types'
 import { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 import type { PinStore } from './pins.js'
+import { ProviderTrustResolver } from './trust.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
 export { FilePinStore } from './file-pin-store.js'
@@ -30,6 +31,7 @@ export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
 export type { RenderOptions } from './render.js'
 export { dataPreamble, renderEnvelope } from './render.js'
+export { ProviderTrustResolver } from './trust.js'
 export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 
 /** Thrown when a signed artifact (a card or a manifest) fails verification. */
@@ -53,6 +55,25 @@ export class GlyphRevokedError extends Error {
     )
     this.name = 'GlyphRevokedError'
     this.toolName = toolName
+    this.reason = reason
+  }
+}
+
+/**
+ * Thrown by call() when trust enforcement is active and the provider is
+ * unknown or its signing key is not in the trusted set.
+ */
+export class GlyphTrustError extends Error {
+  readonly provider: string
+  readonly reason: 'unknown_provider' | 'untrusted_key'
+  constructor(provider: string, reason: 'unknown_provider' | 'untrusted_key') {
+    super(
+      reason === 'unknown_provider'
+        ? `Provider "${provider}" is not in the trust registry`
+        : `Provider "${provider}" signing key is not trusted`,
+    )
+    this.name = 'GlyphTrustError'
+    this.provider = provider
     this.reason = reason
   }
 }
@@ -111,6 +132,22 @@ export interface LexiconInspection {
   status: 'new' | 'unchanged' | 'changed' | 'revoked'
 }
 
+/** Configuration for provider trust enforcement. See TRUSTREG-002. */
+export interface TrustConfig {
+  /** When true, every call() checks the provider against the trust registry. */
+  enabled: boolean
+  /**
+   * The resolver used to look up provider trust entries. When omitted,
+   * a default resolver with HTTP + filesystem discovery is created.
+   */
+  resolver?: ProviderTrustResolver
+  /**
+   * When true, providers that are not in the trust registry are allowed to
+   * execute. Defaults to false — unknown providers are rejected.
+   */
+  allowUnknownProviders?: boolean
+}
+
 export class GlyphClient {
   private baseUrl: string
   private consumerId: string
@@ -126,6 +163,10 @@ export class GlyphClient {
   private requireAttestation: 'none' | 'danger' | 'all'
   /** Per-session cache of verified rich cards, keyed by tool name. */
   private cardCache = new Map<string, GlyphCard>()
+  /** Trust configuration — when enabled, every call is gated by provider trust. */
+  private trustEnabled: boolean
+  private trustResolver?: ProviderTrustResolver
+  private trustAllowUnknown: boolean
 
   constructor(options: {
     baseUrl: string
@@ -169,6 +210,13 @@ export class GlyphClient {
      */
     verifyReceipts?: boolean
     /**
+     * Provider trust enforcement. When enabled, every call() verifies the
+     * tool's provider against a trust registry. Unknown providers are
+     * rejected unless `allowUnknownProviders` is true. Untrusted signing
+     * keys are always rejected. See {@link TrustConfig}.
+     */
+    trust?: TrustConfig
+    /**
      * Attestation verification policy. Controls whether tools must carry a
      * valid external attestation (Sigstore, SLSA, etc.) before execution.
      * - `'none'` (default): no attestation required — fully backward compatible.
@@ -198,6 +246,9 @@ export class GlyphClient {
     this.secureMode = options.secureMode ?? false
     this.autoApproveReviewChanges = options.autoApproveReviewChanges ?? false
     this.verifyReceipts = options.verifyReceipts ?? true
+    this.trustEnabled = options.trust?.enabled ?? false
+    this.trustResolver = options.trust?.resolver
+    this.trustAllowUnknown = options.trust?.allowUnknownProviders ?? false
     this.requireAttestation = options.requireAttestation ?? 'none'
     this.attestationRegistry = new AttestationVerifierRegistry()
     // Register built-in verifiers
@@ -250,6 +301,7 @@ export class GlyphClient {
     options?: { confirmationToken?: string },
   ): Promise<SealedEnvelope & { payload: T }> {
     await this.ensureApproved(name)
+    await this.enforceTrust(name)
     await this.ensureAttested(name)
     const callId = randomUUID()
     const envelope = await this.post<SealedEnvelope>(`/glyphs/${encodeURIComponent(name)}/call`, {
@@ -439,6 +491,32 @@ export class GlyphClient {
       throw new Error('GlyphClient was constructed without a PinStore')
     }
     return this.pins
+  }
+
+  /**
+   * Trust gate for call(): when trust is enabled, the provider must be
+   * known to the trust registry and the card's signing key must be in the
+   * provider's trusted set.
+   */
+  private async enforceTrust(name: string): Promise<void> {
+    if (!this.trustEnabled) return
+
+    let card = this.cardCache.get(name)
+    if (!card) card = await this.getCard(name)
+
+    const provider = card.provider
+    const resolver = this.trustResolver ?? new ProviderTrustResolver({})
+
+    const entry = await resolver.resolve(provider)
+    if (!entry) {
+      if (this.trustAllowUnknown) return
+      throw new GlyphTrustError(provider, 'unknown_provider')
+    }
+
+    // The card's publicKey must be in the provider's trusted set.
+    if (!card.publicKey || !entry.publicKeys.includes(card.publicKey)) {
+      throw new GlyphTrustError(provider, 'untrusted_key')
+    }
   }
 
   /**
