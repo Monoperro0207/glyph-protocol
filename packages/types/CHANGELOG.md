@@ -1,5 +1,11 @@
 # @glyphp/types
 
+## 1.3.0
+
+### Minor Changes
+
+- 85584c8: Add ProviderTrustEntry, ProviderPolicies, and RiskTier types for the consumer-side provider trust registry (TRUSTREG-001/002).
+
 ## 1.2.0
 
 ### Minor Changes

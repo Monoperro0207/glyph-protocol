@@ -1,5 +1,21 @@
 # @glyphp/adapter-openapi
 
+## 3.0.0
+
+### Major Changes
+
+- 7713204: Redact API keys, tokens, and other secrets from HTTP error messages to prevent credential leaks in logs and error displays. The `redactUrl()` helper replaces sensitive query parameter values (api_key, token, secret, password, etc.) with `***` before they appear in thrown Error messages.
+
+### Patch Changes
+
+- Updated dependencies [f34252f]
+- Updated dependencies [8ec3e34]
+- Updated dependencies [d868938]
+- Updated dependencies [85584c8]
+  - @glyphp/core@1.3.0
+  - @glyphp/server@1.3.0
+  - @glyphp/types@1.3.0
+
 ## 2.0.0
 
 ### Major Changes
