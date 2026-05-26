@@ -1,5 +1,33 @@
 export type JSONSchema = Record<string, unknown>
 
+export type RiskTier = 'safe' | 'caution' | 'danger'
+
+/** A consumer-curated trust entry for a glyph provider. See TRUSTREG-001. */
+export interface ProviderTrustEntry {
+  /** Org identifier, e.g. "github.com/my-org" or "glyph.acme.com". */
+  provider: string
+  /** Hex ed25519 public keys currently trusted for this provider. */
+  publicKeys: string[]
+  /** Optional pinned genesis key — the first key ever seen for this provider. */
+  genesisKey?: string
+  /** Optional policies that constrain what this provider's tools may do. */
+  policies?: ProviderPolicies
+  /** Optional URL to a conformance report (Sigstore bundle, SLSA, etc.). */
+  conformanceReport?: string
+  /** ISO date when this entry was registered/updated. */
+  registeredAt?: string
+}
+
+/** Per-provider policies that gate tool execution. See TRUSTREG-002. */
+export interface ProviderPolicies {
+  /** Require attestation for tools of this risk or higher. */
+  requireAttestation?: 'none' | 'danger' | 'all'
+  /** Restrict execution to these risk tiers only. Empty = allow all. */
+  allowedRiskTiers?: RiskTier[]
+  /** Require receipt verification for every call (overrides client default). */
+  requireReceiptVerification?: boolean
+}
+
 export interface GlyphCard {
   id: string
   version: string
