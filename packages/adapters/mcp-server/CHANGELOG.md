@@ -1,5 +1,12 @@
 # @glyphp/adapter-mcp-server
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [a8f5656]
+  - @glyphp/client@1.1.0
+
 ## 1.0.2
 
 ### Patch Changes

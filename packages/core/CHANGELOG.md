@@ -1,5 +1,11 @@
 # @glyphp/core
 
+## 1.3.0
+
+### Minor Changes
+
+- d868938: `compileJsonSchema()` now throws `SchemaCompilationError` when a JSON Schema cannot be compiled by AJV, rather than silently degrading to `z.unknown()`. Add `outputValidation: 'none'` option as explicit opt-out for passthrough behavior. Export `SchemaCompilationError` and `CompileJsonSchemaOptions` types.
+
 ## 1.2.0
 
 ### Minor Changes

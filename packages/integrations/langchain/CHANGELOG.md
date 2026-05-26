@@ -1,5 +1,14 @@
 # @glyphp/integration-langchain
 
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies [d868938]
+- Updated dependencies [a8f5656]
+  - @glyphp/core@1.3.0
+  - @glyphp/client@1.1.0
+
 ## 1.1.2
 
 ### Patch Changes

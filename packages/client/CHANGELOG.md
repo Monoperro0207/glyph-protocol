@@ -1,5 +1,16 @@
 # @glyphp/client
 
+## 1.1.0
+
+### Minor Changes
+
+- a8f5656: secureMode strict enforcement: review-only card changes (intent, tags, examples) now require human approval in secureMode. Add `autoApproveReviewChanges` opt-in to restore old behavior. Add automatic receipt verification in secureMode — validates receipt signature against pinned key, outputHash, inspectionHash, and glyphId on every call. Add `verifyReceipts` option to opt out.
+
+### Patch Changes
+
+- Updated dependencies [d868938]
+  - @glyphp/core@1.3.0
+
 ## 1.0.2
 
 ### Patch Changes
