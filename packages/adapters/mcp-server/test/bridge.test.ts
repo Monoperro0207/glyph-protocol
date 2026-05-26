@@ -263,11 +263,13 @@ test('glyph call that throws is caught and returned as MCP error', async () => {
   const bridge = mcpServerFromGlyph(client) as unknown as {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
-  const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = (await callHandler({
+  const callHandler = bridge._requestHandlers.get('tools/call')! as (
+    req: unknown,
+  ) => Promise<McpToolResult>
+  const result = await callHandler({
     method: 'tools/call',
     params: { name: 'boom', arguments: {} },
-  })) as McpToolResult
+  })
   assert.equal(result.isError, true)
   assert.match(result.content[0]!.text, /Glyph call failed/)
   assert.match(result.content[0]!.text, /deliberate/)
@@ -311,11 +313,13 @@ test('glyph with string output payload is handled', async () => {
   const bridge = mcpServerFromGlyph(client) as unknown as {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
-  const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = (await callHandler({
+  const callHandler = bridge._requestHandlers.get('tools/call')! as (
+    req: unknown,
+  ) => Promise<McpToolResult>
+  const result = await callHandler({
     method: 'tools/call',
     params: { name: 'txt', arguments: {} },
-  })) as McpToolResult
+  })
   assert.ok(result.content[0]!.text.includes('just text'))
   assert.ok(!result.isError)
 })
@@ -347,11 +351,13 @@ test('sanitized output appends inspection note to MCP content', async () => {
   const bridge = mcpServerFromGlyph(client) as unknown as {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
   }
-  const callHandler = bridge._requestHandlers.get('tools/call')!
-  const result = (await callHandler({
+  const callHandler = bridge._requestHandlers.get('tools/call')! as (
+    req: unknown,
+  ) => Promise<McpToolResult>
+  const result = await callHandler({
     method: 'tools/call',
     params: { name: 'invisible', arguments: {} },
-  })) as McpToolResult
+  })
   assert.ok(result.content[0]!.text.includes('hello'))
   const sanitizedNote = result.content.find((b) => b.text.includes('[glyph: sanitized'))
   assert.ok(sanitizedNote, 'expected sanitization note')

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import type { KeyRegistry } from '@glyphp/types'
 import {
   buildKeyEntry,
   buildKeyRegistry,
@@ -281,7 +282,7 @@ test('HttpKeyRegistry resolve delegates to registry', async () => {
 
 test('verifyKeyRegistry rejects wrong registry version', () => {
   const { registry } = genesisRegistry()
-  const bad = { ...registry, registryVersion: '0.9' as unknown as '1.0' }
+  const bad = { ...registry, registryVersion: '0.9' } as unknown as KeyRegistry
   assert.equal(verifyKeyRegistry(bad), false)
 })
 
