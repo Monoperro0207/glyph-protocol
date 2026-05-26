@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import { canonicalHash, diffCards, verifyGlyph, verifyManifest, verifyReceipt as coreVerifyReceipt } from '@glyphp/core'
+import {
+  canonicalHash,
+  diffCards,
+  verifyGlyph,
+  verifyManifest,
+  verifyReceipt as coreVerifyReceipt,
+  AttestationVerifierRegistry,
+} from '@glyphp/core'
+import type { AttestationVerifier, AttestationResult } from '@glyphp/core'
 import type {
   CardDiff,
   CallReceipt,
@@ -13,6 +21,7 @@ import type {
   UpdateManifest,
 } from '@glyphp/types'
 import { PROTOCOL_VERSION } from '@glyphp/types'
+import { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 import type { PinStore } from './pins.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
@@ -21,6 +30,7 @@ export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
 export type { RenderOptions } from './render.js'
 export { dataPreamble, renderEnvelope } from './render.js'
+export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 
 /** Thrown when a signed artifact (a card or a manifest) fails verification. */
 export class GlyphVerificationError extends Error {
@@ -69,6 +79,23 @@ export class GlyphNotApprovedError extends Error {
   }
 }
 
+/**
+ * Thrown by call() when attestation policy requires a valid attestation and
+ * the card is unattested, or all verifiers reject the attestation.
+ */
+export class GlyphAttestationError extends Error {
+  readonly toolName: string
+  readonly details?: string
+  constructor(toolName: string, details?: string) {
+    super(
+      `Tool "${toolName}" requires attestation but none is valid${details ? ` — ${details}` : ''}`,
+    )
+    this.name = 'GlyphAttestationError'
+    this.toolName = toolName
+    this.details = details
+  }
+}
+
 /** The pin status of a card relative to what the PinStore has approved. */
 export interface CardInspection {
   status: 'new' | 'unchanged' | 'changed' | 'revoked'
@@ -95,6 +122,8 @@ export class GlyphClient {
   private secureMode: boolean
   private autoApproveReviewChanges: boolean
   private verifyReceipts: boolean
+  private attestationRegistry: AttestationVerifierRegistry
+  private requireAttestation: 'none' | 'danger' | 'all'
   /** Per-session cache of verified rich cards, keyed by tool name. */
   private cardCache = new Map<string, GlyphCard>()
 
@@ -139,6 +168,20 @@ export class GlyphClient {
      * `false` to opt out (e.g. for servers that don't sign receipts yet).
      */
     verifyReceipts?: boolean
+    /**
+     * Attestation verification policy. Controls whether tools must carry a
+     * valid external attestation (Sigstore, SLSA, etc.) before execution.
+     * - `'none'` (default): no attestation required — fully backward compatible.
+     * - `'danger'`: only tools with `riskTier: 'danger'` must have a valid attestation.
+     * - `'all'`: every tool must have a valid attestation.
+     */
+    requireAttestation?: 'none' | 'danger' | 'all'
+    /**
+     * Custom attestation verifiers to register alongside the built-in
+     * SigstoreVerifier and SlsaVerifier. Each verifier must implement
+     * {@link AttestationVerifier}.
+     */
+    attestationVerifiers?: AttestationVerifier[]
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
@@ -155,6 +198,15 @@ export class GlyphClient {
     this.secureMode = options.secureMode ?? false
     this.autoApproveReviewChanges = options.autoApproveReviewChanges ?? false
     this.verifyReceipts = options.verifyReceipts ?? true
+    this.requireAttestation = options.requireAttestation ?? 'none'
+    this.attestationRegistry = new AttestationVerifierRegistry()
+    // Register built-in verifiers
+    this.attestationRegistry.register(new SigstoreVerifier())
+    this.attestationRegistry.register(new SlsaVerifier())
+    // Register user-provided verifiers
+    for (const v of options.attestationVerifiers ?? []) {
+      this.attestationRegistry.register(v)
+    }
   }
 
   async connect(options?: {
@@ -198,6 +250,7 @@ export class GlyphClient {
     options?: { confirmationToken?: string },
   ): Promise<SealedEnvelope & { payload: T }> {
     await this.ensureApproved(name)
+    await this.ensureAttested(name)
     const callId = randomUUID()
     const envelope = await this.post<SealedEnvelope>(`/glyphs/${encodeURIComponent(name)}/call`, {
       input,
@@ -423,6 +476,55 @@ export class GlyphClient {
       }
     }
     throw new GlyphNotApprovedError(name, inspection.status, inspection.diff)
+  }
+
+  /**
+   * Attestation gate for call(): when requireAttestation is not 'none',
+   * validates that the card carries a verifiable external attestation
+   * before execution. The policy controls which risk tiers require it.
+   */
+  private async ensureAttested(name: string): Promise<void> {
+    if (this.requireAttestation === 'none') return
+
+    let card = this.cardCache.get(name)
+    if (!card) card = await this.getCard(name)
+    if (card.name !== name) throw new GlyphVerificationError(`Card "${name}"`)
+
+    // Determine whether attestation is required for this tool
+    const required =
+      this.requireAttestation === 'all' ||
+      (this.requireAttestation === 'danger' && card.cost.riskTier === 'danger')
+
+    if (!required) return
+
+    // Card must carry an attestation
+    if (!card.attestation) {
+      throw new GlyphAttestationError(
+        name,
+        `card has no attestation (policy: ${this.requireAttestation})`,
+      )
+    }
+
+    // Run all registered verifiers
+    let anyValid = false
+    const failures: string[] = []
+    for (const verifierType of this.attestationRegistry.list()) {
+      const verifier = this.attestationRegistry.get(verifierType)
+      if (!verifier) continue
+      const result = await verifier.verify(card)
+      if (result.valid) {
+        anyValid = true
+        break // One valid attestation type is sufficient
+      }
+      if (result.error) failures.push(`${verifierType}: ${result.error}`)
+    }
+
+    if (!anyValid) {
+      throw new GlyphAttestationError(
+        name,
+        failures.length > 0 ? `all verifiers rejected: ${failures.join('; ')}` : 'no matching verifier',
+      )
+    }
   }
 
   /** Builds the header set for a request, applying auth and any extra headers. */
