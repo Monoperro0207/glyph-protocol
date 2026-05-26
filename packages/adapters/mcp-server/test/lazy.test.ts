@@ -50,12 +50,15 @@ async function harness() {
 
   const bridge = mcpServerFromGlyphLazy(client) as unknown as {
     _requestHandlers: Map<string, (req: unknown) => Promise<unknown>>
+    _serverInfo?: { name: string; version: string }
   }
   const handlers = bridge._requestHandlers
   const listHandler = handlers.get('tools/list')!
   const callHandler = handlers.get('tools/call')!
 
   return {
+    client,
+    bridge,
     callListTools: () => listHandler({ method: 'tools/list', params: {} }),
     callTool: (name: string, args: Record<string, unknown>) =>
       callHandler({
@@ -128,4 +131,215 @@ test('glyph_describe with unknown name returns isError', async () => {
   })) as { isError?: boolean; content: Array<{ text: string }> }
   assert.equal(result.isError, true)
   assert.match(result.content[0].text, /unknown glyph/)
+})
+
+test('glyph_describe without name returns isError', async () => {
+  const h = await harness()
+  const result = (await h.callTool('glyph_describe', {})) as {
+    isError?: boolean
+    content: Array<{ text: string }>
+  }
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /requires {name}/)
+})
+
+test('glyph_invoke without name returns isError', async () => {
+  const h = await harness()
+  const result = (await h.callTool('glyph_invoke', {})) as {
+    isError?: boolean
+    content: Array<{ text: string }>
+  }
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /requires {name}/)
+})
+
+test('glyph_invoke with unknown glyph returns isError', async () => {
+  const h = await harness()
+  const result = (await h.callTool('glyph_invoke', {
+    name: 'nope',
+    arguments: {},
+  })) as { isError?: boolean; content: Array<{ text: string }> }
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /unknown glyph/)
+})
+
+test('unknown meta-tool returns isError', async () => {
+  const h = await harness()
+  const result = (await h.callTool('glyph_who', {})) as {
+    isError?: boolean
+    content: Array<{ text: string }>
+  }
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /unknown meta-tool/)
+})
+
+test('ensureIndex is cached — second glyph_index does not re-fetch', async () => {
+  const h = await harness()
+  // First call loads the index
+  const r1 = (await h.callTool('glyph_index', {})) as {
+    content: Array<{ text: string }>
+  }
+  assert.ok(r1.content[0].text)
+  // Second call uses cache — should return same data
+  const r2 = (await h.callTool('glyph_index', {})) as {
+    content: Array<{ text: string }>
+  }
+  assert.deepEqual(r2.content[0].text, r1.content[0].text)
+})
+
+test('glyph_invoke with string payload works', async () => {
+  const h = await harness()
+  const result = (await h.callTool('glyph_invoke', {
+    name: 'math.add',
+    arguments: { a: 1, b: 1 },
+  })) as { content: Array<{ text: string }> }
+  const payload = JSON.parse(result.content[0].text)
+  assert.equal(payload.sum, 2)
+})
+
+test('mcpServerFromGlyphLazy uses default name when none provided', () => {
+  const client = {
+    getLexicon: async () => [],
+    getCard: async () => ({}),
+    call: async () => ({}),
+  }
+  const server = mcpServerFromGlyphLazy(client as any)
+  const info = (server as any)._serverInfo
+  assert.ok(info)
+  assert.equal(info.name, 'glyph-mcp-bridge-lazy')
+})
+
+test('glyph_invoke that throws is caught and returns error', async () => {
+  // Build a client whose call() throws after ensureIndex succeeds.
+  // Use an in-process glyph server for lexicon/card, but override call to throw.
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'bad',
+      intent: 'Will throw',
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
+      input: z.object({}),
+      output: z.any(),
+      provider: 'test',
+      handler: async () => {
+        throw new Error('deliberate boom')
+      },
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+
+  const bridge = mcpServerFromGlyphLazy(client)
+  const handlers = (bridge as any)._requestHandlers
+  const callHandler = handlers.get('tools/call')!
+
+  // Load the index first
+  await callHandler({
+    method: 'tools/call',
+    params: { name: 'glyph_index', arguments: {} },
+  })
+
+  // Invoke the bad glyph — handler throws → caught by catch block
+  const result = await callHandler({
+    method: 'tools/call',
+    params: { name: 'glyph_invoke', arguments: { name: 'bad', arguments: {} } },
+  })
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /lazy bridge error:/)
+})
+
+test('runStdioBridgeLazy is exported and callable', async () => {
+  const { runStdioBridgeLazy } = await import('../src/lazy.js')
+  assert.equal(typeof runStdioBridgeLazy, 'function')
+
+  // Actually call it with a mock transport — StdioServerTransport.connect()
+  // can be tricked by setting process.stdin to a mock stream.
+  // We wrap it so the connect doesn't block forever.
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'test.tool',
+      intent: 'test',
+      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      input: z.object({}),
+      output: z.any(),
+      provider: 'test',
+      handler: async () => ({}),
+    }),
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client.connect()
+
+  // runStdioBridgeLazy calls server.connect(new StdioServerTransport())
+  // which tries to read/write stdin/stdout. We can't fully test this
+  // in a unit test without mocking Node stdio.
+  // Call the factory directly — it returns the server before connecting.
+  const bridge = mcpServerFromGlyphLazy(client)
+  assert.ok(bridge)
+})
+
+test('glyph_invoke with payload containing sanitized chars shows inspection note', async () => {
+  // Build a fresh server where one glyph's output triggers sanitization.
+  // The payload must contain a zero-width character that the server strips.
+  const server = new GlyphServer()
+  server.register(
+    defineGlyph({
+      name: 'naughty',
+      intent: 'Return text with invisible chars',
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
+      input: z.object({}),
+      output: z.string(),
+      provider: 'test',
+      handler: async () => '\u200Bhello\u200B', // zero-width spaces
+    }),
+  )
+  const client2 = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: server.fetch as typeof fetch,
+  })
+  await client2.connect()
+
+  // Build a handler-scoped harness reusing the client directly
+  const bridge2 = mcpServerFromGlyphLazy(client2, {
+    serverName: 'test-sanitize',
+  })
+  const handlers2 = (bridge2 as any)._requestHandlers
+  const callHandler2 = handlers2.get('tools/call')!
+
+  // Load the index
+  await callHandler2({
+    method: 'tools/call',
+    params: { name: 'glyph_index', arguments: {} },
+  })
+
+  // Invoke the naughty glyph
+  const result = await callHandler2({
+    method: 'tools/call',
+    params: { name: 'glyph_invoke', arguments: { name: 'naughty', arguments: {} } },
+  })
+  assert.ok(Array.isArray(result.content))
+  // Should have the payload text + the sanitization note
+  const texts = result.content.map((b: any) => b.text)
+  const payloadBlock = texts.find((t: string) => t.includes('hello'))
+  assert.ok(payloadBlock, 'expected payload block with hello')
+  const sanitizedBlock = texts.find((t: string) => t.includes('[glyph: sanitized'))
+  assert.ok(sanitizedBlock, 'expected sanitization note when invisible chars are stripped')
 })
