@@ -9,6 +9,7 @@ import {
   type CheckResult,
   type ConformanceLevel,
   type ConformanceOptions,
+  type ConformanceProfile,
   type ConformanceReport,
   type FetchLike,
   type HttpFn,
@@ -22,6 +23,35 @@ const RUNNERS: Record<ConformanceLevel, LevelRunner> = {
   execution: executionLevel,
   security: securityLevel,
   governance: governanceLevel,
+}
+
+/** Preset conformance profiles as defined in CONFPROF-001. */
+export const PROFILE_LEVELS: Record<ConformanceProfile, readonly ConformanceLevel[]> = {
+  minimal: ['discovery', 'execution'],
+  secure: ['discovery', 'execution', 'security'],
+  production: ['discovery', 'execution', 'security', 'governance'],
+}
+
+/**
+ * Default profile when no `--level` flag or `profile` option is specified.
+ * CONFPROF-001: defaults to "secure".
+ */
+export const DEFAULT_PROFILE: ConformanceProfile = 'secure'
+
+/**
+ * Resolve a user-supplied level string to a concrete list of conformance
+ * levels. Accepts preset profile names (`minimal`, `secure`, `production`),
+ * the alias `all`, and comma-separated individual level names for backward
+ * compatibility.
+ */
+export function resolveProfile(input: string): readonly ConformanceLevel[] {
+  if (input === 'all') return [...ALL_LEVELS]
+  if (input in PROFILE_LEVELS) return PROFILE_LEVELS[input as ConformanceProfile]
+  // Comma-separated individual levels (backward compat)
+  return input
+    .split(',')
+    .map((s) => s.trim() as ConformanceLevel)
+    .filter((s) => (ALL_LEVELS as readonly string[]).includes(s))
 }
 
 /**
@@ -38,7 +68,10 @@ export async function runConformance(
 ): Promise<ConformanceReport> {
   const doFetch: FetchLike = options.fetch ?? ((req) => globalThis.fetch(req))
   const base = baseUrl.replace(/\/$/, '')
-  const requested = options.levels ?? ALL_LEVELS
+  const requested: readonly ConformanceLevel[] =
+    options.levels ??
+    (options.profile ? PROFILE_LEVELS[options.profile] : null) ??
+    PROFILE_LEVELS[DEFAULT_PROFILE]
   const ctx: LevelContext = {
     baseUrl: base,
     http: buildHttp(base, doFetch, options.authToken),

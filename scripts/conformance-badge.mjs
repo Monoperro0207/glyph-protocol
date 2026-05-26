@@ -38,6 +38,7 @@ registerFixtures(server)
 const report = await runConformance('http://glyph-badge', {
   fetch: server.fetch,
   fixtures: FIXTURE_NAMES,
+  profile: 'production', // run all four levels including governance
 })
 
 const badge = formatBadgeJson(report)

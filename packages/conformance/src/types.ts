@@ -21,6 +21,9 @@ type PlainValidator = (value: unknown) => boolean
 
 export type ConformanceLevel = 'discovery' | 'execution' | 'security' | 'governance'
 
+/** Preset conformance profiles that map to level subsets. */
+export type ConformanceProfile = 'minimal' | 'secure' | 'production'
+
 export const ALL_LEVELS: readonly ConformanceLevel[] = [
   'discovery',
   'execution',
@@ -78,8 +81,14 @@ export interface FixtureGlyphs {
 
 export interface ConformanceOptions {
   fetch?: FetchLike
-  /** Subset of levels to run. Defaults to all four. */
+  /** Subset of levels to run. Defaults to the secure profile levels. */
   levels?: readonly ConformanceLevel[]
+  /**
+   * Convenience preset that maps to a level subset.
+   * Takes precedence over `levels` when both are provided.
+   * `minimal` = discovery+execution, `secure` = +security, `production` = +governance.
+   */
+  profile?: ConformanceProfile
   /** Glyph names the server-under-test exposes for execution/security checks. */
   fixtures?: FixtureGlyphs
   /** Optional bearer token if the server requires auth. */
