@@ -246,3 +246,55 @@ test('the card still publishes the declared outputSchema regardless of mode', ()
   assert.deepEqual(strict.card.output, typedSearch.outputSchema)
   assert.deepEqual(lax.card.output, typedSearch.outputSchema)
 })
+
+test('jsonTypeToZod handles number, boolean, array, and single-value enum', () => {
+  const richTool: McpTool = {
+    name: 'all-types',
+    description: 'Tool with every type',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        count: { type: 'number' },
+        active: { type: 'boolean' },
+        tags: { type: 'array', items: { type: 'string' } },
+        mode: { type: 'string', enum: ['single'] },
+      },
+    },
+  }
+  const [glyph] = glyphsFromMcpTools([richTool], noopCall)
+  // Check that the card input includes all property types
+  const input = glyph.card.input as any
+  assert.ok(input)
+  assert.equal(input.properties.count.type, 'number')
+  assert.equal(input.properties.active.type, 'boolean')
+  assert.equal(input.properties.tags.type, 'array')
+  assert.equal(input.properties.tags.items.type, 'string')
+  assert.equal(input.properties.mode.enum.length, 1)
+  assert.equal(input.properties.mode.enum[0], 'single')
+})
+
+test('jsonTypeToZod handles object without properties as record', () => {
+  const tool: McpTool = {
+    name: 'freeform',
+    description: 'Object without shape',
+    inputSchema: {
+      type: 'object',
+    },
+  }
+  const [glyph] = glyphsFromMcpTools([tool], noopCall)
+  // Card created with no specific properties — any object accepted
+  assert.ok(glyph.card)
+  const input = glyph.card.input as any
+  assert.equal(input.type, 'object')
+})
+
+test('jsonTypeToZod handles unknown schema type as passthrough', () => {
+  const tool: McpTool = {
+    name: 'weird',
+    description: 'Unknown type',
+    inputSchema: { type: 'null' as any, properties: {} },
+  }
+  const [glyph] = glyphsFromMcpTools([tool], noopCall)
+  // Unknown type still generates a glyph — passthrough behavior
+  assert.ok(glyph.card)
+})
