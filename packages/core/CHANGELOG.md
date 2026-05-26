@@ -1,5 +1,17 @@
 # @glyphp/core
 
+## 1.3.0
+
+### Minor Changes
+
+- f34252f: Add AttestationVerifier interface, AttestationVerifierRegistry, and DigestVerifier. The DigestVerifier validates container image sha256 digests embedded in GlyphCard attestation payloads.
+- d868938: `compileJsonSchema()` now throws `SchemaCompilationError` when a JSON Schema cannot be compiled by AJV, rather than silently degrading to `z.unknown()`. Add `outputValidation: 'none'` option as explicit opt-out for passthrough behavior. Export `SchemaCompilationError` and `CompileJsonSchemaOptions` types.
+
+### Patch Changes
+
+- Updated dependencies [85584c8]
+  - @glyphp/types@1.3.0
+
 ## 1.2.0
 
 ### Minor Changes
