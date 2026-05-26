@@ -431,4 +431,9 @@ export {
 } from './key-registry.js'
 export { Ed25519Signer } from './signer.js'
 export type { GlyphSigner } from './signer.js'
+export {
+  AttestationVerifierRegistry,
+  DigestVerifier,
+} from './attestation.js'
+export type { AttestationResult, AttestationVerifier } from './attestation.js'
 // FrostSigner is in './frost.js' — import directly to avoid circular dep with canonicalHash
