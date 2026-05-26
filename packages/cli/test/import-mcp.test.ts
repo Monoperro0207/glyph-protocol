@@ -11,6 +11,9 @@ import { emitServerProject } from '../src/commands/import-mcp/emitter.js'
 import { runImportMcp } from '../src/commands/import-mcp/index.js'
 import { manualConfig } from '../src/commands/import-mcp/manual.js'
 import { emitReport } from '../src/commands/import-mcp/report.js'
+import { hermesAgentAdapter } from '../src/commands/import-mcp/clients/hermes-agent.js'
+import { openclawAdapter } from '../src/commands/import-mcp/clients/openclaw.js'
+import { emitTopLevelIndex } from '../src/commands/import-mcp/emitter.js'
 
 test('parseClaudeDesktopJson handles a standard config', () => {
   const raw = JSON.stringify({
@@ -261,6 +264,248 @@ test('runImportMcp --dry-run writes nothing and returns empty arrays', async () 
       entries.length,
       0,
       `dry-run should not write anything, found: ${entries.join(',')}`,
+    )
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// parseCodexToml edge cases
+// ---------------------------------------------------------------------------
+
+test('parseCodexToml rejects malformed TOML', () => {
+  assert.throws(() => parseCodexToml('[mcp_servers\n  bad ='), /failed to parse codex config/)
+})
+
+test('parseCodexToml silently skips non-object MCP entries', () => {
+  const out = parseCodexToml(`
+[mcp_servers.ok]
+command = "echo"
+
+not_a_table = "nope"
+
+[mcp_servers.bare_string]
+mcp_servers.bare_string = "just a string, not a table"
+`)
+  assert.equal(out.length, 1)
+  assert.equal(out[0]?.name, 'ok')
+})
+
+test('parseCodexToml skips entries without command or url', () => {
+  const out = parseCodexToml(`
+[mcp_servers.orphan]
+args = ["--flag"]
+`)
+  assert.equal(out.length, 0)
+})
+
+test('parseCodexToml filters non-string env values', () => {
+  const out = parseCodexToml(`
+[mcp_servers.fs]
+command = "npx"
+
+[mcp_servers.fs.env]
+TOKEN = "secret"
+PORT = 3000
+`)
+  const o = out[0]!
+  if (o.transport.kind === 'stdio') {
+    assert.deepEqual(o.transport.env, { TOKEN: 'secret' })
+  } else {
+    assert.fail('expected stdio')
+  }
+})
+
+test('parseCodexToml parses url-based MCP entry', () => {
+  const out = parseCodexToml(`
+[mcp_servers.api]
+url = "https://example.com/mcp"
+bearer_token = "tok"
+`)
+  const o = out[0]!
+  assert.equal(o.name, 'api')
+  if (o.transport.kind === 'http') {
+    assert.equal(o.transport.url, 'https://example.com/mcp')
+    assert.equal(o.transport.bearerToken, 'tok')
+  } else {
+    assert.fail('expected http')
+  }
+})
+
+// ---------------------------------------------------------------------------
+// parseClaudeDesktopJson edge cases
+// ---------------------------------------------------------------------------
+
+test('parseClaudeDesktopJson parses url-based entry', () => {
+  const raw = JSON.stringify({
+    mcpServers: {
+      remote: { url: 'https://mcp.example.com' },
+    },
+  })
+  const out = parseClaudeDesktopJson(raw, 'claude-desktop')
+  assert.equal(out.length, 1)
+  if (out[0]!.transport.kind === 'http') {
+    assert.equal(out[0]!.transport.url, 'https://mcp.example.com')
+  } else {
+    assert.fail('expected http')
+  }
+})
+
+test('parseClaudeDesktopJson filters non-string args', () => {
+  const raw = JSON.stringify({
+    mcpServers: {
+      fs: { command: 'npx', args: ['-y', 42, null, 'real'] },
+    },
+  })
+  const out = parseClaudeDesktopJson(raw, 'claude-desktop')
+  const o = out[0]!
+  if (o.transport.kind === 'stdio') {
+    assert.deepEqual(o.transport.args, ['-y', 'real'])
+  } else {
+    assert.fail('expected stdio')
+  }
+})
+
+// ---------------------------------------------------------------------------
+// manualConfig edge cases
+// ---------------------------------------------------------------------------
+
+test('manualConfig slug from invalid URL falls back to mcp-remote', () => {
+  const c = manualConfig({ url: 'not-a-url' })
+  assert.equal(c.name, 'mcp-remote')
+})
+
+test('manualConfig slug from command with slashes uses last segment', () => {
+  const c = manualConfig({ command: 'npx -y @scope/pkg/name' })
+  assert.match(c.name, /name/)
+})
+
+// ---------------------------------------------------------------------------
+// emitter edge cases
+// ---------------------------------------------------------------------------
+
+test('emitServerProject http transport throws', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-emit-http-'))
+  try {
+    const config = {
+      name: 'http-test',
+      source: 'manual' as const,
+      transport: { kind: 'http' as const, url: 'https://example.com' },
+    }
+    await assert.rejects(
+      () => emitServerProject(config, [fakeGlyph('echo', 'safe')], 3100, tmp),
+      /only supports stdio transports/,
+    )
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+test('emitServerProject no env keys writes placeholder .env.example', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-noenv-'))
+  try {
+    const config = {
+      name: 'noenv-test',
+      source: 'manual' as const,
+      transport: { kind: 'stdio' as const, command: 'echo' },
+    }
+    await emitServerProject(config, [fakeGlyph('echo', 'safe')], 3100, tmp)
+    const env = await readFile(join(tmp, '.env.example'), 'utf8')
+    assert.match(env, /No environment variables were declared/)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+test('emitTopLevelIndex writes a multi-server README', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-topindex-'))
+  try {
+    await emitTopLevelIndex(tmp, [
+      {
+        config: {
+          name: 'fs',
+          source: 'codex',
+          transport: { kind: 'stdio', command: 'npx' },
+        },
+        port: 3100,
+        toolCount: 2,
+        cards: [],
+        outputDir: 'out/fs',
+      },
+      {
+        config: {
+          name: 'api',
+          source: 'claude-desktop',
+          transport: { kind: 'http', url: 'https://example.com' },
+        },
+        port: 3101,
+        toolCount: 3,
+        cards: [],
+        outputDir: 'out/api',
+      },
+    ])
+    const readme = await readFile(join(tmp, 'README.md'), 'utf8')
+    assert.match(readme, /Glyph imports/)
+    assert.match(readme, /fs.*codex.*3100.*2/)
+    assert.match(readme, /api.*claude-desktop.*3101.*3/)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// report edge cases
+// ---------------------------------------------------------------------------
+
+test('emitReport no imported no skipped produces empty sections', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-report-empty-'))
+  try {
+    const path = await emitReport(tmp, { imported: [], skipped: [] })
+    const md = await readFile(path, 'utf8')
+    assert.match(md, /Imported \(0\)/)
+    assert.match(md, /\(none\)/)
+    assert.match(md, /Skipped \(0\)/)
+    assert.match(md, /All imported cards are tagged.*safe/)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// adapter stubs (hermes-agent, openclaw)
+// ---------------------------------------------------------------------------
+
+test('hermesAgentAdapter detect returns false', async () => {
+  assert.equal(await hermesAgentAdapter.detect(), false)
+})
+
+test('hermesAgentAdapter load throws not-implemented', async () => {
+  await assert.rejects(() => hermesAgentAdapter.load(), /not implemented yet/)
+})
+
+test('openclawAdapter detect returns false', async () => {
+  assert.equal(await openclawAdapter.detect(), false)
+})
+
+test('openclawAdapter load throws not-implemented', async () => {
+  await assert.rejects(() => openclawAdapter.load(), /not implemented yet/)
+})
+
+// ---------------------------------------------------------------------------
+// runImportMcp index edge cases
+// ---------------------------------------------------------------------------
+
+test('runImportMcp rejects unknown client id', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-unknown-client-'))
+  try {
+    await assert.rejects(
+      () =>
+        runImportMcp({
+          from: 'not-a-client' as any,
+          options: { output: tmp, portBase: 3100, dryRun: true, timeoutMs: 1_000 },
+        }),
+      /unknown client/,
     )
   } finally {
     await rm(tmp, { recursive: true, force: true })
