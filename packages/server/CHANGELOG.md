@@ -1,5 +1,19 @@
 # @glyphp/server
 
+## 1.3.0
+
+### Minor Changes
+
+- 8ec3e34: Add `strictProduction` option to `GlyphServerOptions`. When `NODE_ENV=production` and `strictProduction: true` (the default in production), the constructor throws if auth, rateLimit, or a stable keyPair/signer are missing. When `strictProduction: false`, only a warning is logged. Non-production environments are unaffected. Update `glyph init production-server` scaffold to include `strictProduction: true`.
+
+### Patch Changes
+
+- Updated dependencies [f34252f]
+- Updated dependencies [d868938]
+- Updated dependencies [85584c8]
+  - @glyphp/core@1.3.0
+  - @glyphp/types@1.3.0
+
 ## 1.2.0
 
 ### Minor Changes
