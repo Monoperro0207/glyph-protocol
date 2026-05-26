@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -192,4 +192,92 @@ test('KeyRegistry accepts group key metadata for multi-signer entries', () => {
   assert.equal(entry.group.threshold, 2)
   assert.equal(entry.group.participants, 3)
   assert.equal(entry.publicKey.length, 64) // standard ed25519 (FROST group key)
+})
+
+test('FileKeyRegistry caches loaded registry — second load returns cached', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'glyph-keyreg-'))
+  try {
+    const path = join(dir, 'keys.json')
+    const { registry } = genesisRegistry()
+
+    // Pre-write the file so load() doesn't need save()
+    writeFileSync(path, JSON.stringify(registry, null, 2), 'utf8')
+
+    const file = new FileKeyRegistry(path)
+    const loaded1 = await file.load()
+    assert.ok(loaded1)
+
+    // Second load should use cache
+    const loaded2 = await file.load()
+    assert.deepEqual(loaded2.active, loaded1.active)
+
+    // Overwrite with garbage — cache should survive
+    writeFileSync(path, 'not-json', 'utf8')
+    const loaded3 = await file.load()
+    assert.deepEqual(loaded3.active, loaded1.active)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('FileKeyRegistry load rejects invalid signature on disk', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'glyph-keyreg-'))
+  try {
+    const path = join(dir, 'keys.json')
+    const { registry } = genesisRegistry()
+    // Truly broken: change the active fingerprint so signature won't match
+    const broken = { ...registry, active: '00'.repeat(32) }
+    writeFileSync(path, JSON.stringify(broken, null, 2), 'utf8')
+
+    const file = new FileKeyRegistry(path)
+    await assert.rejects(
+      async () => file.load(),
+      /signature verification/,
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('FileKeyRegistry save fails with bad signature', async () => {
+  // Already covered by "refuses to save an unverifiable registry" above,
+  // but test the specific path where verifyKeyRegistry returns false on save.
+  const dir = mkdtempSync(join(tmpdir(), 'glyph-keyreg-'))
+  try {
+    const file = new FileKeyRegistry(join(dir, 'keys.json'))
+    const { registry } = genesisRegistry()
+    const broken = { ...registry, keys: [...registry.keys], active: 'different' }
+    await assert.rejects(() => file.save(broken), /refusing to save/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('HttpKeyRegistry rejects non-ok HTTP response', async () => {
+  const client = new HttpKeyRegistry('http://example.test', {
+    fetchImpl: (async () => ({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      json: async () => ({}),
+    })) as any,
+  })
+  await assert.rejects(
+    () => client.registry(),
+    /HttpKeyRegistry: GET \/keys returned 500/,
+  )
+})
+
+test('HttpKeyRegistry resolve delegates to registry', async () => {
+  const { kp, registry } = genesisRegistry()
+  const client = new HttpKeyRegistry('http://example.test', {
+    fetchImpl: (async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => registry,
+    })) as any,
+  })
+  const result = await client.resolve(kp.publicKey)
+  assert.equal(result.status, 'active')
 })
