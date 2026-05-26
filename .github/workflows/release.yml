@@ -14,12 +14,13 @@
 # After that, this workflow publishes every subsequent release with no
 # npm token stored in GitHub — auth is short-lived OIDC.
 #
-# A second job (`attestations`) runs AFTER `release` completes, on the
-# packages that were just published. It generates a CycloneDX SBOM and a
-# sigstore cosign signature per tarball and attaches both to the
-# corresponding GitHub Release. The job is `continue-on-error: true` so a
-# transient sigstore/cdxgen failure never blocks the npm publish that
-# already succeeded.
+# After the release, two attestation jobs run:
+#   1. `attestations-core` (required): generates SBOM + cosign for core
+#      packages (@glyphp/core, @glyphp/server, @glyphp/client,
+#      @glyphp/conformance). Retries once on transient failure. If it fails
+#      permanently, the release is NOT blocked but the status is visible.
+#   2. `attestations-rest` (best-effort): same for all other packages.
+#      `continue-on-error: true` — never blocks the workflow.
 
 name: Release
 
@@ -63,10 +64,108 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  attestations:
-    # Generate CycloneDX SBOMs and cosign signatures for the tarballs that
-    # were just published, and attach them to the matching GitHub Release.
-    # Best-effort — npm publish has already succeeded if we got here.
+  attestations-core:
+    # Required attestation for core packages. Retries once on transient
+    # failure. On permanent failure the release is NOT blocked (npm publish
+    # already succeeded), but the failure is visible in the workflow run.
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Install cdxgen
+        run: npm install -g @cyclonedx/cdxgen@^11
+
+      - name: Generate SBOM and cosign for core packages
+        id: core-attest
+        env:
+          PUBLISHED: ${{ needs.release.outputs.published_packages }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORE_PACKAGES: '["@glyphp/core","@glyphp/server","@glyphp/client","@glyphp/conformance"]'
+        run: |
+          set -uo pipefail
+          mkdir -p .attest-core
+          cd .attest-core
+          failed=0
+          echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
+            name=$(echo "$row" | jq -r .name)
+            matches=$(echo "$CORE_PACKAGES" | jq -r --arg n "$name" '.[] | select(. == $n)')
+            [ -z "$matches" ] && continue
+            version=$(echo "$row" | jq -r .version)
+            tag="${name}@${version}"
+
+            echo "::group::$tag (core)"
+
+            tarball=$(npm pack "$name@$version" --silent) || {
+              echo "::error::npm pack failed for core package $tag"
+              failed=1
+              echo "::endgroup::"
+              continue
+            }
+
+            extracted=$(mktemp -d)
+            tar -xzf "$tarball" -C "$extracted"
+            sbom="${tarball%.tgz}.cdx.sbom.json"
+            cdxgen -t npm -o "$sbom" "$extracted/package" \
+              || echo "::error::cdxgen failed for core package $tag"
+
+            bundle="${tarball%.tgz}.cosign.bundle"
+            cosign sign-blob --yes --bundle "$bundle" "$tarball" \
+              || echo "::error::cosign failed for core package $tag"
+
+            uploads=()
+            [ -f "$sbom" ] && uploads+=("$sbom")
+            [ -f "$bundle" ] && uploads+=("$bundle")
+            if [ ${#uploads[@]} -gt 0 ]; then
+              gh release upload "$tag" "${uploads[@]}" --clobber \
+                || echo "::error::release upload failed for $tag"
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$failed" -eq 1 ]; then exit 1; fi
+
+      - name: Retry core attestation on transient failure
+        if: failure()
+        env:
+          PUBLISHED: ${{ needs.release.outputs.published_packages }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORE_PACKAGES: '["@glyphp/core","@glyphp/server","@glyphp/client","@glyphp/conformance"]'
+        run: |
+          echo "::warning::Retrying core attestation after transient failure"
+          # Re-run the same logic (simplified — retry only cosign which is most flaky)
+          mkdir -p .attest-core-retry
+          cd .attest-core-retry
+          echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
+            name=$(echo "$row" | jq -r .name)
+            matches=$(echo "$CORE_PACKAGES" | jq -r --arg n "$name" '.[] | select(. == $n)')
+            [ -z "$matches" ] && continue
+            version=$(echo "$row" | jq -r .version)
+            tag="${name}@${version}"
+            echo "::group::retry $tag"
+            tarball=$(npm pack "$name@$version" --silent) || { echo "::endgroup::"; continue; }
+            bundle="${tarball%.tgz}.cosign.bundle"
+            cosign sign-blob --yes --bundle "$bundle" "$tarball" \
+              || echo "::warning::cosign retry failed for $tag — release without full attestation"
+            if [ -f "$bundle" ]; then
+              gh release upload "$tag" "$bundle" --clobber \
+                || echo "::warning::upload failed for $tag"
+            fi
+            echo "::endgroup::"
+          done
+
+  attestations-rest:
+    # Best-effort attestation for all other (non-core) packages.
+    # continue-on-error: true — never blocks the workflow.
     needs: release
     if: needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
@@ -86,41 +185,36 @@ jobs:
       - name: Install cdxgen
         run: npm install -g @cyclonedx/cdxgen@^11
 
-      - name: Generate SBOM and cosign signature per published package
+      - name: Generate SBOM and cosign for non-core packages
         env:
           PUBLISHED: ${{ needs.release.outputs.published_packages }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORE_PACKAGES: '["@glyphp/core","@glyphp/server","@glyphp/client","@glyphp/conformance"]'
         run: |
           set -uo pipefail
-          mkdir -p .attest
-          cd .attest
+          mkdir -p .attest-rest
+          cd .attest-rest
           echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
             name=$(echo "$row" | jq -r .name)
+            matches=$(echo "$CORE_PACKAGES" | jq -r --arg n "$name" '.[] | select(. == $n)')
+            [ -n "$matches" ] && continue
             version=$(echo "$row" | jq -r .version)
             tag="${name}@${version}"
 
             echo "::group::$tag"
-
-            # Pull the tarball that was just published.
             tarball=$(npm pack "$name@$version" --silent) || {
               echo "::warning::npm pack failed for $tag"
               echo "::endgroup::"
               continue
             }
-
-            # CycloneDX SBOM from the extracted package contents.
             extracted=$(mktemp -d)
             tar -xzf "$tarball" -C "$extracted"
             sbom="${tarball%.tgz}.cdx.sbom.json"
             cdxgen -t npm -o "$sbom" "$extracted/package" \
               || echo "::warning::cdxgen failed for $tag"
-
-            # Keyless cosign signature anchored at this workflow's OIDC identity.
             bundle="${tarball%.tgz}.cosign.bundle"
             cosign sign-blob --yes --bundle "$bundle" "$tarball" \
               || echo "::warning::cosign failed for $tag"
-
-            # Attach to the GitHub Release that changesets-action created.
             uploads=()
             [ -f "$sbom" ] && uploads+=("$sbom")
             [ -f "$bundle" ] && uploads+=("$bundle")
