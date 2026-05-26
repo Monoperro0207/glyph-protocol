@@ -1,7 +1,8 @@
-# Releasing Glyph Protocol 1.0
+# Releasing Glyph Protocol after 1.0
 
-This checklist takes the repo from a green `pnpm verify:full` to a
-published 1.0 across npm, PyPI and Go modules.
+This checklist covers ongoing releases after the stable wire-protocol 1.0 line.
+Do not publish packages directly from a local checkout except for an explicitly
+approved emergency or first-publish bootstrap.
 
 ## 0. Pre-flight
 
@@ -9,59 +10,53 @@ published 1.0 across npm, PyPI and Go modules.
 corepack enable
 pnpm install --frozen-lockfile
 pnpm verify:full   # typecheck + test + build + smoke + conformance + python + go
+pnpm audit --prod
 ```
 
 All steps must pass. Fix any drift in `spec/canonical/*-vectors.json` by
-re-running `node scripts/generate-vectors.mjs` and updating the
-corresponding SDK if necessary.
+re-running `node scripts/generate-vectors.mjs` and updating the corresponding
+SDK if necessary.
 
-## 1. Wire-protocol bump (npm packages)
+## 1. Version packages
 
-The `.changeset/protocol-1-0.md` file already exists and marks every
-package as `major`. To produce the version bumps:
+Add changesets with the user-facing package changes. The release workflow uses
+Changesets on `main` after CI succeeds:
 
-```bash
-pnpm version-packages          # rewrites package.json versions
-git commit -am "1.0 release"
-```
+1. Merge feature/fix PRs with changesets.
+2. The `Release` workflow opens or updates the Version Packages PR.
+3. Review the generated versions/changelogs.
+4. Merge the Version Packages PR when ready to publish.
 
-Then publish:
+Publishing then happens from `.github/workflows/release.yml` through npm trusted
+publishing/OIDC. Do not run `pnpm release` locally for normal releases; local
+publishing can bypass the provenance assumptions documented for consumers.
 
-```bash
-pnpm release                   # pnpm build && changeset publish
-```
+## 2. Python SDK
 
-`@glyphp/types` exports `PROTOCOL_VERSION`. Before the very first 1.0
-release, change it from `0.2` to `1.0` in `packages/types/src/protocol.ts`
-and update the server / conformance tests' expectations in the same
-commit. (The 0.2 → 1.0 wire bump is intentional and breaking — clients
-must opt in via the handshake.)
-
-## 2. Python SDK (PyPI)
+If the Python SDK changed, publish it through the project-approved release path.
+For manual verification builds only:
 
 ```bash
 cd sdks/python
 python -m pip install --upgrade build twine
 python -m build
-python -m twine upload dist/*
 ```
 
-The package name is `glyph-protocol`; the import path is
-`glyph_protocol`.
+Do not upload from a local machine unless explicitly approved.
 
-## 3. Go SDK (Go module proxy)
+## 3. Go SDK
 
-Go modules publish by tag. Tag the commit:
+Go modules publish by tag. For SDK releases, tag the exact release commit:
 
 ```bash
-git tag sdks/go/glyphprotocol/v1.0.0
-git push origin sdks/go/glyphprotocol/v1.0.0
+git tag sdks/go/glyphprotocol/v<version>
+git push origin sdks/go/glyphprotocol/v<version>
 ```
 
 The Go proxy picks the tag up automatically. Consumers run:
 
 ```bash
-go get github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol@v1.0.0
+go get github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol@v<version>
 ```
 
 ## 4. Conformance badge for the reference server
@@ -78,20 +73,22 @@ pnpm exec glyph-conformance https://reference.glyphprotocol.dev \
   --output report.json --markdown report.md
 ```
 
-Commit `report.json` + `report.md` somewhere public and link from the
-top-level README.
+Commit `report.json` + `report.md` somewhere public and link from the top-level
+README.
 
-## 5. GitHub release
+## 5. Post-release sanity checks
+
+Verify npm provenance for at least one core package:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
-gh release create v1.0.0 --notes-file CHANGELOG-PROTOCOL.md
+npm view @glyphp/core dist.attestations
 ```
 
-## 6. Post-release sanity check
+Then follow `docs/release-verification.md` for cosign/SBOM checks on the
+published package version.
 
-In a clean directory, outside the monorepo:
+In a clean directory outside the monorepo, run a smoke install against the
+published packages:
 
 ```bash
 mkdir -p /tmp/glyph-postrelease && cd /tmp/glyph-postrelease
@@ -120,6 +117,8 @@ node --input-type=module -e "
 "
 ```
 
+Check SDK canonicalization in clean scratch projects:
+
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install glyph-protocol
@@ -129,7 +128,7 @@ python -c "from glyph_protocol import canonical_hash; print(canonical_hash({'b':
 ```bash
 mkdir -p /tmp/glyph-go && cd /tmp/glyph-go
 go mod init scratch
-go get github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol@v1.0.0
+go get github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol@v<version>
 cat > main.go <<'EOF'
 package main
 import (
@@ -143,6 +142,3 @@ func main() {
 EOF
 go run .
 ```
-
-All three printouts must match the same hash hex —
-that is the end-to-end cross-language guarantee.

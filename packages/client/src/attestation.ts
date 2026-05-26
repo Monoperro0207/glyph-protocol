@@ -1,4 +1,4 @@
-import type { AttestationVerifier, AttestationResult } from '@glyphp/core'
+import type { AttestationResult, AttestationVerifier } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
 
 // ---------------------------------------------------------------------------
@@ -61,6 +61,7 @@ export class SigstoreVerifier implements AttestationVerifier {
 
     return {
       valid: true,
+      trusted: false,
       type: this.type,
       details: {
         mediaType: parsed.mediaType,
@@ -120,7 +121,11 @@ export class SlsaVerifier implements AttestationVerifier {
     }
 
     if (!parsed.subject || parsed.subject.length === 0) {
-      return { valid: false, type: this.type, error: 'missing or empty subject array in SLSA provenance' }
+      return {
+        valid: false,
+        type: this.type,
+        error: 'missing or empty subject array in SLSA provenance',
+      }
     }
 
     // Validate subject[0].digest has sha256
@@ -129,12 +134,14 @@ export class SlsaVerifier implements AttestationVerifier {
       return {
         valid: false,
         type: this.type,
-        error: 'subject[0].digest.sha256 is missing — full digest validation requires external verifier',
+        error:
+          'subject[0].digest.sha256 is missing — full digest validation requires external verifier',
       }
     }
 
     return {
       valid: true,
+      trusted: false,
       type: this.type,
       details: {
         builder: parsed.predicate.builder.id,

@@ -15,10 +15,11 @@
 # npm token stored in GitHub — auth is short-lived OIDC.
 #
 # After the release, two attestation jobs run:
-#   1. `attestations-core` (required): generates SBOM + cosign for core
-#      packages (@glyphp/core, @glyphp/server, @glyphp/client,
-#      @glyphp/conformance). Retries once on transient failure. If it fails
-#      permanently, the release is NOT blocked but the status is visible.
+#   1. `attestations-core` (required post-publish status): generates SBOM +
+#      cosign for core packages (@glyphp/core, @glyphp/server,
+#      @glyphp/client, @glyphp/conformance). If any core attestation step
+#      fails, the workflow fails after publish so the release is visibly
+#      marked incomplete.
 #   2. `attestations-rest` (best-effort): same for all other packages.
 #      `continue-on-error: true` — never blocks the workflow.
 
@@ -70,9 +71,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   attestations-core:
-    # Required attestation for core packages. Retries once on transient
-    # failure. On permanent failure the release is NOT blocked (npm publish
-    # already succeeded), but the failure is visible in the workflow run.
+    # Required post-publish status for core packages. Npm publish has already
+    # completed, so a failure cannot roll back packages, but it fails the
+    # workflow and visibly marks the release as missing core attestations.
     needs: release
     if: needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
@@ -119,21 +120,32 @@ jobs:
             }
 
             extracted=$(mktemp -d)
-            tar -xzf "$tarball" -C "$extracted"
+            tar -xzf "$tarball" -C "$extracted" || {
+              echo "::error::extract failed for core package $tag"
+              failed=1
+              echo "::endgroup::"
+              continue
+            }
             sbom="${tarball%.tgz}.cdx.sbom.json"
-            cdxgen -t npm -o "$sbom" "$extracted/package" \
-              || echo "::error::cdxgen failed for core package $tag"
+            cdxgen -t npm -o "$sbom" "$extracted/package" || {
+              echo "::error::cdxgen failed for core package $tag"
+              failed=1
+            }
 
             bundle="${tarball%.tgz}.cosign.bundle"
-            cosign sign-blob --yes --bundle "$bundle" "$tarball" \
-              || echo "::error::cosign failed for core package $tag"
+            cosign sign-blob --yes --bundle "$bundle" "$tarball" || {
+              echo "::error::cosign failed for core package $tag"
+              failed=1
+            }
 
             uploads=()
             [ -f "$sbom" ] && uploads+=("$sbom")
             [ -f "$bundle" ] && uploads+=("$bundle")
             if [ ${#uploads[@]} -gt 0 ]; then
-              gh release upload "$tag" "${uploads[@]}" --clobber \
-                || echo "::error::release upload failed for $tag"
+              gh release upload "$tag" "${uploads[@]}" --clobber || {
+                echo "::error::release upload failed for $tag"
+                failed=1
+              }
             fi
             echo "::endgroup::"
           done
@@ -146,27 +158,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CORE_PACKAGES: '["@glyphp/core","@glyphp/server","@glyphp/client","@glyphp/conformance"]'
         run: |
-          echo "::warning::Retrying core attestation after transient failure"
-          # Re-run the same logic (simplified — retry only cosign which is most flaky)
-          mkdir -p .attest-core-retry
-          cd .attest-core-retry
-          echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
-            name=$(echo "$row" | jq -r .name)
-            matches=$(echo "$CORE_PACKAGES" | jq -r --arg n "$name" '.[] | select(. == $n)')
-            [ -z "$matches" ] && continue
-            version=$(echo "$row" | jq -r .version)
-            tag="${name}@${version}"
-            echo "::group::retry $tag"
-            tarball=$(npm pack "$name@$version" --silent) || { echo "::endgroup::"; continue; }
-            bundle="${tarball%.tgz}.cosign.bundle"
-            cosign sign-blob --yes --bundle "$bundle" "$tarball" \
-              || echo "::warning::cosign retry failed for $tag — release without full attestation"
-            if [ -f "$bundle" ]; then
-              gh release upload "$tag" "$bundle" --clobber \
-                || echo "::warning::upload failed for $tag"
-            fi
-            echo "::endgroup::"
-          done
+          echo "::warning::Core attestation failed; release is published but marked incomplete. Re-run the workflow after fixing the attestation outage."
+          exit 1
 
   attestations-rest:
     # Best-effort attestation for all other (non-core) packages.

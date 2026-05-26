@@ -84,8 +84,9 @@ func TestVerifyGlyphDetectsRequiredScopesTamper(t *testing.T) {
 func TestVerifyReceiptRoundTrip(t *testing.T) {
 	pubHex, priv := newKeyPair(t)
 	base := map[string]any{
-		"receiptVersion":  "0.2",
-		"callId":          "call-1",
+		"receiptVersion":  "0.3",
+		"callId":          "550e8400-e29b-41d4-a716-446655440000",
+		"clientCallId":    "client-call-1",
 		"glyphId":         "0000000000000000000000000000000000000000000000000000000000000000",
 		"glyphName":       "echo",
 		"inputHash":       "1111111111111111111111111111111111111111111111111111111111111111",
@@ -112,6 +113,14 @@ func TestVerifyReceiptRoundTrip(t *testing.T) {
 	}
 	if !ok {
 		t.Fatal("receipt did not verify")
+	}
+	receipt["clientCallId"] = "tampered"
+	ok, err = VerifyReceipt(receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("tampered clientCallId should not verify")
 	}
 }
 

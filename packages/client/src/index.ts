@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto'
+import type { AttestationVerifier } from '@glyphp/core'
 import {
+  AttestationVerifierRegistry,
   canonicalHash,
+  verifyReceipt as coreVerifyReceipt,
   diffCards,
   verifyGlyph,
   verifyManifest,
-  verifyReceipt as coreVerifyReceipt,
-  AttestationVerifierRegistry,
 } from '@glyphp/core'
-import type { AttestationVerifier, AttestationResult } from '@glyphp/core'
 import type {
-  CardDiff,
   CallReceipt,
+  CardDiff,
   ConfirmationTicket,
   GlyphCard,
   HandshakeRequest,
@@ -26,13 +26,13 @@ import type { PinStore } from './pins.js'
 import { ProviderTrustResolver } from './trust.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
+export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
 export type { RenderOptions } from './render.js'
 export { dataPreamble, renderEnvelope } from './render.js'
 export { ProviderTrustResolver } from './trust.js'
-export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 
 /** Thrown when a signed artifact (a card or a manifest) fails verification. */
 export class GlyphVerificationError extends Error {
@@ -546,7 +546,11 @@ export class GlyphClient {
     // Auto-approve non-breaking changes (e.g. intent rewording, example updates).
     // Breaking changes — key swaps, risk escalation, schema changes — still
     // require explicit human re-approval.
-    else if (inspection.status === 'changed' && inspection.diff && !inspection.diff.requiresApproval) {
+    else if (
+      inspection.status === 'changed' &&
+      inspection.diff &&
+      !inspection.diff.requiresApproval
+    ) {
       if (inspection.pin) {
         const updated: Pin = { ...inspection.pin, card, approvedAt: new Date().toISOString() }
         await this.pins.set(updated)
@@ -590,17 +594,23 @@ export class GlyphClient {
       const verifier = this.attestationRegistry.get(verifierType)
       if (!verifier) continue
       const result = await verifier.verify(card)
-      if (result.valid) {
+      if (result.valid && result.trusted !== false) {
         anyValid = true
-        break // One valid attestation type is sufficient
+        break // One trusted attestation type is sufficient
       }
-      if (result.error) failures.push(`${verifierType}: ${result.error}`)
+      if (result.valid && result.trusted === false) {
+        failures.push(`${verifier.type}: structural validation only`)
+      } else if (result.error) {
+        failures.push(`${verifierType}: ${result.error}`)
+      }
     }
 
     if (!anyValid) {
       throw new GlyphAttestationError(
         name,
-        failures.length > 0 ? `all verifiers rejected: ${failures.join('; ')}` : 'no matching verifier',
+        failures.length > 0
+          ? `all verifiers rejected: ${failures.join('; ')}`
+          : 'no matching verifier',
       )
     }
   }

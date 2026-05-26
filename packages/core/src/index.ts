@@ -115,6 +115,7 @@ const FIELD_SEVERITY: Record<string, CardFieldChange['severity']> = {
   examples: 'review',
   failureModes: 'review',
   provider: 'breaking',
+  requiredScopes: 'breaking',
   publicKey: 'breaking',
   attestation: 'breaking',
 }
@@ -160,6 +161,7 @@ export function diffCards(approved: GlyphCard, next: GlyphCard): CardDiff {
   record('examples', approved.examples, next.examples)
   record('failureModes', approved.failureModes, next.failureModes)
   record('provider', approved.provider, next.provider)
+  record('requiredScopes', approved.requiredScopes, next.requiredScopes)
   record('publicKey', approved.publicKey, next.publicKey)
   record('attestation', approved.attestation, next.attestation)
 
@@ -415,8 +417,13 @@ export function sanitize(value: unknown): {
   return { value: cleaned, report: { modified: findings.length > 0, findings } }
 }
 
-export { compileJsonSchema, SchemaCompilationError } from './json-schema-validator.js'
+export type { AttestationResult, AttestationVerifier } from './attestation.js'
+export {
+  AttestationVerifierRegistry,
+  DigestVerifier,
+} from './attestation.js'
 export type { CompileJsonSchemaOptions } from './json-schema-validator.js'
+export { compileJsonSchema, SchemaCompilationError } from './json-schema-validator.js'
 export type { KeyRegistrySource, ResolveResult } from './key-registry.js'
 export {
   buildKeyEntry,
@@ -429,11 +436,6 @@ export {
   StaticKeyRegistry,
   verifyKeyRegistry,
 } from './key-registry.js'
-export { Ed25519Signer } from './signer.js'
 export type { GlyphSigner } from './signer.js'
-export {
-  AttestationVerifierRegistry,
-  DigestVerifier,
-} from './attestation.js'
-export type { AttestationResult, AttestationVerifier } from './attestation.js'
+export { Ed25519Signer } from './signer.js'
 // FrostSigner is in './frost.js' — import directly to avoid circular dep with canonicalHash

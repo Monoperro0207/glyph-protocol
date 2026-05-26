@@ -93,16 +93,25 @@ export function verifyKeyRegistry(registry: KeyRegistry): boolean {
  */
 export type ResolveResult =
   | { status: 'active' | 'retired'; entry: KeyEntry }
-  | { status: 'revoked'; entry: KeyEntry; reason?: string }
+  | { status: 'revoked' | 'expired' | 'not-yet-valid'; entry: KeyEntry; reason?: string }
   | { status: 'unknown' }
 
-export function resolveKey(registry: KeyRegistry, publicKey: string): ResolveResult {
+const asTime = (value: string): number => Date.parse(value)
+
+export function resolveKey(
+  registry: KeyRegistry,
+  publicKey: string,
+  at: Date = new Date(),
+): ResolveResult {
   const target = fingerprintKey(publicKey)
+  const now = at.getTime()
   for (const entry of registry.keys) {
     if (entry.fingerprint !== target) continue
-    if (entry.revokedAt) {
+    if (entry.revokedAt && asTime(entry.revokedAt) <= now) {
       return { status: 'revoked', entry, reason: entry.revocationReason }
     }
+    if (asTime(entry.validFrom) > now) return { status: 'not-yet-valid', entry }
+    if (entry.validUntil && asTime(entry.validUntil) <= now) return { status: 'expired', entry }
     if (entry.validUntil) return { status: 'retired', entry }
     return { status: 'active', entry }
   }
@@ -182,7 +191,7 @@ export function buildKeyEntry(
  * Implementations include in-memory, file-backed and HTTP-backed registries.
  */
 export interface KeyRegistrySource {
-  resolve(publicKey: string): Promise<ResolveResult>
+  resolve(publicKey: string, at?: Date): Promise<ResolveResult>
   registry(): Promise<KeyRegistry>
 }
 
@@ -192,8 +201,8 @@ export class StaticKeyRegistry implements KeyRegistrySource {
   async registry(): Promise<KeyRegistry> {
     return this.value
   }
-  async resolve(publicKey: string): Promise<ResolveResult> {
-    return resolveKey(this.value, publicKey)
+  async resolve(publicKey: string, at?: Date): Promise<ResolveResult> {
+    return resolveKey(this.value, publicKey, at)
   }
   /** Replace the contained registry (used by FileKeyRegistry). */
   update(next: KeyRegistry): void {
@@ -234,8 +243,8 @@ export class FileKeyRegistry implements KeyRegistrySource {
     return this.load()
   }
 
-  async resolve(publicKey: string): Promise<ResolveResult> {
-    return resolveKey(await this.load(), publicKey)
+  async resolve(publicKey: string, at?: Date): Promise<ResolveResult> {
+    return resolveKey(await this.load(), publicKey, at)
   }
 }
 
@@ -268,7 +277,7 @@ export class HttpKeyRegistry implements KeyRegistrySource {
     return parsed
   }
 
-  async resolve(publicKey: string): Promise<ResolveResult> {
-    return resolveKey(await this.registry(), publicKey)
+  async resolve(publicKey: string, at?: Date): Promise<ResolveResult> {
+    return resolveKey(await this.registry(), publicKey, at)
   }
 }

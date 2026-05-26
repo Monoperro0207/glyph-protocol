@@ -104,3 +104,13 @@ test('diffCards flags an input schema change as breaking', () => {
   assert.equal(change?.severity, 'breaking')
   assert.equal(diff.requiresApproval, true)
 })
+
+test('diffCards classifies requiredScopes changes as breaking', () => {
+  const kp = generateKeyPair()
+  const a = sign(basePartial, kp)
+  const b = sign({ ...basePartial, requiredScopes: ['reports:read'] }, kp)
+  const diff = diffCards(a, b)
+  const change = diff.changes.find((c) => c.field === 'requiredScopes')
+  assert.equal(change?.severity, 'breaking')
+  assert.equal(diff.requiresApproval, true)
+})

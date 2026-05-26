@@ -2,6 +2,7 @@ package glyphprotocol
 
 import (
 	"sort"
+	"strings"
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
@@ -24,6 +25,11 @@ type SanitizationReport struct {
 type SanitizeResult struct {
 	Value  any                `json:"value"`
 	Report SanitizationReport `json:"report"`
+}
+
+func escapePathToken(token string) string {
+	token = strings.ReplaceAll(token, "~", "~0")
+	return strings.ReplaceAll(token, "/", "~1")
 }
 
 func isTag(r rune) bool        { return r >= 0xE0000 && r <= 0xE007F }
@@ -103,7 +109,7 @@ func sanitizeValue(value any, path string) (any, []SanitizationFinding) {
 		out := make(map[string]any, len(v))
 		var all []SanitizationFinding
 		for k, item := range v {
-			nv, f := sanitizeValue(item, path+"/"+k)
+			nv, f := sanitizeValue(item, path+"/"+escapePathToken(k))
 			out[k] = nv
 			all = append(all, f...)
 		}

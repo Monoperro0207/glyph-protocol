@@ -7,6 +7,7 @@ import type { GlyphCard } from '@glyphp/types'
 export interface AttestationResult {
   valid: boolean
   type: string
+  trusted?: boolean
   details?: Record<string, unknown>
   error?: string
 }

@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { computeGlyphId } from '@glyphp/core'
 import type { CardAttestation, GlyphCard } from '@glyphp/types'
-import { GlyphClient, MemoryPinStore } from '../src/index.js'
 import { SigstoreVerifier, SlsaVerifier } from '../src/attestation.js'
+import { GlyphClient, MemoryPinStore } from '../src/index.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -95,6 +95,7 @@ test('SigstoreVerifier: valid Sigstore bundle structure → passes', async () =>
   })
   const result = await verifier.verify(card)
   assert.equal(result.valid, true)
+  assert.equal(result.trusted, false)
   assert.equal(result.type, 'sigstore')
 })
 
@@ -188,10 +189,8 @@ test('SigstoreVerifier: reports crypto limitation in details', async () => {
   })
   const result = await verifier.verify(card)
   assert.equal(result.valid, true)
-  assert.ok(
-    typeof result.details?.limitation === 'string',
-    'should note crypto limitation',
-  )
+  assert.equal(result.trusted, false)
+  assert.ok(typeof result.details?.limitation === 'string', 'should note crypto limitation')
 })
 
 // ---------------------------------------------------------------------------
@@ -223,6 +222,7 @@ test('SlsaVerifier: valid SLSA v1 provenance → passes', async () => {
   })
   const result = await verifier.verify(card)
   assert.equal(result.valid, true)
+  assert.equal(result.trusted, false)
   assert.equal(result.type, 'slsa')
   assert.ok(result.details?.builder, 'should include builder info')
 })
@@ -402,7 +402,7 @@ test('requireAttestation: "all" + unattested card → rejected', async () => {
   )
 })
 
-test('requireAttestation: "all" + validly attested card → allowed', async () => {
+test('requireAttestation: "all" + structural-only SLSA attestation → rejected', async () => {
   const card = buildCard({
     riskTier: 'safe',
     attestation: {
@@ -426,11 +426,34 @@ test('requireAttestation: "all" + validly attested card → allowed', async () =
     fetch: serve(card),
     requireAttestation: 'all',
   })
+  await assert.rejects(() => client.call(card.name, {}), /structural validation only/)
+})
+
+test('requireAttestation: "all" + trusted custom attestation → allowed', async () => {
+  const verifier = {
+    type: 'trusted-test',
+    async verify(_card: GlyphCard) {
+      return { valid: true, trusted: true, type: 'trusted-test' }
+    },
+  }
+  const card = buildCard({
+    riskTier: 'safe',
+    attestation: {
+      type: 'trusted-test',
+      payload: '{}',
+    },
+  })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(card),
+    requireAttestation: 'all',
+    attestationVerifiers: [verifier],
+  })
   const result = await client.call(card.name, {})
   assert.equal((result.payload as { ok: boolean }).ok, true)
 })
 
-test('requireAttestation: "danger" + danger card with valid attestation → allowed', async () => {
+test('requireAttestation: "danger" + danger card with structural-only Sigstore attestation → rejected', async () => {
   const card = buildCard({
     riskTier: 'danger',
     attestation: {
@@ -455,8 +478,7 @@ test('requireAttestation: "danger" + danger card with valid attestation → allo
     fetch: serve(card),
     requireAttestation: 'danger',
   })
-  const result = await client.call(card.name, {})
-  assert.equal((result.payload as { ok: boolean }).ok, true)
+  await assert.rejects(() => client.call(card.name, {}), /structural validation only/)
 })
 
 test('requireAttestation: defaults to "none" (backward compatible)', async () => {

@@ -1,3 +1,4 @@
+import { verifyKeyRegistry } from '@glyphp/core'
 import type { CheckResult, LevelRunner } from '../types.js'
 
 /**
@@ -72,19 +73,14 @@ export const governanceLevel: LevelRunner = async (ctx) => {
     if (status === 404) {
       add('governance.keyRegistry', 'skipped', 'server does not publish /keys yet')
     } else {
-      const ok =
-        status === 200 &&
-        Array.isArray(json?.keys) &&
-        json.keys.length > 0 &&
-        json.keys.every(
-          (k: any) => typeof k.fingerprint === 'string' && typeof k.publicKey === 'string',
-        )
+      const ok = status === 200 && verifyKeyRegistry(json)
+      const keyCount = Array.isArray(json?.keys) ? json.keys.length : 0
       add(
         'governance.keyRegistry',
         ok ? 'passed' : 'failed',
         ok
-          ? `${json.keys.length} key${json.keys.length === 1 ? '' : 's'} published`
-          : `expected 200 + KeyRegistry, got ${status}`,
+          ? `${keyCount} key${keyCount === 1 ? '' : 's'} published and verified`
+          : `expected 200 + verifiable KeyRegistry, got ${status}`,
       )
     }
   } catch (e) {

@@ -1,5 +1,6 @@
 import { deepStrictEqual, ok } from 'node:assert'
 import { describe, it } from 'node:test'
+import { buildKeyEntry, buildKeyRegistry, generateKeyPair } from '@glyphp/core'
 import { discoveryLevel } from '../src/levels/discovery.js'
 import { executionLevel } from '../src/levels/execution.js'
 import { governanceLevel } from '../src/levels/governance.js'
@@ -21,16 +22,17 @@ function ctx(
     authToken: string | undefined
   }> = {},
 ): LevelContext {
-  const stub = overrides.http ?? (() => ({ status: 404, headers: new Headers(), json: null, text: '' }))
+  const stub =
+    overrides.http ?? (() => ({ status: 404, headers: new Headers(), json: null, text: '' }))
   const http: HttpFn = async (method, path, body) => stub(method, path, body)
   return {
     baseUrl: 'http://test',
     http,
-      validators: {
-        glyphError: () => true,
-        handshakeResponse: () => true,
-        glyphCard: () => true,
-        sealedEnvelope: () => true,
+    validators: {
+      glyphError: () => true,
+      handshakeResponse: () => true,
+      glyphCard: () => true,
+      sealedEnvelope: () => true,
       sanitization: (v: unknown) => {
         if (v && typeof v === 'object') {
           const o = v as Record<string, unknown>
@@ -41,10 +43,10 @@ function ctx(
         return false
       },
       confirmationTicket: () => true,
-        manifest: () => true,
-        updateManifest: () => true,
-        lexiconEntry: () => true,
-      } as Record<string, (v: unknown) => boolean>,
+      manifest: () => true,
+      updateManifest: () => true,
+      lexiconEntry: () => true,
+    } as Record<string, (v: unknown) => boolean>,
     fixtures: overrides.fixtures ?? {},
     lexiconNames: overrides.lexiconNames ?? [],
     authToken: overrides.authToken,
@@ -86,7 +88,12 @@ describe('execution level', () => {
           if (path.includes('/call')) {
             if (callCount <= 3) {
               // First call: valid input → success
-              return okJson({ type: 'data', payload: { value: 'hello' }, receipt: mockReceipt, inspection: { findings: [] } })
+              return okJson({
+                type: 'data',
+                payload: { value: 'hello' },
+                receipt: mockReceipt,
+                inspection: { findings: [] },
+              })
             }
             // Later calls: invalid input / malformed json
             if (callCount === 4) return glyphErr(400, 'VALIDATION_FAILED')
@@ -121,8 +128,14 @@ describe('execution level', () => {
         http(method, path, body) {
           if (path.includes('/call')) {
             const raw = typeof body === 'string' ? body : JSON.stringify(body)
-            if (raw.includes('123')) return { status: 200, headers: new Headers(), json: {}, text: '' } // not 400 = fail
-            return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+            if (raw.includes('123'))
+              return { status: 200, headers: new Headers(), json: {}, text: '' } // not 400 = fail
+            return okJson({
+              type: 'data',
+              payload: { value: 'hello' },
+              receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+              inspection: { findings: [] },
+            })
           }
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -140,8 +153,13 @@ describe('execution level', () => {
         http(method, path, body) {
           if (path.includes('/call')) {
             const raw = typeof body === 'string' ? body : ''
-            if (raw === '{not json') return okJson({})  // accepted = fail
-            return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+            if (raw === '{not json') return okJson({}) // accepted = fail
+            return okJson({
+              type: 'data',
+              payload: { value: 'hello' },
+              receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+              inspection: { findings: [] },
+            })
           }
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -160,7 +178,12 @@ describe('execution level', () => {
         http(method, path) {
           if (path.includes(bad)) return glyphErr(502, 'OUTPUT_VALIDATION_FAILED')
           if (path.includes(echo) && method === 'POST') {
-            return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+            return okJson({
+              type: 'data',
+              payload: { value: 'hello' },
+              receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+              inspection: { findings: [] },
+            })
           }
           return { status: 200, headers: new Headers(), json: {}, text: '' }
         },
@@ -185,7 +208,8 @@ describe('security level', () => {
           if (path.includes(reqConf)) {
             const bodyObj = typeof body === 'string' ? JSON.parse(body) : body || {}
             if (!bodyObj.confirmationToken) return glyphErr(403, 'CONFIRMATION_REQUIRED')
-            if (bodyObj.confirmationToken === 'not-a-real-token') return glyphErr(403, 'INVALID_CONFIRMATION')
+            if (bodyObj.confirmationToken === 'not-a-real-token')
+              return glyphErr(403, 'INVALID_CONFIRMATION')
           }
           return okJson({})
         },
@@ -207,7 +231,12 @@ describe('security level', () => {
           if (path.includes('/call')) {
             const bodyObj = typeof body === 'string' ? JSON.parse(body) : body || {}
             if (bodyObj.confirmationToken === 'real-token') {
-              return okJson({ type: 'data', payload: {}, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: {} })
+              return okJson({
+                type: 'data',
+                payload: {},
+                receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+                inspection: {},
+              })
             }
             return glyphErr(403, 'CONFIRMATION_REQUIRED')
           }
@@ -357,7 +386,12 @@ describe('security level', () => {
           call++
           if (call === 1) {
             // valid call succeeds
-            return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+            return okJson({
+              type: 'data',
+              payload: { value: 'hello' },
+              receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+              inspection: { findings: [] },
+            })
           }
           throw new Error('input validation failed')
         },
@@ -379,8 +413,10 @@ describe('governance level', () => {
         fixtures: { echo },
         lexiconNames: [echo],
         http(method, path) {
-          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
-          if (path.includes('/keys')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/keys'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -397,9 +433,17 @@ describe('governance level', () => {
         lexiconNames: [echo],
         http(method, path) {
           if (path.includes('/manifest')) {
-            return okJson({ glyphName: echo, version: 1, publicKey: 'aa'.repeat(32), glyphId: 'bb'.repeat(32), changes: [], signature: 'cc'.repeat(64) })
+            return okJson({
+              glyphName: echo,
+              version: 1,
+              publicKey: 'aa'.repeat(32),
+              glyphId: 'bb'.repeat(32),
+              changes: [],
+              signature: 'cc'.repeat(64),
+            })
           }
-          if (path.includes('/keys')) return okJson({ keys: [{ fingerprint: 'aa'.repeat(32), publicKey: 'dd'.repeat(32) }] })
+          if (path.includes('/keys'))
+            return okJson({ keys: [{ fingerprint: 'aa'.repeat(32), publicKey: 'dd'.repeat(32) }] })
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -410,6 +454,33 @@ describe('governance level', () => {
 
   it('key registry published → passed', async () => {
     const echo = 'echo'
+    const kp = generateKeyPair()
+    const entry = buildKeyEntry(kp.publicKey, new Date().toISOString())
+    const registry = buildKeyRegistry({
+      serverId: 'test-server',
+      entries: [entry],
+      activePrivateKey: kp.privateKey,
+    })
+    const res = await governanceLevel(
+      ctx({
+        fixtures: { echo },
+        lexiconNames: [echo],
+        http(method, path) {
+          if (path.includes('/keys')) {
+            return okJson(registry)
+          }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
+          return okJson({ id: 'ee'.repeat(32), name: echo })
+        },
+      }),
+    )
+    deepStrictEqual(find(res, 'governance.keyRegistry').status, 'passed')
+  })
+
+  it('key registry published but unverifiable → failed', async () => {
+    const echo = 'echo'
     const res = await governanceLevel(
       ctx({
         fixtures: { echo },
@@ -418,13 +489,14 @@ describe('governance level', () => {
           if (path.includes('/keys')) {
             return okJson({ keys: [{ fingerprint: 'aa'.repeat(32), publicKey: 'dd'.repeat(32) }] })
           }
-          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
       }),
     )
-    deepStrictEqual(find(res, 'governance.keyRegistry').status, 'passed')
+    deepStrictEqual(find(res, 'governance.keyRegistry').status, 'failed')
   })
 
   it('key registry absent → skipped', async () => {
@@ -434,8 +506,10 @@ describe('governance level', () => {
         fixtures: { echo },
         lexiconNames: [echo],
         http(method, path) {
-          if (path.includes('/keys')) return { status: 404, headers: new Headers(), json: {}, text: '' }
-          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/keys'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -451,8 +525,10 @@ describe('governance level', () => {
         fixtures: { echo },
         lexiconNames: [echo],
         http(method, path) {
-          if (path.includes('/keys')) return { status: 500, headers: new Headers(), json: {}, text: '' }
-          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/keys'))
+            return { status: 500, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -469,7 +545,8 @@ describe('governance level', () => {
         lexiconNames: [echo],
         http(method, path) {
           if (path.includes('/keys')) throw new Error('network error')
-          if (path.includes('/manifest')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/manifest'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -487,7 +564,8 @@ describe('governance level', () => {
         lexiconNames: [echo],
         http(method, path) {
           if (path.includes('/manifest')) throw new Error('timeout')
-          if (path.includes('/keys')) return { status: 404, headers: new Headers(), json: {}, text: '' }
+          if (path.includes('/keys'))
+            return { status: 404, headers: new Headers(), json: {}, text: '' }
           if (path.includes('?depth=')) return okJson({ id: 'ee'.repeat(32), name: echo })
           return okJson({ id: 'ee'.repeat(32), name: echo })
         },
@@ -528,7 +606,8 @@ describe('discovery level', () => {
       ctx({
         http(method, path) {
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
+          if (path === '/handshake')
+            return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
           if (path === '/lexicon') return okJson([])
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -541,7 +620,8 @@ describe('discovery level', () => {
     const res = await discoveryLevel(
       ctx({
         http(method, path) {
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
+          if (path === '/handshake')
+            return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
           if (path === '/lexicon') return okJson([])
           return { status: 404, headers: new Headers(), json: {}, text: '' }
@@ -574,10 +654,21 @@ describe('discovery level', () => {
       ctx({
         http(method, path, body) {
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
-          if (path === '/lexicon') return okJson([{ name: echo, intent: 'Echo test', riskTier: 'safe' }])
+          if (path === '/handshake')
+            return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
+          if (path === '/lexicon')
+            return okJson([{ name: echo, intent: 'Echo test', riskTier: 'safe' }])
           if (path.includes(echo)) {
-            return okJson({ name: echo, glyphId: 'aa'.repeat(32), publicKey: 'bb'.repeat(32), intent: 'Echo', riskTier: 'safe', input: {}, output: {}, signature: 'cc'.repeat(64) })
+            return okJson({
+              name: echo,
+              glyphId: 'aa'.repeat(32),
+              publicKey: 'bb'.repeat(32),
+              intent: 'Echo',
+              riskTier: 'safe',
+              input: {},
+              output: {},
+              signature: 'cc'.repeat(64),
+            })
           }
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -594,10 +685,25 @@ describe('discovery level', () => {
       ctx({
         http(method, path) {
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [{ name: 'exists', intent: 'test', riskTier: 'safe' }] })
-          if (path === '/lexicon') return okJson([{ name: 'exists', intent: 'test', riskTier: 'safe' }])
+          if (path === '/handshake')
+            return okJson({
+              supported: true,
+              protocolVersion: '1.0',
+              lexicon: [{ name: 'exists', intent: 'test', riskTier: 'safe' }],
+            })
+          if (path === '/lexicon')
+            return okJson([{ name: 'exists', intent: 'test', riskTier: 'safe' }])
           if (path.includes('exists')) {
-            return okJson({ id: 'ee'.repeat(32), name: 'exists', publicKey: 'bb'.repeat(32), intent: 'Test', riskTier: 'safe', input: {}, output: {}, signature: 'cc'.repeat(64) })
+            return okJson({
+              id: 'ee'.repeat(32),
+              name: 'exists',
+              publicKey: 'bb'.repeat(32),
+              intent: 'Test',
+              riskTier: 'safe',
+              input: {},
+              output: {},
+              signature: 'cc'.repeat(64),
+            })
           }
           if (path.includes('__conformance_unknown__')) return glyphErr(404, 'NOT_FOUND')
           return { status: 404, headers: new Headers(), json: {}, text: '' }
@@ -615,11 +721,25 @@ describe('discovery level', () => {
       ctx({
         http(method, path) {
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [{ name: echo, intent: 'Echo', riskTier: 'safe' }] })
+          if (path === '/handshake')
+            return okJson({
+              supported: true,
+              protocolVersion: '1.0',
+              lexicon: [{ name: echo, intent: 'Echo', riskTier: 'safe' }],
+            })
           if (path === '/lexicon') return okJson([{ name: echo, intent: 'Echo', riskTier: 'safe' }])
           if (path.includes('?depth=')) return glyphErr(400, 'VALIDATION_FAILED')
           if (path.includes(echo)) {
-            return okJson({ id: 'ee'.repeat(32), name: echo, publicKey: 'bb'.repeat(32), intent: 'Echo', riskTier: 'safe', input: {}, output: {}, signature: 'cc'.repeat(64) })
+            return okJson({
+              id: 'ee'.repeat(32),
+              name: echo,
+              publicKey: 'bb'.repeat(32),
+              intent: 'Echo',
+              riskTier: 'safe',
+              input: {},
+              output: {},
+              signature: 'cc'.repeat(64),
+            })
           }
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -635,7 +755,8 @@ describe('discovery level', () => {
       ctx({
         http(method, path) {
           if (path === '/health') return okJson({ ok: true, protocolVersion: '1.0' })
-          if (path === '/handshake') return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
+          if (path === '/handshake')
+            return okJson({ supported: true, protocolVersion: '1.0', lexicon: [] })
           if (path === '/lexicon') return okJson([])
           return { status: 404, headers: new Headers(), json: {}, text: '' }
         },
@@ -659,7 +780,12 @@ it('execution call throws → all checks fail', async () => {
       },
     }),
   )
-  for (const c of ['execution.call.success', 'execution.call.envelope', 'execution.call.receipt', 'execution.call.sanitization']) {
+  for (const c of [
+    'execution.call.success',
+    'execution.call.envelope',
+    'execution.call.receipt',
+    'execution.call.sanitization',
+  ]) {
     deepStrictEqual(find(res, c).status, 'failed')
   }
 })
@@ -674,7 +800,13 @@ it('execution output validation throws → catch path', async () => {
       lexiconNames: [echo, bad],
       http(method, path) {
         call++
-        if (call <= 3) return okJson({ type: 'data', payload: { value: 'hello' }, receipt: { glyphId: 'abc', callId: '123', signature: 'sig' }, inspection: { findings: [] } })
+        if (call <= 3)
+          return okJson({
+            type: 'data',
+            payload: { value: 'hello' },
+            receipt: { glyphId: 'abc', callId: '123', signature: 'sig' },
+            inspection: { findings: [] },
+          })
         if (call === 4) return glyphErr(400, 'VALIDATION_FAILED')
         if (call === 5) return glyphErr(400, 'MALFORMED_JSON')
         throw new Error('output validation crashed')

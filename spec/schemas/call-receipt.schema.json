@@ -22,6 +22,10 @@
   "properties": {
     "receiptVersion": { "type": "string" },
     "callId": { "type": "string" },
+    "clientCallId": {
+      "type": "string",
+      "description": "Optional client-supplied correlation id preserved separately from the server-generated callId."
+    },
     "glyphId": { "type": "string" },
     "glyphName": { "type": "string" },
     "inputHash": {

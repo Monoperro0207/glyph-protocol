@@ -114,6 +114,32 @@
           }
         ]
       }
+    },
+    {
+      "name": "escaped-object-keys",
+      "input": {
+        "a/b": "x​y",
+        "a~b": "z​w"
+      },
+      "output": {
+        "a/b": "xy",
+        "a~b": "zw"
+      },
+      "report": {
+        "modified": true,
+        "findings": [
+          {
+            "path": "/a~0b",
+            "kind": "zero-width",
+            "count": 1
+          },
+          {
+            "path": "/a~1b",
+            "kind": "zero-width",
+            "count": 1
+          }
+        ]
+      }
     }
   ]
 }
