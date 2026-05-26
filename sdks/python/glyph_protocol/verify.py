@@ -23,6 +23,7 @@ _CARD_CANONICAL_FIELDS = [
     "examples",
     "failureModes",
     "provider",
+    "requiredScopes",
     "attestation",
 ]
 

@@ -230,10 +230,7 @@ test('FileKeyRegistry load rejects invalid signature on disk', async () => {
     writeFileSync(path, JSON.stringify(broken, null, 2), 'utf8')
 
     const file = new FileKeyRegistry(path)
-    await assert.rejects(
-      async () => file.load(),
-      /signature verification/,
-    )
+    await assert.rejects(async () => file.load(), /signature verification/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -262,10 +259,7 @@ test('HttpKeyRegistry rejects non-ok HTTP response', async () => {
       json: async () => ({}),
     })) as any,
   })
-  await assert.rejects(
-    () => client.registry(),
-    /HttpKeyRegistry: GET \/keys returned 500/,
-  )
+  await assert.rejects(() => client.registry(), /HttpKeyRegistry: GET \/keys returned 500/)
 })
 
 test('HttpKeyRegistry resolve delegates to registry', async () => {
@@ -284,7 +278,7 @@ test('HttpKeyRegistry resolve delegates to registry', async () => {
 
 test('verifyKeyRegistry rejects wrong registry version', () => {
   const { registry } = genesisRegistry()
-  const bad = { ...registry, registryVersion: '0.9' }
+  const bad = { ...registry, registryVersion: '0.9' as unknown as '1.0' }
   assert.equal(verifyKeyRegistry(bad), false)
 })
 

@@ -45,6 +45,10 @@
 | Python (verify + client) | 1.0 | [`sdks/python/`](sdks/python/) — `pip install glyph-protocol` |
 | Go (verify + client) | 1.0 | [`sdks/go/glyphprotocol/`](sdks/go/glyphprotocol/) |
 
+Python and Go cover protocol verification/client use. TypeScript-only SDK features
+currently include Provider Trust Resolver policy gates, attestation verifier
+plugins, `GlyphServer`, and experimental FROST signing.
+
 All SDKs are tested against the **canonical test vectors** under
 [`spec/canonical/`](spec/canonical/), so a card canonicalised, hashed,
 signed or sanitised in one SDK verifies byte-identically in any of the
@@ -191,10 +195,37 @@ const server = new GlyphServer({
 Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
 [`spec/trust.md`](spec/trust.md) for what the signatures do and do not prove.
 
+### Signing backends
+
+`GlyphServer` uses ed25519 signing by default. Pass a stable `keyPair` for the
+standard `Ed25519Signer` path, or an advanced `signer` implementation of
+`GlyphSigner` when key material lives behind a custom boundary.
+
+`@glyphp/core/frost` also exposes an experimental `FrostSigner` for threshold
+signing (RFC-0006). It is opt-in, uses an optional dependency, and is not a
+drop-in replacement for every server flow today: synchronous card/manifest
+registration still requires a sync-capable signer.
+
+### Attestation policy
+
+Cards may carry an optional `attestation` field. It is part of the card's
+content identity, so changing it changes the glyph id and is reported as a
+breaking diff. The TypeScript client can require attestation before `call()`:
+
+```typescript
+const client = new GlyphClient({
+  baseUrl: 'https://tools.example',
+  requireAttestation: 'danger', // 'none' | 'danger' | 'all'
+})
+```
+
+Built-in Sigstore/SLSA helpers are structural verifier hooks, not a complete
+runtime or external trust-root guarantee. Full execution attestation remains a
+separate operational policy.
+
 ### Production hardening checklist
 
 Before exposing a Glyph server beyond local development:
-
 - [ ] Pass a **stable `keyPair`** — an ephemeral key invalidates every issued
       card and receipt on restart.
 - [ ] Run behind **TLS**; never serve the protocol in clear text.
@@ -318,6 +349,28 @@ changed and why. `client.getManifest()` fetches and verifies it against the
 rejected). The endpoint is **optional and additive** under `PROTOCOL_VERSION`
 `1.0`.
 
+**Provider trust.** The TypeScript client can also require a provider trust
+entry before a card is called:
+
+```typescript
+import { GlyphClient, ProviderTrustResolver } from '@glyphp/client'
+
+const resolver = new ProviderTrustResolver({
+  explicit: [{ provider: 'tools.example', publicKeys: ['...'] }],
+})
+
+const client = new GlyphClient({
+  baseUrl: 'https://tools.example',
+  trust: { enabled: true, resolver },
+})
+```
+
+This gates provider identity and signing-key membership. HTTP discovery is
+opt-in on the resolver, and genesis pins are per resolver instance unless the
+caller persists and restores them. Typed provider policy fields exist for
+future policy layers, but current enforcement should be treated as provider/key
+enforcement unless your application adds stricter checks.
+
 This governs the **card** — the declared contract. It cannot catch a provider
 that keeps the card byte-identical and silently changes the handler's
 behavior; that is an honest, documented limit (see
@@ -402,7 +455,10 @@ The wire protocol is documented in [`spec/`](spec):
 - [`rfcs/`](spec/rfcs) — protocol RFCs:
   [RFC-0001 — Key Registry, Rotation and Revocation](spec/rfcs/RFC-0001-key-registry.md),
   [RFC-0002 — Scope-based Policy Layer](spec/rfcs/RFC-0002-policy-layer.md),
-  [RFC-0003 — Public Providers Registry](spec/rfcs/RFC-0003-public-registry.md).
+  [RFC-0003 — Public Providers Registry](spec/rfcs/RFC-0003-public-registry.md),
+  [RFC-0004 — Import Clients](spec/rfcs/RFC-0004-import-clients.md),
+  [RFC-0005 — Receipt Call IDs](spec/rfcs/RFC-0005-receipt-callid.md),
+  [RFC-0006 — FROST Multisig](spec/rfcs/RFC-0006-frost-multisig.md).
 
 ## Project documentation
 

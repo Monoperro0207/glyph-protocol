@@ -13,17 +13,16 @@ graph TB
     subgraph Consumer["Consumer (LLM Host)"]
         direction TB
         CL[GlyphClient]
-        PS[Pin Store]
-        KR[Key Registry<br/>Cache]
+        TC[Trust Cache<br/>Pin Store + Key Registry + Provider Trust]
     end
 
     subgraph Server["Glyph Server"]
         direction TB
         GW[HTTP Gateway<br/>+ Auth + Rate Limit]
         CF[Confirmation Gate<br/>Prepare → Confirm → Call]
-        SG[Signature Engine<br/>ed25519 signing]
+        SG[Signature Engine<br/>GlyphSigner / ed25519 default]
         SN[Sanitizer<br/>inert-data neutralisation]
-        KV[Key Vault<br/>active key pair]
+        KV[Signer Material<br/>key pair or external signer]
     end
 
     subgraph Adapters["Adapters"]
@@ -71,11 +70,12 @@ graph TB
 ```
 packages/
 ├── types/           Wire types (GlyphCard, CallReceipt, SealedEnvelope) — zero runtime
-├── core/            canonicalize, hash (SHA-256), sign/verify (ed25519), sanitize, diffCards,
-│                    key registry verification, attestation envelope
+├── core/            canonicalize, hash (SHA-256), sign/verify (ed25519), GlyphSigner,
+│                    sanitize, diffCards, key registry verification, attestation verifier registry
 ├── server/          GlyphServer — HTTP gateway, auth, rate limiting, confirmation gate,
-│                    output validation, inert-data sanitization, call receipts
-├── client/          GlyphClient — handshake, call, renderEnvelope, pin store, approve/review/revoke
+│                    output validation, inert-data sanitization, call receipts, signer backend
+├── client/          GlyphClient — handshake, call, renderEnvelope, pin store, provider trust,
+│                    attestation policy, approve/review/revoke
 ├── conformance/     Executable conformance suite (4 levels: discovery, execution, security, governance)
 ├── cli/             glyph CLI — init, import mcp, pins, verify, export
 ├── resolver/        Intent-to-glyph resolver
@@ -97,6 +97,26 @@ the genesis fingerprint and verify the chain forward. A revoked key carries
 - **Spec**: [RFC-0001](spec/rfcs/RFC-0001-key-registry.md)
 - **Conformance**: `governance.keyRegistry`
 - **Tests**: `packages/server/test/key-registry-endpoint.test.ts`, `packages/core/test/key-registry.test.ts`
+
+## Provider trust and attestation policy
+
+Provider trust and attestation are consumer-side gates layered after card
+signature verification and before `call()`. The TypeScript client can require a
+`ProviderTrustResolver` entry so provider identity and signing-key membership
+must match before execution. Resolver HTTP discovery is opt-in; callers that
+need durable genesis pins must persist and restore resolver snapshots.
+
+Cards may also carry optional attestation metadata. `AttestationVerifierRegistry`
+and the TypeScript client policy (`requireAttestation: 'none' | 'danger' | 'all'`)
+let consumers require registered verifier hooks. Built-in Sigstore/SLSA helpers
+are structural support helpers, not a complete external trust-root guarantee.
+
+## Signing backends
+
+`GlyphServer` signs cards, manifests, and receipts through `GlyphSigner`.
+`Ed25519Signer` is the default path. `FrostSigner` is experimental (RFC-0006),
+uses an optional dependency, and is not a drop-in replacement for synchronous
+registration paths that require `signGlyphSync` / `signManifestSync`.
 
 ## Receipts and the confirmation flow
 

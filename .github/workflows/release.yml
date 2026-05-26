@@ -1,6 +1,6 @@
 # Release workflow — versions and publishes the @glyph-protocol/* packages.
 #
-# On every push to main, the Changesets action either:
+# After CI succeeds on main, the Changesets action either:
 #   - opens/updates a "Version Packages" PR when changesets are pending, or
 #   - publishes to npm when that PR is merged (no changesets pending).
 #
@@ -25,10 +25,12 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
-concurrency: release-${{ github.ref }}
+concurrency: release-${{ github.event.workflow_run.head_branch }}
 
 permissions:
   contents: write
@@ -37,6 +39,9 @@ permissions:
 
 jobs:
   release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changesets.outputs.published }}

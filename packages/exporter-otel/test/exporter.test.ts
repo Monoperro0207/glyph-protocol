@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { CallReceipt } from '@glyphp/types'
+import { RECEIPT_VERSION } from '@glyphp/types'
 import {
   composeReceiptCallbacks,
   jsonlReceiptCallback,
@@ -9,7 +10,7 @@ import {
 } from '../src/index.js'
 
 const sampleReceipt: CallReceipt = {
-  receiptVersion: '0.2',
+  receiptVersion: RECEIPT_VERSION,
   callId: 'call-123',
   glyphId: 'sha256:abc',
   glyphName: 'reports.read',
@@ -64,6 +65,7 @@ test('otelReceiptCallback opens one span per receipt with the canonical attribut
   assert.equal(span.attrs['glyph.input_hash'], 'sha256:in')
   assert.equal(span.attrs['glyph.output_hash'], 'sha256:out')
   assert.equal(span.attrs['glyph.inspection_hash'], 'sha256:insp')
+  assert.equal(span.attrs['glyph.receipt_version'], RECEIPT_VERSION)
   assert.ok(span.ended)
 })
 

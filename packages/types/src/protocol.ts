@@ -8,6 +8,11 @@
 export const PROTOCOL_VERSION = '1.0'
 
 /**
+ * The wire version of call receipts emitted by Glyph servers.
+ */
+export const RECEIPT_VERSION = '0.3'
+
+/**
  * The wire version of the optional UpdateManifest format. Independent of
  * PROTOCOL_VERSION: the manifest is an additive, optional artifact, so its
  * evolution does not move the handshake-negotiated protocol contract.
