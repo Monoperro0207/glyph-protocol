@@ -127,7 +127,31 @@ export class GlyphServer {
     maxPendingConfirmations?: number
     /** Max request body size in bytes (default 1_048_576 = 1 MiB). */
     maxBodyBytes?: number
+    /**
+     * Enforce that production-critical configs (auth, rateLimit, keyPair) are
+     * present when `NODE_ENV=production`. Defaults to `true` in production,
+     * `false` otherwise. When true and configs are missing, the constructor
+     * throws. When false, only a warning is logged.
+     */
+    strictProduction?: boolean
   }) {
+    // ── Production Hardening Guard (PRODHARDEN-001) ──
+    const isProduction = process.env.NODE_ENV === 'production'
+    const strictProduction = options?.strictProduction ?? isProduction
+    if (isProduction) {
+      const missing: string[] = []
+      if (!options?.auth) missing.push('auth')
+      if (!options?.rateLimit) missing.push('rateLimit')
+      if (!options?.keyPair && !options?.signer) missing.push('keyPair (or signer)')
+      if (missing.length > 0) {
+        const msg = `[glyph] Production mode requires: ${missing.join(', ')}. Set strictProduction: false to bypass (not recommended).`
+        if (strictProduction) {
+          throw new Error(msg)
+        }
+        console.warn(msg)
+      }
+    }
+
     this.port = options?.port ?? 3100
     this.auth = options?.auth
     this.rateLimit = options?.rateLimit
@@ -144,6 +168,10 @@ export class GlyphServer {
     } else {
       const kp = generateKeyPair()
       this.signer = new Ed25519Signer(kp)
+      if (isProduction && strictProduction) {
+        // Should be unreachable — caught by guard above. Defense-in-depth.
+        throw new Error('[glyph] Production mode forbids ephemeral key pairs.')
+      }
       console.warn('[glyph] No keyPair provided — generated an ephemeral one for this run.')
     }
     console.log('[glyph] provider publicKey:', this.signer.publicKey)
