@@ -1,5 +1,11 @@
 # @glyphp/types
 
+## 1.4.0
+
+### Minor Changes
+
+- 6062ac1: Export the shared receipt wire version constant for SDKs and tests.
+
 ## 1.3.0
 
 ### Minor Changes

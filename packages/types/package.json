@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/types",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Shared TypeScript type definitions for the Glyph Protocol",
   "license": "Apache-2.0",
   "author": "Patrick Espino",

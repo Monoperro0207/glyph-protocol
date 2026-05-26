@@ -1,5 +1,14 @@
 # 01-hello-glyph
 
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [3900f5b]
+  - @glyphp/core@1.3.1
+  - @glyphp/client@1.1.1
+  - @glyphp/server@1.3.1
+
 ## 0.1.6
 
 ### Patch Changes
