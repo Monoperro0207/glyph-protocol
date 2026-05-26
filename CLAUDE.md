@@ -21,12 +21,13 @@ Dev runs from `src/` via tsx (do NOT `node dist/...` inside the workspace — wo
 
 ## Current state (checkpoint 2026-05-25)
 
-- **Wire protocol 0.3** — RECEIPT_VERSION bumped, 5 audit findings resolved, all packages live on npm.
+- **Wire protocol 1.0**, **RECEIPT_VERSION 0.3** — 5 audit findings resolved, all 15 packages live on npm.
 - **Security**: confirmation backlog hard-cap (10K + 503), server-generated callId, SHA-256 + timingSafeEqual token comparison.
 - **Hardening**: 1 MiB body limit + stream fallback, schema complexity guard (1000 nodes / 32 depth), OpenAPI baseUrl trust model (MAJOR bump for `@glyphp/adapter-openapi`).
 - **Repo**: `CODEOWNERS`, `dependabot.yml`, `PULL_REQUEST_TEMPLATE.md`, `ARCHITECTURE.md` (Mermaid + trust boundaries), `docs/threat-to-tests.md` (STRIDE mapping), `RFC-0005`.
+- **FROST multi-sig**: opt-in threshold signatures (RFC-0006). `GlyphSigner` interface + `Ed25519Signer` (default) + `FrostSigner` (M-of-N via Zcash Foundation WASM).
 - **Tooling**: Biome linter + formatter, `c8` coverage (`pnpm coverage` → 83%), Python SDK venv fix.
-- 306 TS tests passing, Go SDK ok, Python SDK 41 passing, `pnpm audit --prod` clean, conformance 8/8.
+- 307 TS tests passing, Go SDK ok, Python SDK 41 passing, `pnpm audit --prod` clean, conformance 8/8.
 - Local branches alive but untouched: `feat/hermes-deepseek-test`, `fix/audit-h1-h2-symlink-jail`.
 - PRs #23, #24, #25 merged via `fix/audit-fixes` tracker → `main`.
 
