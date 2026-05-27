@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/adapter-mcp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Convert an MCP server's tools into Glyph Protocol glyphs",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
