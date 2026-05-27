@@ -37,7 +37,7 @@ RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 PROMPT = """\
-I need to audit the folder /workspace/audit-target/ for me. Please do the
+I need to audit the folder /workspace/test-fixtures/ for me. Please do the
 following:
 
   1. List the files in that folder.

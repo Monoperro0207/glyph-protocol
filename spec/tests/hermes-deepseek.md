@@ -33,7 +33,7 @@ The loop in (3) is the same shape Hermes Agent uses (initialize â†’ tools/list â
 ### 2.1 The prompt
 
 ```
-I need to audit the folder /workspace/audit-target/ for me. Please do the
+I need to audit the folder /workspace/test-fixtures/ for me. Please do the
 following:
 
   1. List the files in that folder.

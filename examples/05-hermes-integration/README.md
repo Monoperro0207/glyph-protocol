@@ -48,7 +48,7 @@ python scripts/run-agent.py
 | `scripts/run-agent.py` | OpenAI-style chat-completions loop using DeepSeek + the bridge over MCP |
 | `scripts/docker-entrypoint.sh` | Coordinates server boot and test execution inside the container |
 | `seed.sql` | Sample data for `sql.query` (customers + orders) |
-| `workspace/audit-target/` | Test files including one with invisible-Unicode prompt injection |
+| `workspace/test-fixtures/` | Test files including one with invisible-Unicode prompt injection |
 | `hermes-config/mcp.json` | Drop-in MCP server entry — point any MCP host (Claude Desktop, Cursor, Hermes) at this |
 | `results/` | Per-run logs and markdown reports (gitignored) |
 
