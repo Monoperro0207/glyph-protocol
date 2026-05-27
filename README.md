@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/glyphp.png" alt="Glyph Protocol logo" width="220">
+</p>
+
 # Glyph Protocol
 
 > **Signed, content-addressed tool contracts for AI agents.**
