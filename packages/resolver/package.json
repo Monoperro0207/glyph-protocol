@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/resolver",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Resolve natural-language intent to Glyph Protocol glyphs with pluggable scorers",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
