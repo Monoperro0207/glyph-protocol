@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import {
-  compileJsonSchema,
-  SchemaCompilationError,
-} from '../src/json-schema-validator.js'
+import { compileJsonSchema, SchemaCompilationError } from '../src/json-schema-validator.js'
 
 // --- helpers ---
 
@@ -85,16 +82,12 @@ test('invalid schema that AJV cannot compile throws SchemaCompilationError', () 
   // A pattern with an unterminated character class causes new RegExp("[") to
   // throw, which AJV propagates during compile().
   const badSchema = { type: 'string', pattern: '[' }
-  assert.throws(
-    () => compileJsonSchema(badSchema),
-    SchemaCompilationError,
-  )
+  assert.throws(() => compileJsonSchema(badSchema), SchemaCompilationError)
   // Also verify the error message mentions the failure
   assert.throws(
     () => compileJsonSchema(badSchema),
     (err: Error) =>
-      err instanceof SchemaCompilationError &&
-      err.message.includes('SCHEMA_COMPILATION_FAILED'),
+      err instanceof SchemaCompilationError && err.message.includes('SCHEMA_COMPILATION_FAILED'),
   )
 })
 
@@ -119,15 +112,11 @@ test('outputValidation: none returns z.unknown() passthrough even for valid sche
 test('another invalid schema (bad regex escape) also throws SchemaCompilationError', () => {
   // Single backslash is an invalid regex escape — AJV throws
   const badSchema = { type: 'string', pattern: '\\' }
-  assert.throws(
-    () => compileJsonSchema(badSchema),
-    SchemaCompilationError,
-  )
+  assert.throws(() => compileJsonSchema(badSchema), SchemaCompilationError)
   assert.throws(
     () => compileJsonSchema(badSchema),
     (err: Error) =>
-      err instanceof SchemaCompilationError &&
-      err.message.includes('SCHEMA_COMPILATION_FAILED'),
+      err instanceof SchemaCompilationError && err.message.includes('SCHEMA_COMPILATION_FAILED'),
   )
 })
 
@@ -139,8 +128,6 @@ test('compileJsonSchema includes the underlying AJV error as cause', () => {
   } catch (err) {
     assert.ok(err instanceof SchemaCompilationError)
     assert.ok((err as SchemaCompilationError).cause instanceof Error)
-    assert.ok(
-      (err as SchemaCompilationError).cause!.message.includes('character class'),
-    )
+    assert.ok((err as SchemaCompilationError).cause!.message.includes('character class'))
   }
 })

@@ -7,13 +7,12 @@ import type { GlyphDefinition } from '@glyphp/server'
 import type { GlyphCard } from '@glyphp/types'
 import { parseClaudeDesktopJson } from '../src/commands/import-mcp/clients/claude-desktop.js'
 import { parseCodexToml } from '../src/commands/import-mcp/clients/codex.js'
-import { emitServerProject } from '../src/commands/import-mcp/emitter.js'
+import { hermesAgentAdapter } from '../src/commands/import-mcp/clients/hermes-agent.js'
+import { openclawAdapter } from '../src/commands/import-mcp/clients/openclaw.js'
+import { emitServerProject, emitTopLevelIndex } from '../src/commands/import-mcp/emitter.js'
 import { runImportMcp } from '../src/commands/import-mcp/index.js'
 import { manualConfig } from '../src/commands/import-mcp/manual.js'
 import { emitReport } from '../src/commands/import-mcp/report.js'
-import { hermesAgentAdapter } from '../src/commands/import-mcp/clients/hermes-agent.js'
-import { openclawAdapter } from '../src/commands/import-mcp/clients/openclaw.js'
-import { emitTopLevelIndex } from '../src/commands/import-mcp/emitter.js'
 
 test('parseClaudeDesktopJson handles a standard config', () => {
   const raw = JSON.stringify({

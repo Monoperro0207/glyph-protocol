@@ -139,9 +139,7 @@ export class ProviderTrustResolver {
     return entry
   }
 
-  private async resolveFromFilesystem(
-    provider: string,
-  ): Promise<ProviderTrustEntry | undefined> {
+  private async resolveFromFilesystem(provider: string): Promise<ProviderTrustEntry | undefined> {
     const path = join(this.fsDiscoveryPath, '.glyph-trust.json')
     try {
       const raw = await readFile(path, 'utf8')
@@ -155,9 +153,7 @@ export class ProviderTrustResolver {
     }
   }
 
-  private async resolveFromHttp(
-    provider: string,
-  ): Promise<ProviderTrustEntry | undefined> {
+  private async resolveFromHttp(provider: string): Promise<ProviderTrustEntry | undefined> {
     try {
       const url = `https://${provider}/.well-known/glyph-trust`
       const res = await this.fetchImpl(url)

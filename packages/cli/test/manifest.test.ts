@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { it, describe } from 'node:test'
+import { describe, it } from 'node:test'
 import { generateKeyPair, signManifest } from '@glyphp/core'
 import { runManifestVerify } from '../src/commands/manifest.js'
 
@@ -49,10 +49,7 @@ describe('runManifestVerify', () => {
     try {
       const path = join(dir, 'bad.json')
       writeFileSync(path, 'not json', 'utf8')
-      await assert.rejects(
-        () => runManifestVerify(path),
-        /not valid JSON/,
-      )
+      await assert.rejects(() => runManifestVerify(path), /not valid JSON/)
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
@@ -74,8 +71,6 @@ describe('runManifestVerify', () => {
   })
 
   it('handles file not found', async () => {
-    await assert.rejects(
-      () => runManifestVerify('/tmp/nonexistent-glyph-manifest-12345.json'),
-    )
+    await assert.rejects(() => runManifestVerify('/tmp/nonexistent-glyph-manifest-12345.json'))
   })
 })

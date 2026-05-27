@@ -26,19 +26,19 @@
  * @module
  */
 
-import type { GlyphCard, CallReceipt, UpdateManifest } from '@glyphp/types'
+import type { CallReceipt, GlyphCard, UpdateManifest } from '@glyphp/types'
 import {
+  aggregate_signature,
+  CommitmentList,
+  create_signing_package,
+  type DealerKeygenResult,
   generate_with_dealer as frostDealer,
   key_package_from_secret_share,
+  type Round1CommitResult,
   round1_commit,
   round2_sign,
-  create_signing_package,
-  aggregate_signature,
-  verify_group_signature,
-  CommitmentList,
   SignatureShareList,
-  type DealerKeygenResult,
-  type Round1CommitResult,
+  verify_group_signature,
 } from '@myecoria/frost-ed25519-blake2b-wasm'
 import { canonicalHash } from './index.js'
 import type { GlyphSigner } from './signer.js'
@@ -140,7 +140,9 @@ export class FrostSigner implements GlyphSigner {
   // -----------------------------------------------------------------------
 
   signGlyphSync(_card: GlyphCard): string {
-    throw new Error('FrostSigner.signGlyphSync: FROST requires async coordination. Use signGlyph().')
+    throw new Error(
+      'FrostSigner.signGlyphSync: FROST requires async coordination. Use signGlyph().',
+    )
   }
 
   signManifestSync(_manifest: Omit<UpdateManifest, 'signature'>): string {

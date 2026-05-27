@@ -269,7 +269,13 @@ test('runStdioBridgeLazy is exported and callable', async () => {
     defineGlyph({
       name: 'test.tool',
       intent: 'test',
-      cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe', requiresConfirmation: false },
+      cost: {
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
+      },
       input: z.object({}),
       output: z.any(),
       provider: 'test',
