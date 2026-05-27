@@ -218,6 +218,29 @@ test('input schema enforces enums, typed arrays and nested objects', () => {
   assert.equal(schema.safeParse({ ...ok, body: { filter: {} } }).success, false)
 })
 
+test('input schema treats object without properties as freeform object', () => {
+  const doc: OpenApiDoc = {
+    openapi: '3.0.0',
+    info: { title: 'Freeform API', version: '1.0.0' },
+    paths: {
+      '/freeform': {
+        post: {
+          operationId: 'freeform',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    },
+  }
+  const [glyph] = glyphsFromOpenApi(doc, { baseUrl: 'https://x.test' })
+  assert.equal(glyph.inputSchema.safeParse({ body: { a: 1, nested: { ok: true } } }).success, true)
+  assert.equal(glyph.inputSchema.safeParse({ body: ['not', 'an', 'object'] }).success, false)
+  assert.equal(glyph.inputSchema.safeParse({ body: 'not an object' }).success, false)
+})
+
 // ---- output validation against the declared response schema ----------------
 
 const typedDoc: OpenApiDoc = {

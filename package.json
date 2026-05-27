@@ -28,6 +28,7 @@
     "lint": "biome lint --write .",
     "format": "biome format --write .",
     "check": "biome check .",
+    "check:go-baseline": "node scripts/check-go-baseline.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"

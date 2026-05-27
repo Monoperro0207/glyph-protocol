@@ -282,10 +282,11 @@ test('jsonTypeToZod handles object without properties as record', () => {
     },
   }
   const [glyph] = glyphsFromMcpTools([tool], noopCall)
-  // Card created with no specific properties — any object accepted
-  assert.ok(glyph.card)
   const input = glyph.card.input as any
   assert.equal(input.type, 'object')
+  assert.equal(glyph.inputSchema.safeParse({ a: 1, nested: { ok: true } }).success, true)
+  assert.equal(glyph.inputSchema.safeParse(['not', 'an', 'object']).success, false)
+  assert.equal(glyph.inputSchema.safeParse('not an object').success, false)
 })
 
 test('jsonTypeToZod handles unknown schema type as passthrough', () => {
