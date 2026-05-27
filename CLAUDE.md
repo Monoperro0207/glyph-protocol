@@ -30,7 +30,7 @@ Dev runs from `src/` via tsx (do NOT `node dist/...` inside the workspace — wo
 - **527 TS tests** passing, Go SDK ok, Python SDK 43 passing.
 - **Logo:** official asset at `assets/glyphp.png`, displayed in README.
 - **Repo:** 1 local branch (`main`), 2 remote (`main` + HEAD). All stale branches/worktrees cleaned. Audit artifacts archived in `openspec/changes/archive/`. `audit-target` workspace renamed to `test-fixtures`.
-- **Pending:** ~20 MB coverage artifacts in git history (requires `git filter-branch` — deferred, not blocking).
+- **Coverage artifacts purged from git history** (2026-05-27, `git-filter-repo`, `.git` reduced 37→6.2 MB, 280 blobs removed).
 
 ## Working style for agents
 
