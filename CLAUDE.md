@@ -19,17 +19,18 @@ pnpm audit --prod    # CVE check
 
 Dev runs from `src/` via tsx (do NOT `node dist/...` inside the workspace — workspace deps point at sibling `src/*.ts` in dev; `publishConfig` rewrites to `dist/` only in published tarballs). Use `pnpm --filter <pkg> exec tsx src/cli.ts ...` when smoke-testing the CLI locally.
 
-## Current state (checkpoint 2026-05-25)
+## Current state (checkpoint 2026-05-27)
 
-- **Wire protocol 1.0**, **RECEIPT_VERSION 0.3** — 5 audit findings resolved, all 15 packages live on npm.
-- **Security**: confirmation backlog hard-cap (10K + 503), server-generated callId, SHA-256 + timingSafeEqual token comparison.
-- **Hardening**: 1 MiB body limit + stream fallback, schema complexity guard (1000 nodes / 32 depth), OpenAPI baseUrl trust model (MAJOR bump for `@glyphp/adapter-openapi`).
-- **Repo**: `CODEOWNERS`, `dependabot.yml`, `PULL_REQUEST_TEMPLATE.md`, `ARCHITECTURE.md` (Mermaid + trust boundaries), `docs/threat-to-tests.md` (STRIDE mapping), `RFC-0005`.
-- **FROST multi-sig**: opt-in threshold signatures (RFC-0006). `GlyphSigner` interface + `Ed25519Signer` (default) + `FrostSigner` (M-of-N via Zcash Foundation WASM).
-- **Tooling**: Biome linter + formatter, `c8` coverage (`pnpm coverage` → 83%), Python SDK venv fix.
-- 307 TS tests passing, Go SDK ok, Python SDK 41 passing, `pnpm audit --prod` clean, conformance 8/8.
-- Local branches alive but untouched: `feat/hermes-deepseek-test`, `fix/audit-h1-h2-symlink-jail`.
-- PRs #23, #24, #25 merged via `fix/audit-fixes` tracker → `main`.
+- **Wire protocol 1.0**, **RECEIPT_VERSION 0.3** — all packages live on npm, release workflow healthy.
+- **TypeScript 6.0.3** — migrated via controlled spike (#67). Needed `types: ["node"]` in tsconfig.base.json. DTS diff 0 changed.
+- **Zod 4.4.3** — migrated via controlled spike (#68). Swapped `zod-to-json-schema` for `@alcyone-labs/zod-to-json-schema` (original generates empty schema silently with Zod 4). `z.record` calls use explicit `z.record(z.string(), z.unknown())`. Schema/card ID stability tests 6/6 pass.
+- **Guardrails added:** schema/card ID stability tests (`define.test.ts`), Go baseline CI guard (`scripts/check-go-baseline.mjs`), published declaration consumer smoke (`pnpm type-smoke`).
+- **Dependencies:** `hono@4.12.23`, `@types/node@25.9.1`, all GitHub Actions at v6, `pnpm/action-setup@v6`.
+- **CI:** Node 20 + 22, Go 1.22, Python 3.11, conformance 8/8, `pnpm verify` green, `pnpm check` exit 0 (warnings only), `pnpm audit --prod` clean.
+- **527 TS tests** passing, Go SDK ok, Python SDK 43 passing.
+- **Logo:** official asset at `assets/glyphp.png`, displayed in README.
+- **Repo:** 1 local branch (`main`), 2 remote (`main` + HEAD). All stale branches/worktrees cleaned. Audit artifacts archived in `openspec/changes/archive/`. `audit-target` workspace renamed to `test-fixtures`.
+- **Pending:** ~20 MB coverage artifacts in git history (requires `git filter-branch` — deferred, not blocking).
 
 ## Working style for agents
 
@@ -39,6 +40,7 @@ Dev runs from `src/` via tsx (do NOT `node dist/...` inside the workspace — wo
 - **Changeset per concern.** `@glyphp/server` minor, `@glyphp/types` minor, `@glyphp/core` minor, `@glyphp/adapter-openapi` **major** (default change).
 - **Never amend prod-release commits.** Always new commits.
 - **Don't publish to npm directly.** The release workflow (`changesets/action` + OIDC trusted publishing) handles it after a Version Packages PR merge — and that merge is a user decision, not an agent decision.
+- **Major dep upgrades are spikes, not bumps.** For TypeScript, Zod, or any validation/schema-affecting dependency: create an independent branch/worktree, fix minimum necessary, compare `.d.ts` and schema/card IDs against `main`, run `pnpm verify`, then open PR. Never merge Dependabot major PRs directly. For Zod specifically, always runtime-test the JSON Schema converter output — typecheck alone misses silent corruption. See PRs #67 (TS6) and #68 (Zod4) as templates.
 
 ## Memory protocol (Engram, Claude Code only)
 
