@@ -46,11 +46,12 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@alcyone-labs/zod-to-json-schema": "4.0.10",
     "@glyphp/core": "workspace:*",
     "@glyphp/types": "workspace:*",
     "@hono/node-server": "^2.0.4",
     "hono": "^4.12.23",
-    "zod": "^3.23.8",
+    "zod": "^4.4.3",
     "zod-to-json-schema": "^3.23.0"
   }
 }

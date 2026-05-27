@@ -322,7 +322,7 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
         }
         return z.object(shape).passthrough()
       }
-      return z.record(z.unknown())
+      return z.record(z.string(), z.unknown())
     }
     default:
       return z.unknown()
