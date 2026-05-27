@@ -9,7 +9,7 @@
     "@glyphp/server": "workspace:*",
     "@glyphp/core": "workspace:*",
     "@glyphp/conformance": "workspace:*",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsx": "^4.11.0"

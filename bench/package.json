@@ -12,7 +12,7 @@
     "@glyphp/client": "workspace:*",
     "@glyphp/core": "workspace:*",
     "@glyphp/server": "workspace:*",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsx": "^4.11.0",

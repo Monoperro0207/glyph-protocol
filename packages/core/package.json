@@ -50,7 +50,7 @@
     "@noble/ed25519": "^3.1.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "optionalDependencies": {
     "@myecoria/frost-ed25519-blake2b-wasm": "^0.1.4"
