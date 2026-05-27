@@ -46,6 +46,7 @@
   "dependencies": {
     "@glyphp/client": "workspace:*",
     "@glyphp/core": "workspace:*",
-    "@glyphp/types": "workspace:*"
+    "@glyphp/types": "workspace:*",
+    "zod": "4.4.3"
   }
 }

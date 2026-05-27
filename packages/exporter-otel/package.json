@@ -45,6 +45,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@glyphp/types": "workspace:*"
+    "@glyphp/types": "workspace:*",
+    "zod": "4.4.3"
   }
 }

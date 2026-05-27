@@ -8,10 +8,10 @@
     "client": "tsx client.ts"
   },
   "dependencies": {
-    "@glyphp/server": "workspace:*",
     "@glyphp/client": "workspace:*",
     "@glyphp/core": "workspace:*",
-    "zod": "^3.23.8"
+    "@glyphp/server": "workspace:*",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsx": "^4.11.0"

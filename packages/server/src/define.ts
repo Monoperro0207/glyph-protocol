@@ -1,7 +1,7 @@
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema'
 import { computeGlyphId } from '@glyphp/core'
 import type { GlyphCard } from '@glyphp/types'
 import type { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 /**
  * Runtime context handed to a glyph handler. `signal` aborts when the call

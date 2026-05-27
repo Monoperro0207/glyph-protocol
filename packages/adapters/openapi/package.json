@@ -45,9 +45,9 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@glyphp/types": "workspace:*",
     "@glyphp/core": "workspace:*",
     "@glyphp/server": "workspace:*",
-    "zod": "^3.23.8"
+    "@glyphp/types": "workspace:*",
+    "zod": "^4.4.3"
   }
 }
