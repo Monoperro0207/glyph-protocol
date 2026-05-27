@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { test, describe } from 'node:test'
+import { test } from 'node:test'
 import { glyphsFromOpenApi, redactUrl } from '../src/index.js'
 import type { OpenApiDoc } from '../src/openapi-types.js'
 
