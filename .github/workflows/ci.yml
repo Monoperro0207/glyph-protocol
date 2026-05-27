@@ -22,6 +22,9 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
 
+      - name: Check Go baseline
+        run: pnpm check:go-baseline
+
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm verify
