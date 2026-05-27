@@ -23,7 +23,13 @@
     }
   },
   "files": {
-    "includes": ["packages/**/*.ts", "scripts/**/*.mjs", "examples/**/*.ts", "bench/**/*.ts"]
+    "includes": [
+      "packages/**/*.ts",
+      "!packages/**/dist",
+      "scripts/**/*.mjs",
+      "examples/**/*.ts",
+      "bench/**/*.ts"
+    ]
   },
   "overrides": [
     {

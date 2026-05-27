@@ -103,5 +103,8 @@ test('defineGlyph keeps representative generated schemas stable', () => {
 
 test('defineGlyph keeps representative card identity stable', () => {
   assert.equal(computeGlyphId(stabilityGlyph.card), stabilityGlyph.card.id)
-  assert.equal(stabilityGlyph.card.id, '7728d10255970b969b7e29255feb2b6a8093a8b10bc85003694373a18b799562')
+  assert.equal(
+    stabilityGlyph.card.id,
+    '7728d10255970b969b7e29255feb2b6a8093a8b10bc85003694373a18b799562',
+  )
 })

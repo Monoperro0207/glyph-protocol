@@ -20,10 +20,7 @@ function compareVersions(a, b) {
   return a.minor - b.minor
 }
 
-const [goMod, ci] = await Promise.all([
-  readFile(GO_MOD_PATH, 'utf8'),
-  readFile(CI_PATH, 'utf8'),
-])
+const [goMod, ci] = await Promise.all([readFile(GO_MOD_PATH, 'utf8'), readFile(CI_PATH, 'utf8')])
 
 const moduleGo = parseGoVersion(goMod)
 const ciGo = parseCiGoVersion(ci)

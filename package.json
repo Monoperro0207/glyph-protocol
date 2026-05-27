@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "tsx --test packages/*/test/*.test.ts packages/adapters/*/test/*.test.ts packages/integrations/*/test/*.test.ts examples/05-hermes-integration/test/*.test.ts",
     "smoke": "node scripts/smoke-test.mjs",
+    "type-smoke": "node scripts/type-smoke.mjs",
     "conformance:self": "tsx scripts/conformance-self.mjs",
     "conformance:badge": "tsx scripts/conformance-badge.mjs",
     "verify": "node scripts/verify.mjs",
