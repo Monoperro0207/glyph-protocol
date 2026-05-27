@@ -1,5 +1,15 @@
 # @glyphp/client
 
+## 1.1.1
+
+### Patch Changes
+
+- 3900f5b: Harden protocol verification edge cases: required scope diffs now require approval, structural attestation helpers no longer satisfy enforcement, key registry resolution is validity-window aware, and conformance verifies key registries cryptographically.
+- Updated dependencies [6062ac1]
+- Updated dependencies [3900f5b]
+  - @glyphp/types@1.4.0
+  - @glyphp/core@1.3.1
+
 ## 1.1.0
 
 ### Minor Changes
