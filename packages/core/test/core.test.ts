@@ -287,7 +287,10 @@ test('verifyGlyph catches invalid hex and returns false', () => {
 })
 
 test('verifyReceipt catches invalid hex and returns false', () => {
-  assert.equal(verifyReceipt({ glyphId: 'x', callId: 'y', signature: 'not-hex', serverPublicKey: 'z' } as any), false)
+  assert.equal(
+    verifyReceipt({ glyphId: 'x', callId: 'y', signature: 'not-hex', serverPublicKey: 'z' } as any),
+    false,
+  )
 })
 
 test('verifyManifest catches invalid signature and returns false', () => {

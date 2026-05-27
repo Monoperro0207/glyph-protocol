@@ -106,10 +106,7 @@ export interface CompileJsonSchemaOptions {
  * @throws {SchemaCompilationError} When the schema cannot be compiled by AJV
  *   and `outputValidation` is not set to `'none'`.
  */
-export function compileJsonSchema(
-  schema: unknown,
-  opts?: CompileJsonSchemaOptions,
-): z.ZodTypeAny {
+export function compileJsonSchema(schema: unknown, opts?: CompileJsonSchemaOptions): z.ZodTypeAny {
   if (opts?.outputValidation === 'none') {
     // Explicit opt-out: skip validation entirely, return passthrough.
     return z.unknown()

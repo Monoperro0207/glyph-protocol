@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { CardAttestation, GlyphCard } from '@glyphp/types'
+import type { AttestationResult } from '../src/index.js'
 import {
   AttestationVerifierRegistry,
   computeGlyphId,
@@ -11,7 +12,6 @@ import {
   verifyAttestation,
   verifyGlyph,
 } from '../src/index.js'
-import type { AttestationResult } from '../src/index.js'
 
 const baseCard = {
   version: '1.0.0',
@@ -173,7 +173,9 @@ test('DigestVerifier rejects malformed digest — wrong prefix', async () => {
   const verifier = new DigestVerifier()
   const card = makeCard({
     type: 'container-digest',
-    payload: JSON.stringify({ digest: 'sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }),
+    payload: JSON.stringify({
+      digest: 'sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    }),
   })
   const result = await verifier.verify(card)
   assert.equal(result.valid, false)
@@ -194,7 +196,9 @@ test('DigestVerifier rejects malformed digest — invalid hex chars', async () =
   const verifier = new DigestVerifier()
   const card = makeCard({
     type: 'container-digest',
-    payload: JSON.stringify({ digest: 'sha256:zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz' }),
+    payload: JSON.stringify({
+      digest: 'sha256:zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+    }),
   })
   const result = await verifier.verify(card)
   assert.equal(result.valid, false)

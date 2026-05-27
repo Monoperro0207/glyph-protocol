@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { generateKeyPair, signGlyph, canonicalHash } from '../src/index.js'
-import { Ed25519Signer } from '../src/signer.js'
 import type { FrostSigner, SignerShare } from '../src/frost.js'
+import { canonicalHash, generateKeyPair, signGlyph } from '../src/index.js'
+import { Ed25519Signer } from '../src/signer.js'
 
 // WASM imports require Node >= 22 (native .wasm ESM support).
 // Skip WASM-dependent tests on older runtimes — tests pass on Node 22+ in CI.
@@ -18,10 +18,23 @@ test('Ed25519Signer signs a card identically to signGlyph()', () => {
   const signer = new Ed25519Signer(kp)
 
   const partial = {
-    version: '1.0.0', name: 'test-tool', intent: 'Test something', tags: [],
-    cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe' as const, requiresConfirmation: false },
-    idempotent: false, input: { type: 'object' }, output: { type: 'object' },
-    examples: [], failureModes: [], provider: 'test',
+    version: '1.0.0',
+    name: 'test-tool',
+    intent: 'Test something',
+    tags: [],
+    cost: {
+      latency: 'fast',
+      sideEffects: false,
+      reversible: true,
+      riskTier: 'safe' as const,
+      requiresConfirmation: false,
+    },
+    idempotent: false,
+    input: { type: 'object' },
+    output: { type: 'object' },
+    examples: [],
+    failureModes: [],
+    provider: 'test',
   } as any
 
   assert.equal(signGlyph(partial, kp.privateKey), signer.signGlyphSync(partial))
@@ -38,9 +51,21 @@ test('FrostSigner constructs with trusted-dealer shares', { skip: skipWasm }, as
   )
   const dealer = generate_with_dealer(3, 2)
   const shares: SignerShare[] = [
-    { index: 0, keyPackage: key_package_from_secret_share(dealer.share(0).secret_share), policy: 'auto' },
-    { index: 1, keyPackage: key_package_from_secret_share(dealer.share(1).secret_share), policy: 'auto' },
-    { index: 2, keyPackage: key_package_from_secret_share(dealer.share(2).secret_share), policy: 'approval-required' },
+    {
+      index: 0,
+      keyPackage: key_package_from_secret_share(dealer.share(0).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 1,
+      keyPackage: key_package_from_secret_share(dealer.share(1).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 2,
+      keyPackage: key_package_from_secret_share(dealer.share(2).secret_share),
+      policy: 'approval-required',
+    },
   ]
 
   const { FrostSigner } = await import('../src/frost.js')
@@ -62,8 +87,16 @@ test('FrostSigner sync methods throw', { skip: skipWasm }, async () => {
   )
   const dealer = generate_with_dealer(2, 2)
   const shares: SignerShare[] = [
-    { index: 0, keyPackage: key_package_from_secret_share(dealer.share(0).secret_share), policy: 'auto' },
-    { index: 1, keyPackage: key_package_from_secret_share(dealer.share(1).secret_share), policy: 'auto' },
+    {
+      index: 0,
+      keyPackage: key_package_from_secret_share(dealer.share(0).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 1,
+      keyPackage: key_package_from_secret_share(dealer.share(1).secret_share),
+      policy: 'auto',
+    },
   ]
   const { FrostSigner } = await import('../src/frost.js')
   const signer = new FrostSigner({
@@ -83,9 +116,21 @@ test('FrostSigner 2-of-3 signs and verifies', { skip: skipWasm }, async () => {
     await import('@myecoria/frost-ed25519-blake2b-wasm')
   const dealer = generate_with_dealer(3, 2)
   const shares: SignerShare[] = [
-    { index: 0, keyPackage: key_package_from_secret_share(dealer.share(0).secret_share), policy: 'auto' },
-    { index: 1, keyPackage: key_package_from_secret_share(dealer.share(1).secret_share), policy: 'auto' },
-    { index: 2, keyPackage: key_package_from_secret_share(dealer.share(2).secret_share), policy: 'approval-required' },
+    {
+      index: 0,
+      keyPackage: key_package_from_secret_share(dealer.share(0).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 1,
+      keyPackage: key_package_from_secret_share(dealer.share(1).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 2,
+      keyPackage: key_package_from_secret_share(dealer.share(2).secret_share),
+      policy: 'approval-required',
+    },
   ]
 
   const { FrostSigner } = await import('../src/frost.js')
@@ -97,10 +142,23 @@ test('FrostSigner 2-of-3 signs and verifies', { skip: skipWasm }, async () => {
   })
 
   const card = {
-    version: '1.0.0', name: 'frost-test', intent: 'FROST sign test', tags: [],
-    cost: { latency: 'fast', sideEffects: false, reversible: true, riskTier: 'safe' as const, requiresConfirmation: false },
-    idempotent: false, input: { type: 'object' }, output: { type: 'object' },
-    examples: [], failureModes: [], provider: 'test',
+    version: '1.0.0',
+    name: 'frost-test',
+    intent: 'FROST sign test',
+    tags: [],
+    cost: {
+      latency: 'fast',
+      sideEffects: false,
+      reversible: true,
+      riskTier: 'safe' as const,
+      requiresConfirmation: false,
+    },
+    idempotent: false,
+    input: { type: 'object' },
+    output: { type: 'object' },
+    examples: [],
+    failureModes: [],
+    provider: 'test',
   } as any
 
   const sigHex = await signer.signGlyph(card)
@@ -155,5 +213,7 @@ test('FROST WASM 2-of-3 sign+verify end-to-end', { skip: skipWasm }, async () =>
   const valid = verify_group_signature(dealer.public_key_package, msg, sig)
   assert.equal(valid, true)
 
-  ;[commitments, sigShares, r1_0, r1_1, s0, s1, dealer].forEach((o) => o.free())
+  ;[commitments, sigShares, r1_0, r1_1, s0, s1, dealer].forEach((o) => {
+    o.free()
+  })
 })

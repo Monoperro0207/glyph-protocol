@@ -1,15 +1,11 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, realpath, writeFile, rm, mkdir } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { test, afterEach } from 'node:test'
-import { generateKeyPair, computeGlyphId, signGlyph } from '@glyphp/core'
+import { afterEach, test } from 'node:test'
+import { computeGlyphId, generateKeyPair, signGlyph } from '@glyphp/core'
 import type { GlyphCard, ProviderTrustEntry } from '@glyphp/types'
-import {
-  GlyphClient,
-  GlyphVerificationError,
-  MemoryPinStore,
-} from '../src/index.js'
+import { GlyphClient, GlyphVerificationError, MemoryPinStore } from '../src/index.js'
 import { ProviderTrustResolver } from '../src/trust.js'
 
 type KeyPair = { publicKey: string; privateKey: string }
@@ -175,8 +171,7 @@ test('TRUSTREG-002: unknown provider rejected when trust enabled', async () => {
   // call() must reject because the provider is unknown.
   await assert.rejects(
     () => client.call(card.name, {}),
-    (e: unknown) =>
-      e instanceof Error && /provider/i.test(e.message),
+    (e: unknown) => e instanceof Error && /provider/i.test(e.message),
   )
 })
 
@@ -231,8 +226,7 @@ test('TRUSTREG-002: Card with untrusted publicKey rejected', async () => {
   // call() must reject because the card's key is not trusted.
   await assert.rejects(
     () => client.call(rogueCard.name, {}),
-    (e: unknown) =>
-      e instanceof Error && /trust/i.test(e.message),
+    (e: unknown) => e instanceof Error && /trust/i.test(e.message),
   )
 })
 
@@ -317,8 +311,11 @@ test('TRUSTREG-003: key rotation accepted when genesis matches', async () => {
   // consistent, so the caller can verify it matches whatever they pinned.
   const second = await resolver2.resolve('acme.payments')
   assert.ok(second, 'expected a resolved entry after rotation')
-  assert.equal(second!.genesisKey, genesisPair.publicKey,
-    'genesis key must stay pinned across rotations')
+  assert.equal(
+    second!.genesisKey,
+    genesisPair.publicKey,
+    'genesis key must stay pinned across rotations',
+  )
   assert.ok(
     second!.publicKeys.includes(rotatedPair.publicKey),
     'rotated key must be present in the entry',
@@ -359,8 +356,11 @@ test('TRUSTREG-003: genesis pinning rejects a provider with mismatched genesis',
   })
 
   const resolved = await resolver2.resolve('acme.payments')
-  assert.equal(resolved, undefined,
-    'genesis mismatch must return undefined — provider cannot change genesis')
+  assert.equal(
+    resolved,
+    undefined,
+    'genesis mismatch must return undefined — provider cannot change genesis',
+  )
 })
 
 test('TRUSTREG-003: provider with no explicit genesisKey defaults first key', async () => {
@@ -377,6 +377,9 @@ test('TRUSTREG-003: provider with no explicit genesisKey defaults first key', as
   await resolver.resolve('new.provider')
 
   const pinned = resolver.getGenesis('new.provider')
-  assert.equal(pinned, firstKey.publicKey,
-    'first public key is implicitly the genesis when none is set')
+  assert.equal(
+    pinned,
+    firstKey.publicKey,
+    'first public key is implicitly the genesis when none is set',
+  )
 })

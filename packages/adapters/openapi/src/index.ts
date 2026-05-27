@@ -47,8 +47,7 @@ export function redactUrl(url: string, extraSensitiveParams?: string[]): string 
   const redacted = new URLSearchParams()
 
   for (const [key, value] of params.entries()) {
-    const isSensitive =
-      SENSITIVE_PARAMS.has(key.toLowerCase()) || extraSet.has(key.toLowerCase())
+    const isSensitive = SENSITIVE_PARAMS.has(key.toLowerCase()) || extraSet.has(key.toLowerCase())
     if (isSensitive) {
       redacted.append(key, '***')
       changed = true
@@ -397,9 +396,7 @@ function buildHandler(
 
     const res = await fetch(url, init)
     if (!res.ok) {
-      throw new Error(
-        `HTTP ${res.status} from ${init.method} ${redactUrl(url, querySchemeNames)}`,
-      )
+      throw new Error(`HTTP ${res.status} from ${init.method} ${redactUrl(url, querySchemeNames)}`)
     }
     return parseResponse(res)
   }

@@ -100,8 +100,7 @@ if (args.help || !args.baseUrl) {
 
 // ── Production-level gate (CONFPROF-003) ──
 const includesGovernance =
-  args.profile === 'production' ||
-  (args.levels != null && args.levels.includes('governance'))
+  args.profile === 'production' || (args.levels != null && args.levels.includes('governance'))
 
 if (includesGovernance && !args.authToken) {
   console.error(

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { canonicalHash, computeGlyphId, generateKeyPair, signGlyph, signReceipt } from '@glyphp/core'
+import {
+  canonicalHash,
+  computeGlyphId,
+  generateKeyPair,
+  signGlyph,
+  signReceipt,
+} from '@glyphp/core'
 import type { CallReceipt, GlyphCard } from '@glyphp/types'
 import {
   GlyphClient,
@@ -104,7 +110,14 @@ test('call() blocks a tool after a breaking schema change', async () => {
   await c1.approveCard(await c1.getCard(v1.name))
 
   // Same name, same key, but input schema changed → breaking diff → must block.
-  const v2 = { ...makeCard({ keyPair }), input: { type: 'object', properties: { amount: { type: 'number' } }, required: ['amount'] } as any }
+  const v2 = {
+    ...makeCard({ keyPair }),
+    input: {
+      type: 'object',
+      properties: { amount: { type: 'number' } },
+      required: ['amount'],
+    } as any,
+  }
   v2.id = computeGlyphId(v2)
   v2.signature = signGlyph(v2, keyPair.privateKey)
 
@@ -285,8 +298,7 @@ test('secureMode: intent metadata change requires approval (no auto-approve)', a
   })
   await assert.rejects(
     () => smClient.call(intentChanged.name, {}),
-    (e: unknown) =>
-      e instanceof GlyphNotApprovedError && e.status === 'changed',
+    (e: unknown) => e instanceof GlyphNotApprovedError && e.status === 'changed',
   )
 })
 
@@ -334,7 +346,9 @@ test('secureMode: examples metadata change requires approval (no auto-approve)',
   // Change examples — review-only field, but secureMode blocks auto-approve.
   const exChanged = {
     ...origPartial,
-    examples: [{ description: 'Sad path edge case', input: { reason: 'fraud' }, output: { ok: false } }],
+    examples: [
+      { description: 'Sad path edge case', input: { reason: 'fraud' }, output: { ok: false } },
+    ],
   }
   const exChangedCard: GlyphCard = {
     ...exChanged,
@@ -352,8 +366,7 @@ test('secureMode: examples metadata change requires approval (no auto-approve)',
   })
   await assert.rejects(
     () => smClient.call(exChangedCard.name, {}),
-    (e: unknown) =>
-      e instanceof GlyphNotApprovedError && e.status === 'changed',
+    (e: unknown) => e instanceof GlyphNotApprovedError && e.status === 'changed',
   )
 })
 
@@ -380,7 +393,10 @@ test('secureMode + autoApproveReviewChanges: intent change auto-approves', async
     autoApproveReviewChanges: true,
   })
   const result = await smClient.call(intentChanged.name, {})
-  assert.ok(result.payload !== undefined, 'with autoApproveReviewChanges, intent change should auto-approve')
+  assert.ok(
+    result.payload !== undefined,
+    'with autoApproveReviewChanges, intent change should auto-approve',
+  )
 })
 
 test('secureMode: provider change still requires approval (breaking field)', async () => {
@@ -409,7 +425,9 @@ test('secureMode: provider change still requires approval (breaking field)', asy
   await assert.rejects(
     () => smClient.call(provChanged.name, {}),
     (e: unknown) =>
-      e instanceof GlyphNotApprovedError && e.status === 'changed' && e.diff?.requiresApproval === true,
+      e instanceof GlyphNotApprovedError &&
+      e.status === 'changed' &&
+      e.diff?.requiresApproval === true,
   )
 })
 
@@ -444,10 +462,7 @@ test('call() auto-approves non-breaking changes and blocks breaking ones', async
     fetch: serve(escalated),
     pins,
   })
-  await assert.rejects(
-    () => blockClient.call(escalated.name, {}),
-    GlyphNotApprovedError,
-  )
+  await assert.rejects(() => blockClient.call(escalated.name, {}), GlyphNotApprovedError)
 })
 
 // ---------------------------------------------------------------------------
@@ -529,10 +544,7 @@ test('secureMode: receipt with altered payload rejects', async () => {
     pins,
     secureMode: true,
   })
-  await assert.rejects(
-    () => tamperClient.call(card.name, {}),
-    /receipt/i,
-  )
+  await assert.rejects(() => tamperClient.call(card.name, {}), /receipt/i)
 })
 
 test('secureMode: receipt signed by wrong key rejects', async () => {
@@ -595,10 +607,7 @@ test('secureMode: receipt signed by wrong key rejects', async () => {
     pins,
     secureMode: true,
   })
-  await assert.rejects(
-    () => badClient.call(card.name, {}),
-    /receipt/i,
-  )
+  await assert.rejects(() => badClient.call(card.name, {}), /receipt/i)
 })
 
 test('secureMode: altered inspection rejected', async () => {
@@ -622,10 +631,7 @@ test('secureMode: altered inspection rejected', async () => {
     pins,
     secureMode: true,
   })
-  await assert.rejects(
-    () => tamperClient.call(card.name, {}),
-    /receipt/i,
-  )
+  await assert.rejects(() => tamperClient.call(card.name, {}), /receipt/i)
 })
 
 test('secureMode: glyphId mismatch rejected', async () => {
@@ -648,10 +654,7 @@ test('secureMode: glyphId mismatch rejected', async () => {
     pins,
     secureMode: true,
   })
-  await assert.rejects(
-    () => tamperClient.call(card.name, {}),
-    /receipt/i,
-  )
+  await assert.rejects(() => tamperClient.call(card.name, {}), /receipt/i)
 })
 
 test('verifyReceipts: false skips receipt verification', async () => {

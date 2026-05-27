@@ -4,9 +4,9 @@
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildFixtureGlyphs, runConformance } from '../src/index.js'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { z } from 'zod'
+import { buildFixtureGlyphs, runConformance } from '../src/index.js'
 
 // ── auth rejection: conformance detects unauthorized access ──
 
@@ -24,10 +24,7 @@ test('security.auth.required — pass with auth server + token → detects auth 
   })
   const authCheck = report.checks.find((c) => c.name === 'security.auth.required')
   assert.ok(authCheck)
-  assert.equal(
-    authCheck.status, 'passed',
-    `should detect auth enforcement: ${authCheck.detail}`,
-  )
+  assert.equal(authCheck.status, 'passed', `should detect auth enforcement: ${authCheck.detail}`)
 })
 
 test('security.auth.required — fail when server has no auth but token expected', async () => {
@@ -43,7 +40,8 @@ test('security.auth.required — fail when server has no auth but token expected
   const authCheck = report.checks.find((c) => c.name === 'security.auth.required')
   assert.ok(authCheck)
   assert.equal(
-    authCheck.status, 'failed',
+    authCheck.status,
+    'failed',
     `should detect missing auth when token is expected: ${authCheck.detail}`,
   )
 })
@@ -60,8 +58,11 @@ test('security.rateLimit — pass when server enforces rate limiting', async () 
       name: 'conformance-echo',
       intent: 'Echoes its input back',
       cost: {
-        latency: 'fast', sideEffects: false, reversible: true,
-        riskTier: 'safe', requiresConfirmation: false,
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
       },
       input: z.object({ value: z.string() }),
       output: z.object({ value: z.string() }),
@@ -76,10 +77,7 @@ test('security.rateLimit — pass when server enforces rate limiting', async () 
   })
   const rateCheck = report.checks.find((c) => c.name === 'security.rateLimit')
   assert.ok(rateCheck)
-  assert.equal(
-    rateCheck.status, 'passed',
-    `rate limit should be detected: ${rateCheck.detail}`,
-  )
+  assert.equal(rateCheck.status, 'passed', `rate limit should be detected: ${rateCheck.detail}`)
 })
 
 // ── manifest tampering: invalid signature detected ──
@@ -91,8 +89,11 @@ test('governance.manifest — skip when manifest has no valid signature (structu
       name: 'echo',
       intent: 'Echoes input',
       cost: {
-        latency: 'fast', sideEffects: false, reversible: true,
-        riskTier: 'safe', requiresConfirmation: false,
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
       },
       input: z.object({ value: z.string() }),
       output: z.object({ value: z.string() }),
@@ -131,12 +132,9 @@ test('governance.manifest — skip when manifest has no valid signature (structu
 // ── key registry attack: broken chain detection ──
 
 test('governance.keyRegistry — pass with valid key registry', async () => {
-  const {
-    buildKeyEntry,
-    buildKeyRegistry,
-    generateKeyPair,
-    StaticKeyRegistry,
-  } = await import('@glyphp/core')
+  const { buildKeyEntry, buildKeyRegistry, generateKeyPair, StaticKeyRegistry } = await import(
+    '@glyphp/core'
+  )
 
   const kp = generateKeyPair()
   const entry = buildKeyEntry(kp.publicKey, new Date().toISOString())
@@ -153,8 +151,11 @@ test('governance.keyRegistry — pass with valid key registry', async () => {
       name: 'echo',
       intent: 'test',
       cost: {
-        latency: 'fast', sideEffects: false, reversible: true,
-        riskTier: 'safe', requiresConfirmation: false,
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
       },
       input: z.object({}).passthrough(),
       output: z.object({}).passthrough(),
@@ -179,8 +180,11 @@ test('governance.keyRegistry — skipped when no registry published', async () =
       name: 'echo',
       intent: 'test',
       cost: {
-        latency: 'fast', sideEffects: false, reversible: true,
-        riskTier: 'safe', requiresConfirmation: false,
+        latency: 'fast',
+        sideEffects: false,
+        reversible: true,
+        riskTier: 'safe',
+        requiresConfirmation: false,
       },
       input: z.object({}).passthrough(),
       output: z.object({}).passthrough(),

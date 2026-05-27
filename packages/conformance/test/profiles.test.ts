@@ -2,12 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { defineGlyph, GlyphServer } from '@glyphp/server'
 import { z } from 'zod'
-import {
-  DEFAULT_PROFILE,
-  PROFILE_LEVELS,
-  resolveProfile,
-  runConformance,
-} from '../src/index.js'
+import { DEFAULT_PROFILE, PROFILE_LEVELS, resolveProfile, runConformance } from '../src/index.js'
 
 // ---------------------------------------------------------------------------
 // Pure-function unit tests — resolveProfile
@@ -25,22 +20,12 @@ describe('resolveProfile', () => {
 
   test('"production" returns all four levels', () => {
     const levels = resolveProfile('production')
-    assert.deepEqual(levels, [
-      'discovery',
-      'execution',
-      'security',
-      'governance',
-    ])
+    assert.deepEqual(levels, ['discovery', 'execution', 'security', 'governance'])
   })
 
   test('"all" returns all four levels (backward compat)', () => {
     const levels = resolveProfile('all')
-    assert.deepEqual(levels, [
-      'discovery',
-      'execution',
-      'security',
-      'governance',
-    ])
+    assert.deepEqual(levels, ['discovery', 'execution', 'security', 'governance'])
   })
 
   test('comma-separated individual levels still work', () => {
@@ -63,11 +48,7 @@ describe('PROFILE_LEVELS', () => {
   })
 
   test('maps secure to discovery+execution+security', () => {
-    assert.deepEqual(PROFILE_LEVELS.secure, [
-      'discovery',
-      'execution',
-      'security',
-    ])
+    assert.deepEqual(PROFILE_LEVELS.secure, ['discovery', 'execution', 'security'])
   })
 
   test('maps production to all four', () => {
@@ -151,12 +132,7 @@ describe('runConformance with profiles', () => {
       profile: 'production',
     })
     const levelNames = report.levels.map((l) => l.level)
-    assert.deepEqual(levelNames, [
-      'discovery',
-      'execution',
-      'security',
-      'governance',
-    ])
+    assert.deepEqual(levelNames, ['discovery', 'execution', 'security', 'governance'])
   })
 
   test('no profile and no levels → defaults to secure', async () => {
