@@ -146,7 +146,7 @@ function buildZodInput(schema?: JsonSchema): z.ZodTypeAny {
     typeof schema.properties !== 'object' ||
     schema.properties === null
   ) {
-    return z.record(z.unknown())
+    return z.record(z.string(), z.unknown())
   }
   const properties = schema.properties as Record<string, JsonSchema>
   const required = new Set(Array.isArray(schema.required) ? (schema.required as string[]) : [])
@@ -208,7 +208,7 @@ function jsonTypeToZod(schema: JsonSchema | undefined): z.ZodTypeAny {
         }
         return z.object(shape).passthrough()
       }
-      return z.record(z.unknown())
+      return z.record(z.string(), z.unknown())
     }
     default:
       return z.unknown()

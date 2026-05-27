@@ -8,11 +8,12 @@
     "client": "tsx client.ts"
   },
   "dependencies": {
-    "@glyphp/server": "workspace:*",
-    "@glyphp/client": "workspace:*",
     "@glyphp/adapter-mcp": "workspace:*",
+    "@glyphp/client": "workspace:*",
     "@glyphp/resolver": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@glyphp/server": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "tsx": "^4.11.0"

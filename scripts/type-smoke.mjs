@@ -128,9 +128,15 @@ try {
     overrides[name] = tarball
     console.log(`[type-smoke] packed ${name}@${version}`)
   }
-  deps.zod = '^3.23.8'
-  deps.typescript = '^5.4.5'
-  deps['@types/node'] = '^25.9.1'
+  deps.zod = JSON.parse(
+    readFileSync(join(repoRoot, 'packages/server/package.json'), 'utf8'),
+  ).dependencies.zod
+  deps.typescript = JSON.parse(
+    readFileSync(join(repoRoot, 'package.json'), 'utf8'),
+  ).devDependencies.typescript
+  deps['@types/node'] = JSON.parse(
+    readFileSync(join(repoRoot, 'package.json'), 'utf8'),
+  ).devDependencies['@types/node']
 
   writeFileSync(
     join(proj, 'package.json'),

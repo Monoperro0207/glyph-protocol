@@ -173,7 +173,7 @@ server.register(
     input: z.object({ sql: z.string() }),
     output: z.object({
       columns: z.array(z.string()),
-      rows: z.array(z.record(z.unknown())),
+      rows: z.array(z.record(z.string(), z.unknown())),
     }),
     provider: 'hermes-test.sql',
     handler: async ({ sql }) => {
