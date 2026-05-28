@@ -14,9 +14,11 @@ import type {
 import * as ed from '@noble/ed25519'
 
 // @noble/ed25519 needs a sha512 implementation wired in for synchronous use.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-;(ed.hashes as any).sha512 = (msg: Uint8Array): Uint8Array => {
-  return new Uint8Array(createHash('sha512').update(msg).digest())
+// v3 types hashes.sha512 as `undefined | (msg) => bytes`, so this assigns directly.
+// Uint8Array.from copies into a fresh ArrayBuffer-backed view, matching the
+// `Uint8Array<ArrayBuffer>` return type noble expects (digest() is ArrayBufferLike).
+ed.hashes.sha512 = (msg: Uint8Array) => {
+  return Uint8Array.from(createHash('sha512').update(msg).digest())
 }
 
 const toHex = (bytes: Uint8Array): string => Buffer.from(bytes).toString('hex')
