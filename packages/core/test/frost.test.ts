@@ -172,6 +172,67 @@ test('FrostSigner 2-of-3 signs and verifies', { skip: skipWasm }, async () => {
   signer.destroy()
 })
 
+test('FrostSigner.signGlyph throws when auto shares cannot meet threshold', {
+  skip: skipWasm,
+}, async () => {
+  const { generate_with_dealer, key_package_from_secret_share } = await import(
+    '@myecoria/frost-ed25519-blake2b-wasm'
+  )
+  const dealer = generate_with_dealer(3, 2)
+  // Only 1 auto share but threshold 2 — the other two need human approval, so
+  // #sign cannot assemble enough Round-1 commitments synchronously and throws
+  // asking for more approvals (frost.ts:215-224).
+  const shares: SignerShare[] = [
+    {
+      index: 0,
+      keyPackage: key_package_from_secret_share(dealer.share(0).secret_share),
+      policy: 'auto',
+    },
+    {
+      index: 1,
+      keyPackage: key_package_from_secret_share(dealer.share(1).secret_share),
+      policy: 'approval-required',
+    },
+    {
+      index: 2,
+      keyPackage: key_package_from_secret_share(dealer.share(2).secret_share),
+      policy: 'approval-required',
+    },
+  ]
+  const { FrostSigner } = await import('../src/frost.js')
+  const signer = new FrostSigner({
+    publicKeyPackage: dealer.public_key_package,
+    shares,
+    threshold: 2,
+    dealerResult: dealer,
+  })
+
+  const card = {
+    version: '1.0.0',
+    name: 'frost-approval-test',
+    intent: 'FROST approval-required test',
+    tags: [],
+    cost: {
+      latency: 'fast',
+      sideEffects: false,
+      reversible: true,
+      riskTier: 'safe' as const,
+      requiresConfirmation: false,
+    },
+    idempotent: false,
+    input: { type: 'object' },
+    output: { type: 'object' },
+    examples: [],
+    failureModes: [],
+    provider: 'test',
+  } as any
+
+  await assert.rejects(() => signer.signGlyph(card), /more approvals/)
+  // The two approval-required signers are now waiting on the coordinator.
+  assert.equal(signer.pendingApprovals.size, 2)
+  signer.destroy()
+})
+
 test('FROST WASM 2-of-3 sign+verify end-to-end', { skip: skipWasm }, async () => {
   const {
     generate_with_dealer,
