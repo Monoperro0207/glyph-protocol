@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import type { GlyphDefinition } from '@glyphp/server'
 import type { GlyphCard } from '@glyphp/types'
 import { parseClaudeDesktopJson } from '../src/commands/import-mcp/clients/claude-desktop.js'
 import { parseCodexToml } from '../src/commands/import-mcp/clients/codex.js'
+import { cursorAdapter } from '../src/commands/import-mcp/clients/cursor.js'
 import { hermesAgentAdapter } from '../src/commands/import-mcp/clients/hermes-agent.js'
 import { openclawAdapter } from '../src/commands/import-mcp/clients/openclaw.js'
 import { emitServerProject, emitTopLevelIndex } from '../src/commands/import-mcp/emitter.js'
@@ -507,6 +509,99 @@ test('runImportMcp rejects unknown client id', async () => {
       /unknown client/,
     )
   } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+// Path relative to cwd so the spawned `node <script>` command has no spaces —
+// manualConfig splits the command string on whitespace, and the repo may live
+// under a path that contains spaces.
+const STUB_SERVER = relative(
+  process.cwd(),
+  fileURLToPath(new URL('./fixtures/stub-mcp-server.mjs', import.meta.url)),
+)
+
+test('runImportMcp imports a live stdio server end-to-end', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-import-live-'))
+  try {
+    const result = await runImportMcp({
+      manual: { command: `node ${STUB_SERVER}`, name: 'stub' },
+      options: { output: tmp, portBase: 3100, dryRun: false, timeoutMs: 15_000 },
+    })
+    assert.equal(result.skipped.length, 0, `unexpected skips: ${JSON.stringify(result.skipped)}`)
+    assert.equal(result.imported.length, 1)
+    const server = result.imported[0]!
+    assert.equal(server.toolCount, 2)
+    assert.ok(result.reportPath)
+
+    // safeDirName turned the manual name into a directory and the project was emitted.
+    const serverTs = await readFile(join(server.outputDir, 'server.ts'), 'utf8')
+    assert.match(serverTs, /StdioClientTransport/)
+    // delete_file (normalized to delete-file) must be flagged danger by the
+    // adapter's dangerous-word heuristic.
+    const readme = await readFile(join(server.outputDir, 'README.md'), 'utf8')
+    assert.match(readme, /delete-file.*danger/)
+
+    // A single imported server still writes the top-level index.
+    const topIndex = await readFile(join(tmp, 'README.md'), 'utf8')
+    assert.match(topIndex, /Glyph imports/)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+test('runImportMcp --dry-run with --url prints the http transport plan', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-dryrun-url-'))
+  try {
+    const result = await runImportMcp({
+      manual: { url: 'https://mcp.example.com/sse' },
+      options: { output: tmp, portBase: 3100, dryRun: true, timeoutMs: 1_000 },
+    })
+    assert.equal(result.imported.length, 0)
+    assert.equal(result.skipped.length, 0)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+test('runImportMcp --from with an empty client config throws no-servers', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-empty-from-'))
+  const prevCwd = process.cwd()
+  try {
+    await mkdir(join(tmp, '.cursor'), { recursive: true })
+    await writeFile(join(tmp, '.cursor', 'mcp.json'), JSON.stringify({ mcpServers: {} }))
+    process.chdir(tmp)
+    await assert.rejects(
+      () =>
+        runImportMcp({
+          from: 'cursor',
+          options: { output: join(tmp, 'out'), portBase: 3100, dryRun: true, timeoutMs: 1_000 },
+        }),
+      /no MCP servers declared/,
+    )
+  } finally {
+    process.chdir(prevCwd)
+    await rm(tmp, { recursive: true, force: true })
+  }
+})
+
+test('cursorAdapter detect + load read .cursor/mcp.json from the project cwd', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'glyph-cursor-'))
+  const prevCwd = process.cwd()
+  try {
+    await mkdir(join(tmp, '.cursor'), { recursive: true })
+    await writeFile(
+      join(tmp, '.cursor', 'mcp.json'),
+      JSON.stringify({ mcpServers: { fs: { command: 'npx', args: ['-y', 'server-fs'] } } }),
+    )
+    process.chdir(tmp)
+    assert.equal(await cursorAdapter.detect(), true)
+    const configs = await cursorAdapter.load()
+    assert.equal(configs.length, 1)
+    assert.equal(configs[0]?.name, 'fs')
+    assert.equal(configs[0]?.source, 'cursor')
+  } finally {
+    process.chdir(prevCwd)
     await rm(tmp, { recursive: true, force: true })
   }
 })
