@@ -25,6 +25,8 @@ import { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 import type { PendingAuditEntry, PendingAuditQueue } from './audit-queue.js'
 import { MemoryPendingAuditQueue } from './audit-queue.js'
 import type { PinStore } from './pins.js'
+import type { AuditDecision, AutoPromotionPolicy } from './promotion-policy.js'
+import { evaluatePromotion } from './promotion-policy.js'
 import { ProviderTrustResolver } from './trust.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
@@ -34,6 +36,8 @@ export { MemoryPendingAuditQueue } from './audit-queue.js'
 export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
+export type { AuditDecision, AutoPromotionPolicy } from './promotion-policy.js'
+export { evaluatePromotion } from './promotion-policy.js'
 export type { RenderOptions } from './render.js'
 export { dataPreamble, renderEnvelope } from './render.js'
 export { ProviderTrustResolver } from './trust.js'
@@ -199,6 +203,13 @@ export class GlyphClient {
   private resilientUpdates: boolean
   private pendingAuditQueue?: PendingAuditQueue
   private onPendingAudit?: (entry: PendingAuditEntry) => void
+  /** Autonomous layer: policy + runner that audit and promote in the background. */
+  private autoPromotionPolicy?: AutoPromotionPolicy
+  private onAuditComplete?: (decision: AuditDecision) => void
+  private runnerActive = false
+  private runnerHandle?: ReturnType<typeof setInterval>
+  /** The most recent background audit pass, so flushAudits() can await it. */
+  private runnerInFlight?: Promise<void>
 
   constructor(options: {
     baseUrl: string
@@ -279,6 +290,15 @@ export class GlyphClient {
     pendingAuditQueue?: PendingAuditQueue
     /** Invoked each time a changed tool is parked for audit. */
     onPendingAudit?: (entry: PendingAuditEntry) => void
+    /**
+     * Autonomous-layer promotion policy. When set, `processAudits()` (and the
+     * background runner) may re-pin a parked update to its new card once the
+     * audit passes AND the policy allows the change class. The default (unset)
+     * promotes nothing — every update waits for an explicit `approveCard()`.
+     */
+    autoPromotionPolicy?: AutoPromotionPolicy
+    /** Invoked with the decision after each audited update is processed. */
+    onAuditComplete?: (decision: AuditDecision) => void
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
@@ -306,6 +326,8 @@ export class GlyphClient {
       options.pendingAuditQueue ??
       (this.resilientUpdates ? new MemoryPendingAuditQueue() : undefined)
     this.onPendingAudit = options.onPendingAudit
+    this.autoPromotionPolicy = options.autoPromotionPolicy
+    this.onAuditComplete = options.onAuditComplete
     this.requireAttestation = options.requireAttestation ?? 'none'
     this.attestationRegistry = new AttestationVerifierRegistry()
     // Register built-in verifiers
@@ -637,6 +659,10 @@ export class GlyphClient {
       }
       await this.pendingAuditQueue?.enqueue(entry)
       this.onPendingAudit?.(entry)
+      // Autonomous layer: when the runner is active, audit + maybe promote in
+      // the background. call() is NOT blocked — it returns on the stable pin
+      // while verification happens behind it.
+      if (this.runnerActive) this.triggerBackgroundAudit()
       return
     }
     throw new GlyphNotApprovedError(name, inspection.status, inspection.diff)
@@ -645,6 +671,84 @@ export class GlyphClient {
   /** Lists the tool updates currently parked awaiting audit. */
   async pendingAudits(): Promise<PendingAuditEntry[]> {
     return (await this.pendingAuditQueue?.list()) ?? []
+  }
+
+  /**
+   * Starts the autonomous audit runner. Each parked update is audited and,
+   * when the audit passes and {@link AutoPromotionPolicy} allows the change
+   * class, promoted (re-pinned) on its own. Without `intervalMs` the runner
+   * is trigger-based: a pass fires in the background each time call() parks an
+   * update. With `intervalMs` it also polls on that interval. Returns a stop
+   * function; the interval is unref'd so it never keeps the process alive.
+   */
+  startAuditRunner(options?: { intervalMs?: number }): () => void {
+    this.runnerActive = true
+    if (options?.intervalMs && options.intervalMs > 0) {
+      this.runnerHandle = setInterval(() => this.triggerBackgroundAudit(), options.intervalMs)
+      this.runnerHandle.unref?.()
+    }
+    return () => this.stopAuditRunner()
+  }
+
+  /** Stops the autonomous audit runner. In-flight passes still settle. */
+  stopAuditRunner(): void {
+    this.runnerActive = false
+    if (this.runnerHandle) {
+      clearInterval(this.runnerHandle)
+      this.runnerHandle = undefined
+    }
+  }
+
+  /** Awaits the most recent background audit pass — for deterministic tests. */
+  async flushAudits(): Promise<void> {
+    await this.runnerInFlight
+  }
+
+  /** Schedules a background audit pass, tracked so flushAudits() can await it. */
+  private triggerBackgroundAudit(): void {
+    this.runnerInFlight = this.processAudits().then(
+      () => undefined,
+      () => undefined,
+    )
+  }
+
+  /**
+   * Audits every parked update and promotes the ones the policy allows. A
+   * promotion re-pins the tool to its new card and removes it from the queue.
+   * The invariant holds throughout: an update is promoted only after its audit
+   * passes and the policy is satisfied — never before. Returns one decision
+   * per parked update.
+   */
+  async processAudits(): Promise<AuditDecision[]> {
+    if (!this.resilientUpdates || !this.pendingAuditQueue) return []
+    const reports = await this.auditPending()
+    const decisions: AuditDecision[] = []
+    for (const report of reports) {
+      const { promote, reasons } = this.autoPromotionPolicy
+        ? evaluatePromotion(report, this.autoPromotionPolicy)
+        : { promote: false, reasons: ['no auto-promotion policy configured'] }
+
+      let promoted = false
+      if (promote && this.pins) {
+        const entry = await this.pendingAuditQueue.get(report.toolName)
+        const pin = await this.pins.get(report.toolName)
+        // Promote only the exact card that was audited, and never a revoked tool.
+        if (entry && entry.newCard.id === report.newCardId && !pin?.revokedAt) {
+          await this.pins.set({
+            toolName: report.toolName,
+            approvedAt: new Date().toISOString(),
+            card: entry.newCard,
+          })
+          await this.pendingAuditQueue.remove(report.toolName)
+          promoted = true
+        }
+      }
+
+      const decision: AuditDecision = { report, promoted, reasons }
+      decisions.push(decision)
+      this.onAuditComplete?.(decision)
+    }
+    return decisions
   }
 
   /**
