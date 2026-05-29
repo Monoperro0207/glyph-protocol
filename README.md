@@ -4,7 +4,7 @@
 
 # Glyph Protocol
 
-**[glyph-web-three.vercel.app](https://glyph-web-three.vercel.app)**
+**[glyphp.com](https://glyphp.com)**
 
 > **Signed, content-addressed tool contracts for AI agents.**
 >
