@@ -136,6 +136,30 @@ export interface LexiconInspection {
   status: 'new' | 'unchanged' | 'changed' | 'revoked'
 }
 
+/**
+ * The result of auditing one parked tool update. Reports the verification
+ * outcome of every applicable check; it does NOT promote the update — that is
+ * a separate, policy-gated decision. `ok` is true when no applicable check
+ * failed.
+ */
+export interface AuditReport {
+  toolName: string
+  /** The id of the unaudited new card this report covers. */
+  newCardId: string
+  /** The new card's own ed25519 signature and content hash verify. */
+  signatureValid: boolean
+  /** Signed update manifest: 'valid' (describes this update), 'invalid', or 'absent'. */
+  manifest: 'valid' | 'invalid' | 'absent'
+  /** External attestation: 'valid', 'invalid' (all verifiers rejected), or 'absent'. */
+  attestation: 'valid' | 'invalid' | 'absent'
+  /** The diff from the stable pin to the new card, carried from the queue entry. */
+  diff: CardDiff
+  /** True when every applicable check passed. */
+  ok: boolean
+  /** Human-readable notes for any failed check. */
+  notes: string[]
+}
+
 /** Configuration for provider trust enforcement. See TRUSTREG-002. */
 export interface TrustConfig {
   /** When true, every call() checks the provider against the trust registry. */
@@ -621,6 +645,77 @@ export class GlyphClient {
   /** Lists the tool updates currently parked awaiting audit. */
   async pendingAudits(): Promise<PendingAuditEntry[]> {
     return (await this.pendingAuditQueue?.list()) ?? []
+  }
+
+  /**
+   * Re-verifies every parked tool update and returns a report per entry. This
+   * is a read-only primitive: it checks the new card's signature, any signed
+   * update manifest, and any attestation, but it does NOT promote the update
+   * or drain the queue. Promotion is a separate, policy-gated decision.
+   */
+  async auditPending(): Promise<AuditReport[]> {
+    const entries = (await this.pendingAuditQueue?.list()) ?? []
+    const reports: AuditReport[] = []
+    for (const entry of entries) {
+      reports.push(await this.auditEntry(entry))
+    }
+    return reports
+  }
+
+  /** Audits a single parked update. See {@link auditPending}. */
+  private async auditEntry(entry: PendingAuditEntry): Promise<AuditReport> {
+    const notes: string[] = []
+
+    // 1. The new card's own signature and content hash must verify.
+    const signatureValid = Boolean(entry.newCard.signature) && verifyGlyph(entry.newCard)
+    if (!signatureValid) notes.push('card signature/content hash failed verification')
+
+    // 2. An optional signed update manifest must verify (getManifest already
+    // checks self-consistency + the pinned key) and describe THIS update.
+    let manifest: AuditReport['manifest'] = 'absent'
+    try {
+      const m = await this.getManifest(entry.toolName)
+      if (m) {
+        const pin = this.pins ? await this.pins.get(entry.toolName) : undefined
+        const describesUpdate =
+          m.newCardId === entry.newCard.id && (!pin || m.previousCardId === pin.card.id)
+        manifest = describesUpdate ? 'valid' : 'invalid'
+        if (!describesUpdate) notes.push('manifest does not describe this update')
+      }
+    } catch {
+      manifest = 'invalid'
+      notes.push('manifest failed verification')
+    }
+
+    // 3. An optional attestation is run through the registered verifiers.
+    let attestation: AuditReport['attestation'] = 'absent'
+    if (entry.newCard.attestation) {
+      attestation = (await this.attestationValid(entry.newCard)) ? 'valid' : 'invalid'
+      if (attestation === 'invalid') notes.push('attestation rejected by all verifiers')
+    }
+
+    const ok = signatureValid && manifest !== 'invalid' && attestation !== 'invalid'
+    return {
+      toolName: entry.toolName,
+      newCardId: entry.newCard.id,
+      signatureValid,
+      manifest,
+      attestation,
+      diff: entry.diff,
+      ok,
+      notes,
+    }
+  }
+
+  /** True when any registered verifier trusts the card's attestation. */
+  private async attestationValid(card: GlyphCard): Promise<boolean> {
+    for (const type of this.attestationRegistry.list()) {
+      const verifier = this.attestationRegistry.get(type)
+      if (!verifier) continue
+      const result = await verifier.verify(card)
+      if (result.valid && result.trusted !== false) return true
+    }
+    return false
   }
 
   /**
