@@ -4,6 +4,8 @@
 
 # Glyph Protocol
 
+**[glyph-web-three.vercel.app](https://glyph-web-three.vercel.app)**
+
 > **Signed, content-addressed tool contracts for AI agents.**
 >
 > Every tool publishes a **glyph** — a self-describing, cryptographically signed card that carries not just the schema but also intent, cost, risk, and reversibility. Agents discover glyphs, verify their signatures, and execute tools with audit-grade receipts. No blind function calling. No trust-without-verify.
