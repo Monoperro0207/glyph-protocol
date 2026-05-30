@@ -7,6 +7,7 @@ import {
   diffCards,
   verifyGlyph,
   verifyManifest,
+  verifyProvidersRegistry,
 } from '@glyphp/core'
 import type {
   CallReceipt,
@@ -17,6 +18,7 @@ import type {
   HandshakeResponse,
   LexiconEntry,
   Pin,
+  PublicProvidersRegistry,
   SealedEnvelope,
   UpdateManifest,
 } from '@glyphp/types'
@@ -447,6 +449,27 @@ export class GlyphClient {
       }
     }
     return manifest
+  }
+
+  /**
+   * Fetches a public providers registry (RFC-0003) from any URL and returns it
+   * only if its signature verifies against the `trustRoot` the consumer pinned
+   * out of band. The registry is a *directory*, not a name authority: this call
+   * NEVER approves a glyph — approval still requires the pin store and the
+   * normal diffCards flow on the first getCard() per provider. Throws
+   * GlyphVerificationError when the signature or the trust root does not match.
+   */
+  async discoverProviders(
+    url: string,
+    options: { trustRoot: string },
+  ): Promise<PublicProvidersRegistry> {
+    const res = await this.fetchImpl(new Request(url, { headers: this.buildHeaders(false) }))
+    if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`)
+    const registry = (await res.json()) as PublicProvidersRegistry
+    if (!verifyProvidersRegistry(registry, { trustRoot: options.trustRoot })) {
+      throw new GlyphVerificationError(`Providers registry "${registry.registryId ?? url}"`)
+    }
+    return registry
   }
 
   /**
