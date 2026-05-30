@@ -25,15 +25,20 @@ import { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 import type { PendingAuditEntry, PendingAuditQueue } from './audit-queue.js'
 import { MemoryPendingAuditQueue } from './audit-queue.js'
 import type { PinStore } from './pins.js'
+import type { AuditDecision, AutoPromotionPolicy } from './promotion-policy.js'
+import { evaluatePromotion } from './promotion-policy.js'
 import { ProviderTrustResolver } from './trust.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
 export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
 export type { PendingAuditEntry, PendingAuditQueue } from './audit-queue.js'
 export { MemoryPendingAuditQueue } from './audit-queue.js'
+export { FilePendingAuditQueue } from './file-audit-queue.js'
 export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
+export type { AuditDecision, AutoPromotionPolicy } from './promotion-policy.js'
+export { evaluatePromotion } from './promotion-policy.js'
 export type { RenderOptions } from './render.js'
 export { dataPreamble, renderEnvelope } from './render.js'
 export { ProviderTrustResolver } from './trust.js'
@@ -136,6 +141,30 @@ export interface LexiconInspection {
   status: 'new' | 'unchanged' | 'changed' | 'revoked'
 }
 
+/**
+ * The result of auditing one parked tool update. Reports the verification
+ * outcome of every applicable check; it does NOT promote the update — that is
+ * a separate, policy-gated decision. `ok` is true when no applicable check
+ * failed.
+ */
+export interface AuditReport {
+  toolName: string
+  /** The id of the unaudited new card this report covers. */
+  newCardId: string
+  /** The new card's own ed25519 signature and content hash verify. */
+  signatureValid: boolean
+  /** Signed update manifest: 'valid' (describes this update), 'invalid', or 'absent'. */
+  manifest: 'valid' | 'invalid' | 'absent'
+  /** External attestation: 'valid', 'invalid' (all verifiers rejected), or 'absent'. */
+  attestation: 'valid' | 'invalid' | 'absent'
+  /** The diff from the stable pin to the new card, carried from the queue entry. */
+  diff: CardDiff
+  /** True when every applicable check passed. */
+  ok: boolean
+  /** Human-readable notes for any failed check. */
+  notes: string[]
+}
+
 /** Configuration for provider trust enforcement. See TRUSTREG-002. */
 export interface TrustConfig {
   /** When true, every call() checks the provider against the trust registry. */
@@ -171,10 +200,19 @@ export class GlyphClient {
   private trustEnabled: boolean
   private trustResolver?: ProviderTrustResolver
   private trustAllowUnknown: boolean
+  /** When true, a never-seen tool is auto-pinned on first use (trust-on-first-use). */
+  private tofu: boolean
   /** When true, a detected card change is parked for audit instead of throwing. */
   private resilientUpdates: boolean
   private pendingAuditQueue?: PendingAuditQueue
   private onPendingAudit?: (entry: PendingAuditEntry) => void
+  /** Autonomous layer: policy + runner that audit and promote in the background. */
+  private autoPromotionPolicy?: AutoPromotionPolicy
+  private onAuditComplete?: (decision: AuditDecision) => void
+  private runnerActive = false
+  private runnerHandle?: ReturnType<typeof setInterval>
+  /** The most recent background audit pass, so flushAudits() can await it. */
+  private runnerInFlight?: Promise<void>
 
   constructor(options: {
     baseUrl: string
@@ -253,8 +291,26 @@ export class GlyphClient {
      * keep the queue across restarts.
      */
     pendingAuditQueue?: PendingAuditQueue
+    /**
+     * Trust-on-first-use. When true, a never-seen tool is auto-pinned on its
+     * first call (after its signature verifies) instead of throwing
+     * GlyphNotApprovedError — so an agent does not need an explicit
+     * approveCard() for every new tool. A later card change (especially a key
+     * swap) is still gated by the pin, exactly as without TOFU. Only the FIRST
+     * encounter is relaxed. Defaults to `false`. Requires a PinStore.
+     */
+    tofu?: boolean
     /** Invoked each time a changed tool is parked for audit. */
     onPendingAudit?: (entry: PendingAuditEntry) => void
+    /**
+     * Autonomous-layer promotion policy. When set, `processAudits()` (and the
+     * background runner) may re-pin a parked update to its new card once the
+     * audit passes AND the policy allows the change class. The default (unset)
+     * promotes nothing — every update waits for an explicit `approveCard()`.
+     */
+    autoPromotionPolicy?: AutoPromotionPolicy
+    /** Invoked with the decision after each audited update is processed. */
+    onAuditComplete?: (decision: AuditDecision) => void
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
@@ -263,6 +319,9 @@ export class GlyphClient {
     }
     if (options.resilientUpdates && !options.pins) {
       throw new Error('GlyphClient: resilientUpdates requires a PinStore')
+    }
+    if (options.tofu && !options.pins) {
+      throw new Error('GlyphClient: tofu requires a PinStore')
     }
     this.baseUrl = options.baseUrl.replace(/\/$/, '')
     this.consumerId = options.consumerId ?? randomUUID()
@@ -277,11 +336,14 @@ export class GlyphClient {
     this.trustEnabled = options.trust?.enabled ?? false
     this.trustResolver = options.trust?.resolver
     this.trustAllowUnknown = options.trust?.allowUnknownProviders ?? false
+    this.tofu = options.tofu ?? false
     this.resilientUpdates = options.resilientUpdates ?? false
     this.pendingAuditQueue =
       options.pendingAuditQueue ??
       (this.resilientUpdates ? new MemoryPendingAuditQueue() : undefined)
     this.onPendingAudit = options.onPendingAudit
+    this.autoPromotionPolicy = options.autoPromotionPolicy
+    this.onAuditComplete = options.onAuditComplete
     this.requireAttestation = options.requireAttestation ?? 'none'
     this.attestationRegistry = new AttestationVerifierRegistry()
     // Register built-in verifiers
@@ -574,6 +636,19 @@ export class GlyphClient {
     if (inspection.status === 'revoked') {
       throw new GlyphRevokedError(name, inspection.pin?.revokeReason)
     }
+    // Trust-on-first-use: a never-seen tool is auto-pinned on first encounter
+    // instead of throwing, so an agent needn't approve every new tool by hand.
+    // The card's signature must verify first — TOFU trusts provenance on first
+    // sight, but never pins something it cannot verify. Only the FIRST
+    // encounter is relaxed: once pinned, a later change (key swap, schema, risk)
+    // is gated by the pin exactly as without TOFU.
+    if (this.tofu && inspection.status === 'new') {
+      if (!card.signature || !verifyGlyph(card)) {
+        throw new GlyphVerificationError(`Card "${name}"`)
+      }
+      await this.pins.set({ toolName: name, approvedAt: new Date().toISOString(), card })
+      return
+    }
     // In secureMode, review-only changes (intent, tags, examples) are NOT
     // auto-approved unless the caller explicitly opted in via
     // `autoApproveReviewChanges`. Even descriptive metadata can affect tool
@@ -613,6 +688,10 @@ export class GlyphClient {
       }
       await this.pendingAuditQueue?.enqueue(entry)
       this.onPendingAudit?.(entry)
+      // Autonomous layer: when the runner is active, audit + maybe promote in
+      // the background. call() is NOT blocked — it returns on the stable pin
+      // while verification happens behind it.
+      if (this.runnerActive) this.triggerBackgroundAudit()
       return
     }
     throw new GlyphNotApprovedError(name, inspection.status, inspection.diff)
@@ -621,6 +700,155 @@ export class GlyphClient {
   /** Lists the tool updates currently parked awaiting audit. */
   async pendingAudits(): Promise<PendingAuditEntry[]> {
     return (await this.pendingAuditQueue?.list()) ?? []
+  }
+
+  /**
+   * Starts the autonomous audit runner. Each parked update is audited and,
+   * when the audit passes and {@link AutoPromotionPolicy} allows the change
+   * class, promoted (re-pinned) on its own. Without `intervalMs` the runner
+   * is trigger-based: a pass fires in the background each time call() parks an
+   * update. With `intervalMs` it also polls on that interval. Returns a stop
+   * function; the interval is unref'd so it never keeps the process alive.
+   */
+  startAuditRunner(options?: { intervalMs?: number }): () => void {
+    this.runnerActive = true
+    if (options?.intervalMs && options.intervalMs > 0) {
+      this.runnerHandle = setInterval(() => this.triggerBackgroundAudit(), options.intervalMs)
+      this.runnerHandle.unref?.()
+    }
+    return () => this.stopAuditRunner()
+  }
+
+  /** Stops the autonomous audit runner. In-flight passes still settle. */
+  stopAuditRunner(): void {
+    this.runnerActive = false
+    if (this.runnerHandle) {
+      clearInterval(this.runnerHandle)
+      this.runnerHandle = undefined
+    }
+  }
+
+  /** Awaits the most recent background audit pass — for deterministic tests. */
+  async flushAudits(): Promise<void> {
+    await this.runnerInFlight
+  }
+
+  /** Schedules a background audit pass, tracked so flushAudits() can await it. */
+  private triggerBackgroundAudit(): void {
+    this.runnerInFlight = this.processAudits().then(
+      () => undefined,
+      () => undefined,
+    )
+  }
+
+  /**
+   * Audits every parked update and promotes the ones the policy allows. A
+   * promotion re-pins the tool to its new card and removes it from the queue.
+   * The invariant holds throughout: an update is promoted only after its audit
+   * passes and the policy is satisfied — never before. Returns one decision
+   * per parked update.
+   */
+  async processAudits(): Promise<AuditDecision[]> {
+    if (!this.resilientUpdates || !this.pendingAuditQueue) return []
+    const reports = await this.auditPending()
+    const decisions: AuditDecision[] = []
+    for (const report of reports) {
+      const { promote, reasons } = this.autoPromotionPolicy
+        ? evaluatePromotion(report, this.autoPromotionPolicy)
+        : { promote: false, reasons: ['no auto-promotion policy configured'] }
+
+      let promoted = false
+      if (promote && this.pins) {
+        const entry = await this.pendingAuditQueue.get(report.toolName)
+        const pin = await this.pins.get(report.toolName)
+        // Promote only the exact card that was audited, and never a revoked tool.
+        if (entry && entry.newCard.id === report.newCardId && !pin?.revokedAt) {
+          await this.pins.set({
+            toolName: report.toolName,
+            approvedAt: new Date().toISOString(),
+            card: entry.newCard,
+          })
+          await this.pendingAuditQueue.remove(report.toolName)
+          promoted = true
+        }
+      }
+
+      const decision: AuditDecision = { report, promoted, reasons }
+      decisions.push(decision)
+      this.onAuditComplete?.(decision)
+    }
+    return decisions
+  }
+
+  /**
+   * Re-verifies every parked tool update and returns a report per entry. This
+   * is a read-only primitive: it checks the new card's signature, any signed
+   * update manifest, and any attestation, but it does NOT promote the update
+   * or drain the queue. Promotion is a separate, policy-gated decision.
+   */
+  async auditPending(): Promise<AuditReport[]> {
+    const entries = (await this.pendingAuditQueue?.list()) ?? []
+    const reports: AuditReport[] = []
+    for (const entry of entries) {
+      reports.push(await this.auditEntry(entry))
+    }
+    return reports
+  }
+
+  /** Audits a single parked update. See {@link auditPending}. */
+  private async auditEntry(entry: PendingAuditEntry): Promise<AuditReport> {
+    const notes: string[] = []
+
+    // 1. The new card's own signature and content hash must verify.
+    const signatureValid = Boolean(entry.newCard.signature) && verifyGlyph(entry.newCard)
+    if (!signatureValid) notes.push('card signature/content hash failed verification')
+
+    // 2. An optional signed update manifest must verify (getManifest already
+    // checks self-consistency + the pinned key) and describe THIS update.
+    let manifest: AuditReport['manifest'] = 'absent'
+    try {
+      const m = await this.getManifest(entry.toolName)
+      if (m) {
+        const pin = this.pins ? await this.pins.get(entry.toolName) : undefined
+        const describesUpdate =
+          m.newCardId === entry.newCard.id && (!pin || m.previousCardId === pin.card.id)
+        manifest = describesUpdate ? 'valid' : 'invalid'
+        if (!describesUpdate) notes.push('manifest does not describe this update')
+      }
+    } catch {
+      manifest = 'invalid'
+      notes.push('manifest failed verification')
+    }
+
+    // 3. An optional attestation is run through the registered verifiers.
+    let attestation: AuditReport['attestation'] = 'absent'
+    if (entry.newCard.attestation) {
+      attestation = (await this.attestationValid(entry.newCard)) ? 'valid' : 'invalid'
+      if (attestation === 'invalid') notes.push('attestation rejected by all verifiers')
+    }
+
+    const ok = signatureValid && manifest !== 'invalid' && attestation !== 'invalid'
+    return {
+      toolName: entry.toolName,
+      newCardId: entry.newCard.id,
+      signatureValid,
+      manifest,
+      attestation,
+      diff: entry.diff,
+      ok,
+      notes,
+    }
+  }
+
+  /** True when any registered verifier trusts the card's attestation. */
+  private async attestationValid(card: GlyphCard): Promise<boolean> {
+    for (const type of this.attestationRegistry.list()) {
+      const verifier = this.attestationRegistry.get(type)
+      if (!verifier) continue
+      const result = await verifier.verify(card)
+      if (result.valid && result.trusted !== false) return true
+    }
+    return false
   }
 
   /**
