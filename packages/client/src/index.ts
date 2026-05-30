@@ -22,11 +22,15 @@ import type {
 } from '@glyphp/types'
 import { PROTOCOL_VERSION } from '@glyphp/types'
 import { SigstoreVerifier, SlsaVerifier } from './attestation.js'
+import type { PendingAuditEntry, PendingAuditQueue } from './audit-queue.js'
+import { MemoryPendingAuditQueue } from './audit-queue.js'
 import type { PinStore } from './pins.js'
 import { ProviderTrustResolver } from './trust.js'
 
 export type { CardDiff, Pin, UpdateManifest } from '@glyphp/types'
 export { SigstoreVerifier, SlsaVerifier } from './attestation.js'
+export type { PendingAuditEntry, PendingAuditQueue } from './audit-queue.js'
+export { MemoryPendingAuditQueue } from './audit-queue.js'
 export { FilePinStore } from './file-pin-store.js'
 export type { PinStore } from './pins.js'
 export { MemoryPinStore } from './pins.js'
@@ -167,6 +171,10 @@ export class GlyphClient {
   private trustEnabled: boolean
   private trustResolver?: ProviderTrustResolver
   private trustAllowUnknown: boolean
+  /** When true, a detected card change is parked for audit instead of throwing. */
+  private resilientUpdates: boolean
+  private pendingAuditQueue?: PendingAuditQueue
+  private onPendingAudit?: (entry: PendingAuditEntry) => void
 
   constructor(options: {
     baseUrl: string
@@ -230,11 +238,31 @@ export class GlyphClient {
      * {@link AttestationVerifier}.
      */
     attestationVerifiers?: AttestationVerifier[]
+    /**
+     * Fail-to-last-known-good instead of fail-closed. When true, a tool whose
+     * card changed since approval is NOT rejected: the new card is parked in
+     * the {@link PendingAuditQueue} for later audit while call() keeps running
+     * the last approved (stable) pin. A never-pinned tool still throws — there
+     * is no stable version to fall back to. Defaults to `false`: the strict
+     * gate is unchanged. Requires a PinStore.
+     */
+    resilientUpdates?: boolean
+    /**
+     * Where parked tool updates await audit. Defaults to an in-memory queue
+     * when resilientUpdates is enabled. Supply a persistent implementation to
+     * keep the queue across restarts.
+     */
+    pendingAuditQueue?: PendingAuditQueue
+    /** Invoked each time a changed tool is parked for audit. */
+    onPendingAudit?: (entry: PendingAuditEntry) => void
   }) {
     if (options.secureMode && !options.pins) {
       throw new Error(
         'GlyphClient: secureMode requires a PinStore (use FilePinStore for persistence)',
       )
+    }
+    if (options.resilientUpdates && !options.pins) {
+      throw new Error('GlyphClient: resilientUpdates requires a PinStore')
     }
     this.baseUrl = options.baseUrl.replace(/\/$/, '')
     this.consumerId = options.consumerId ?? randomUUID()
@@ -249,6 +277,11 @@ export class GlyphClient {
     this.trustEnabled = options.trust?.enabled ?? false
     this.trustResolver = options.trust?.resolver
     this.trustAllowUnknown = options.trust?.allowUnknownProviders ?? false
+    this.resilientUpdates = options.resilientUpdates ?? false
+    this.pendingAuditQueue =
+      options.pendingAuditQueue ??
+      (this.resilientUpdates ? new MemoryPendingAuditQueue() : undefined)
+    this.onPendingAudit = options.onPendingAudit
     this.requireAttestation = options.requireAttestation ?? 'none'
     this.attestationRegistry = new AttestationVerifierRegistry()
     // Register built-in verifiers
@@ -310,9 +343,14 @@ export class GlyphClient {
       confirmationToken: options?.confirmationToken,
     })
     // In secureMode with receipt verification enabled (the default), validate
-    // the receipt against the pinned card before returning the payload.
+    // the receipt against the pinned card before returning the payload. When a
+    // resilient update is parked for this tool, the stable pin — not the
+    // unaudited new card — governs: a server that actually swapped to the new
+    // card produces a receipt whose glyphId won't match the pin, so its output
+    // is rejected. The unaudited card's result never reaches the caller.
     if (this.secureMode && this.verifyReceipts && this.pins) {
-      const card = this.cardCache.get(name)
+      const pending = this.resilientUpdates ? await this.pendingAuditQueue?.get(name) : undefined
+      const card = pending ? (await this.pins.get(name))?.card : this.cardCache.get(name)
       if (card) this.verifyReceipt(envelope, card)
     }
     return envelope as SealedEnvelope & { payload: T }
@@ -557,7 +595,32 @@ export class GlyphClient {
         return
       }
     }
+    // Resilient updates: a tool we have a stable pin for changed in a way that
+    // would otherwise block. Instead of breaking the workflow, park the new
+    // card for audit and keep running the stable pin. A 'new' tool has no
+    // stable version to fall back to, so it still throws below.
+    if (
+      this.resilientUpdates &&
+      inspection.status === 'changed' &&
+      inspection.pin &&
+      inspection.diff
+    ) {
+      const entry: PendingAuditEntry = {
+        toolName: name,
+        newCard: card,
+        diff: inspection.diff,
+        detectedAt: new Date().toISOString(),
+      }
+      await this.pendingAuditQueue?.enqueue(entry)
+      this.onPendingAudit?.(entry)
+      return
+    }
     throw new GlyphNotApprovedError(name, inspection.status, inspection.diff)
+  }
+
+  /** Lists the tool updates currently parked awaiting audit. */
+  async pendingAudits(): Promise<PendingAuditEntry[]> {
+    return (await this.pendingAuditQueue?.list()) ?? []
   }
 
   /**
