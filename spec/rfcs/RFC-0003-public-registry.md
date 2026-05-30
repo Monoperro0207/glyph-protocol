@@ -1,6 +1,6 @@
 # RFC-0003: Public providers registry
 
-- **Status:** Draft (spec only, no client implementation in this RFC)
+- **Status:** Implemented (V1) — `GlyphClient.discoverProviders()` + `verifyProvidersRegistry()`
 - **Targets:** Glyph Protocol 1.0
 - **Author:** Patrick Espino
 - **Created:** 2026-05-24

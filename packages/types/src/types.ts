@@ -321,3 +321,43 @@ export interface UpdateManifest {
   /** Hex ed25519 signature over the canonical hash of every other field. */
   signature: string
 }
+
+/**
+ * One provider listing inside a {@link PublicProvidersRegistry} (RFC-0003).
+ * Inclusion is a *recommendation* by whoever signed the registry, not a
+ * statement of correctness — identity remains the `(endpoint, publicKey)` pair.
+ */
+export interface RegistryProvider {
+  name: string
+  endpoint: string
+  publicKey: string
+  intent?: string
+  conformanceBadge?: string
+  lastVerifiedAt?: string
+  tags?: string[]
+  status: 'active' | 'revoked'
+  revokedAt?: string
+  revocationReason?: string
+}
+
+/**
+ * A signed directory of Glyph providers, distributable as a single JSON file
+ * at any URL the consumer trusts (RFC-0003). The signature is verified against
+ * a `trustRoot` the consumer pins out of band — the registry is a directory,
+ * not a name authority, and never auto-approves a glyph.
+ */
+export interface PublicProvidersRegistry {
+  registryVersion: '1.0'
+  /** Opaque identifier of who issued this registry — not a global name. */
+  registryId: string
+  issuedAt: string
+  ttlSeconds: number
+  providers: RegistryProvider[]
+  signedBy: {
+    name: string
+    publicKey: string
+    fingerprint: string
+  }
+  /** Hex ed25519 signature over the canonical hash of every other field. */
+  signature: string
+}

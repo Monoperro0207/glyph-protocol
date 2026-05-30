@@ -17,6 +17,8 @@ export type {
   Pin,
   ProviderPolicies,
   ProviderTrustEntry,
+  PublicProvidersRegistry,
+  RegistryProvider,
   RiskTier,
   Sanitization,
   SanitizationFinding,
