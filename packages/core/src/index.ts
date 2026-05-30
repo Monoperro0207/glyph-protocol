@@ -438,6 +438,8 @@ export {
   StaticKeyRegistry,
   verifyKeyRegistry,
 } from './key-registry.js'
+export type { KeylessBackend, KeylessBundle, KeylessIdentityPolicy } from './keyless.js'
+export { KeylessVerifier } from './keyless.js'
 export type { GlyphSigner } from './signer.js'
 export { Ed25519Signer } from './signer.js'
 // FrostSigner is in './frost.js' — import directly to avoid circular dep with canonicalHash
