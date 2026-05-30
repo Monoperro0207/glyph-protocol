@@ -464,7 +464,8 @@ The wire protocol is documented in [`spec/`](spec):
   [RFC-0003 — Public Providers Registry](spec/rfcs/RFC-0003-public-registry.md),
   [RFC-0004 — Import Clients](spec/rfcs/RFC-0004-import-clients.md),
   [RFC-0005 — Receipt Call IDs](spec/rfcs/RFC-0005-receipt-callid.md),
-  [RFC-0006 — FROST Multisig](spec/rfcs/RFC-0006-frost-multisig.md).
+  [RFC-0006 — FROST Multisig](spec/rfcs/RFC-0006-frost-multisig.md),
+  [RFC-0007 — Keyless Signing](spec/rfcs/RFC-0007-keyless-signing.md).
 
 ## Project documentation
 

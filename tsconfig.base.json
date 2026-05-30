@@ -9,6 +9,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "types": ["node"]
   }
 }
