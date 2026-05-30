@@ -200,6 +200,8 @@ export class GlyphClient {
   private trustEnabled: boolean
   private trustResolver?: ProviderTrustResolver
   private trustAllowUnknown: boolean
+  /** When true, a never-seen tool is auto-pinned on first use (trust-on-first-use). */
+  private tofu: boolean
   /** When true, a detected card change is parked for audit instead of throwing. */
   private resilientUpdates: boolean
   private pendingAuditQueue?: PendingAuditQueue
@@ -289,6 +291,15 @@ export class GlyphClient {
      * keep the queue across restarts.
      */
     pendingAuditQueue?: PendingAuditQueue
+    /**
+     * Trust-on-first-use. When true, a never-seen tool is auto-pinned on its
+     * first call (after its signature verifies) instead of throwing
+     * GlyphNotApprovedError — so an agent does not need an explicit
+     * approveCard() for every new tool. A later card change (especially a key
+     * swap) is still gated by the pin, exactly as without TOFU. Only the FIRST
+     * encounter is relaxed. Defaults to `false`. Requires a PinStore.
+     */
+    tofu?: boolean
     /** Invoked each time a changed tool is parked for audit. */
     onPendingAudit?: (entry: PendingAuditEntry) => void
     /**
@@ -309,6 +320,9 @@ export class GlyphClient {
     if (options.resilientUpdates && !options.pins) {
       throw new Error('GlyphClient: resilientUpdates requires a PinStore')
     }
+    if (options.tofu && !options.pins) {
+      throw new Error('GlyphClient: tofu requires a PinStore')
+    }
     this.baseUrl = options.baseUrl.replace(/\/$/, '')
     this.consumerId = options.consumerId ?? randomUUID()
     this.contextBudget = options.contextBudget ?? 50000
@@ -322,6 +336,7 @@ export class GlyphClient {
     this.trustEnabled = options.trust?.enabled ?? false
     this.trustResolver = options.trust?.resolver
     this.trustAllowUnknown = options.trust?.allowUnknownProviders ?? false
+    this.tofu = options.tofu ?? false
     this.resilientUpdates = options.resilientUpdates ?? false
     this.pendingAuditQueue =
       options.pendingAuditQueue ??
@@ -620,6 +635,19 @@ export class GlyphClient {
     if (inspection.status === 'unchanged') return
     if (inspection.status === 'revoked') {
       throw new GlyphRevokedError(name, inspection.pin?.revokeReason)
+    }
+    // Trust-on-first-use: a never-seen tool is auto-pinned on first encounter
+    // instead of throwing, so an agent needn't approve every new tool by hand.
+    // The card's signature must verify first — TOFU trusts provenance on first
+    // sight, but never pins something it cannot verify. Only the FIRST
+    // encounter is relaxed: once pinned, a later change (key swap, schema, risk)
+    // is gated by the pin exactly as without TOFU.
+    if (this.tofu && inspection.status === 'new') {
+      if (!card.signature || !verifyGlyph(card)) {
+        throw new GlyphVerificationError(`Card "${name}"`)
+      }
+      await this.pins.set({ toolName: name, approvedAt: new Date().toISOString(), card })
+      return
     }
     // In secureMode, review-only changes (intent, tags, examples) are NOT
     // auto-approved unless the caller explicitly opted in via
