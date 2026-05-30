@@ -25,6 +25,7 @@
   "files": {
     "includes": [
       "packages/**/*.ts",
+      "packages/**/*.tsx",
       "!packages/**/dist",
       "scripts/**/*.mjs",
       "examples/**/*.ts",
