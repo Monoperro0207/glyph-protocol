@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { runAuditList } from './commands/audit.js'
 import { runDiffCard } from './commands/diff.js'
 import { ALL_CLIENT_IDS } from './commands/import-mcp/clients/index.js'
 import { runImportMcp } from './commands/import-mcp/index.js'
@@ -21,6 +22,8 @@ usage:
                                  flags: --reinstate, --file <pin-store-path>
   glyph revoke <tool>            revoke a previously approved tool
                                  flags: --reason <text>, --file <pin-store-path>
+  glyph audit list               list tool updates parked awaiting audit
+                                 flags: --file <pending-audit-store-path>
   glyph manifest verify <src>    verify an update manifest's signature
   glyph init [dir]               scaffold a new Glyph project
                                  flags: --profile <production-server|agent-ts|mcp-bridge|
@@ -126,6 +129,17 @@ try {
       const { ok, report } = await runPinsRevoke(rest[0]!, {
         file: flags.file as string | undefined,
         reason: flags.reason as string | undefined,
+      })
+      console.log(report)
+      process.exit(ok ? 0 : 1)
+      break
+    }
+    case 'audit': {
+      const { rest, flags } = parseFlags(args, ['file'])
+      const sub = rest[0]
+      if (sub !== 'list') fail('audit list is the only subcommand for now')
+      const { ok, report } = await runAuditList({
+        file: flags.file as string | undefined,
       })
       console.log(report)
       process.exit(ok ? 0 : 1)
