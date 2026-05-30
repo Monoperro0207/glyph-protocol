@@ -1,12 +1,13 @@
 import { Box, Text, useApp, useInput } from 'ink'
 import { useEffect, useState } from 'react'
 import { runKeysList } from '../commands/keys.js'
-import { runPinsList } from '../commands/pins.js'
+import { runPinsApprove, runPinsList, runPinsRevoke } from '../commands/pins.js'
+import { ActionFlow } from './ActionFlow.js'
 import { LogoCursor } from './LogoCursor.js'
 
 const DEFAULT_KEYS_FILE = 'keys.json'
 
-type View = 'menu' | 'pins' | 'keys' | 'help'
+type View = 'menu' | 'pins' | 'keys' | 'approve' | 'revoke' | 'help'
 
 interface MenuItem {
   key: View | 'quit'
@@ -16,6 +17,8 @@ interface MenuItem {
 
 const MENU: MenuItem[] = [
   { key: 'pins', label: 'Pins', hint: 'approved tools and their status' },
+  { key: 'approve', label: 'Approve', hint: 'review + pin a card (file or URL)' },
+  { key: 'revoke', label: 'Revoke', hint: 'block a previously approved tool' },
   { key: 'keys', label: 'Keys', hint: 'local key registry' },
   { key: 'help', label: 'Help', hint: 'commands and shortcuts' },
   { key: 'quit', label: 'Quit', hint: 'exit glyphp' },
@@ -81,6 +84,26 @@ export function App(): JSX.Element {
       <ReportView
         title={`Key registry — ${DEFAULT_KEYS_FILE}`}
         load={() => runKeysList({ file: DEFAULT_KEYS_FILE }).then((r) => r.report)}
+      />
+    )
+  }
+  if (view === 'approve') {
+    return (
+      <ActionFlow
+        title="Approve a card"
+        inputLabel="Card source (file or URL)"
+        confirm={(v) => `Pin and approve the card from "${v}"? Its signature is verified first.`}
+        run={(v) => runPinsApprove(v)}
+      />
+    )
+  }
+  if (view === 'revoke') {
+    return (
+      <ActionFlow
+        title="Revoke a tool"
+        inputLabel="Tool name"
+        confirm={(v) => `Revoke "${v}"? Future calls are refused until you re-approve it.`}
+        run={(v) => runPinsRevoke(v)}
       />
     )
   }

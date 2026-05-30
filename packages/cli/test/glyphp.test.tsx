@@ -31,11 +31,11 @@ test('glyphp shell shows a selection cursor on the first item', async () => {
 test('glyphp shell navigates into the Help view and back to the menu', async () => {
   const { lastFrame, stdin, unmount } = render(<App />)
   await tick()
-  // Move down to "Help" (Pins → Keys → Help = two downs) and open it.
-  stdin.write('j')
-  await tick()
-  stdin.write('j')
-  await tick()
+  // Move down to "Help" (Pins → Approve → Revoke → Keys → Help = four downs).
+  for (let i = 0; i < 4; i++) {
+    stdin.write('j')
+    await tick()
+  }
   stdin.write(ENTER)
   await tick()
   assert.match(lastFrame() ?? '', /Navigate with/)
