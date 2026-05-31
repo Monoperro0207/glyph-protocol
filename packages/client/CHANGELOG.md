@@ -1,5 +1,71 @@
 # @glyphp/client
 
+## 1.2.0
+
+### Minor Changes
+
+- 2fa9732: Add `FilePendingAuditQueue` (a persistent `PendingAuditQueue` that mirrors
+  `FilePinStore`) and the `glyph audit list` CLI command. The command reads the
+  persisted queue (default `~/.glyph/pending-audits.json`, override with `--file`)
+  and renders each parked tool update with its diff and a breaking/review verdict,
+  read-only. It exits non-zero when any parked update carries a breaking change
+  awaiting review, so it can gate CI. Promotion stays a separate step
+  (`glyph approve` or the autonomous runner).
+- ad538e4: Add `GlyphClient.auditPending()` and the `AuditReport` type. This read-only
+  primitive re-verifies every parked tool update in the `PendingAuditQueue`: the
+  new card's signature and content hash, any signed update manifest (must verify
+  and describe this exact update), and any attestation (run through the registered
+  verifiers). It returns one `AuditReport` per entry and never promotes an update
+  or drains the queue — promotion is a separate, policy-gated decision.
+- 7945823: Add the autonomous audit layer to `GlyphClient`. A new `AutoPromotionPolicy`
+  plus `processAudits()` and a background runner (`startAuditRunner()` /
+  `stopAuditRunner()` / `flushAudits()`) let the client audit parked tool updates
+  on its own and re-pin (promote) the ones that pass — without blocking the live
+  workflow, which keeps running on the stable pin.
+
+  Promotion is policy-gated and conservative by default (an unset policy promotes
+  nothing). Each flag opens one change class: `allowBreaking`, `allowRiskEscalation`,
+  `allowKeyChange`, `requireManifest`, `requireAttestation`. A failed audit is never
+  promotable regardless of policy, and only the exact audited card is promoted —
+  never a revoked tool. New exports: `AutoPromotionPolicy`, `AuditDecision`,
+  `evaluatePromotion`, and `onAuditComplete`.
+
+- 34dcfd4: Implement RFC-0003 public providers registry discovery. Adds the
+  `PublicProvidersRegistry` / `RegistryProvider` types, `signProvidersRegistry()`
+  - `verifyProvidersRegistry()` in core, and `GlyphClient.discoverProviders(url, {
+trustRoot })`. The client fetches a signed provider directory from any URL and
+    returns it only when its signature verifies against the `trustRoot` the
+    consumer pinned out of band. The registry is a directory, not a name authority:
+    `discoverProviders()` never approves a glyph — approval still requires the pin
+    store and the normal `diffCards` flow on first `getCard()` per provider.
+- 6dc6c84: Add opt-in `resilientUpdates` mode to `GlyphClient`. When enabled, a tool whose
+  card changed since approval is no longer rejected with `GlyphNotApprovedError`:
+  the new card is parked in a `PendingAuditQueue` for later audit while `call()`
+  keeps running the last approved (stable) pin — fail-to-last-known-good instead
+  of fail-closed. A never-pinned tool still throws (no stable version to fall back
+  to), and under `secureMode` the receipt is verified against the stable pin so a
+  server that actually swapped to the unaudited card has its output rejected.
+
+  New exports: `PendingAuditQueue`, `PendingAuditEntry`, `MemoryPendingAuditQueue`,
+  and `GlyphClient.pendingAudits()`. Defaults to `false` — existing behavior is
+  unchanged.
+
+- 2fb8e2b: Add opt-in `tofu` (trust-on-first-use) to `GlyphClient`. When enabled, a
+  never-seen tool is auto-pinned on its first call — after its signature
+  verifies — instead of throwing `GlyphNotApprovedError`, so an agent doesn't
+  need an explicit `approveCard()` for every new tool. Only the first encounter
+  is relaxed: once pinned, a later card change (key swap, schema, risk
+  escalation) is gated by the pin exactly as without TOFU, and a card whose
+  signature does not verify is never pinned. Defaults to `false` — existing
+  behavior unchanged. Requires a PinStore.
+
+### Patch Changes
+
+- Updated dependencies [0e8846b]
+- Updated dependencies [34dcfd4]
+  - @glyphp/core@1.4.0
+  - @glyphp/types@1.5.0
+
 ## 1.1.1
 
 ### Patch Changes

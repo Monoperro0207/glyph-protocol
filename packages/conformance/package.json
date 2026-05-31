@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/conformance",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Conformance suite — validate any Glyph server against the protocol spec",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
