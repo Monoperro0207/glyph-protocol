@@ -181,6 +181,22 @@ importers:
         specifier: ^4.11.0
         version: 4.22.3
 
+  examples/07-resilient-update:
+    dependencies:
+      '@glyphp/client':
+        specifier: workspace:*
+        version: link:../../packages/client
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+    devDependencies:
+      tsx:
+        specifier: ^4.11.0
+        version: 4.22.3
+
   examples/11-production-deploy:
     dependencies:
       '@glyphp/conformance':
