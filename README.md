@@ -136,6 +136,10 @@ for which client adapters are stable today vs. pending verification.
   integration sandbox: Glyph→MCP bridge + DeepSeek-V4 Flash agent loop +
   native Python protocol test. Reproducible in Docker. See the audit report
   at [`spec/tests/hermes-deepseek.md`](spec/tests/hermes-deepseek.md)
+- [`07-resilient-update`](examples/07-resilient-update) — what happens when a
+  tool ships a new card mid-flight: fail-to-last-known-good, quarantine,
+  autonomous audit, policy-gated promotion, and tamper rejection — narrated as a
+  runnable demo and asserted by a test
 
 ## Verify
 
