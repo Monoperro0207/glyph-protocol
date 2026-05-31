@@ -1,5 +1,34 @@
 # @glyphp/core
 
+## 1.4.0
+
+### Minor Changes
+
+- 0e8846b: Add `KeylessVerifier` (RFC-0007) — an `AttestationVerifier` for the
+  `glyph-keyless-v1` attestation type. It performs the dependency-free half of
+  keyless verification: parsing the provenance bundle, enforcing the
+  subject-digest binding (a bundle cannot be replayed onto another card), and
+  matching an optional `KeylessIdentityPolicy` (issuer/identity allow-lists). The
+  cryptographic certificate-chain + transparency-log check is **delegated** to an
+  injected `KeylessBackend`; without one, a bundle is `valid` (well-formed and
+  bound) but `trusted: false` — structural recognition without false confidence.
+  New exports: `KeylessVerifier`, `KeylessBundle`, `KeylessIdentityPolicy`,
+  `KeylessBackend`. The Sigstore-style backend dependency is intentionally left
+  out (RFC-0007 §8) so core stays dependency-light.
+- 34dcfd4: Implement RFC-0003 public providers registry discovery. Adds the
+  `PublicProvidersRegistry` / `RegistryProvider` types, `signProvidersRegistry()`
+  - `verifyProvidersRegistry()` in core, and `GlyphClient.discoverProviders(url, {
+trustRoot })`. The client fetches a signed provider directory from any URL and
+    returns it only when its signature verifies against the `trustRoot` the
+    consumer pinned out of band. The registry is a directory, not a name authority:
+    `discoverProviders()` never approves a glyph — approval still requires the pin
+    store and the normal `diffCards` flow on first `getCard()` per provider.
+
+### Patch Changes
+
+- Updated dependencies [34dcfd4]
+  - @glyphp/types@1.5.0
+
 ## 1.3.1
 
 ### Patch Changes

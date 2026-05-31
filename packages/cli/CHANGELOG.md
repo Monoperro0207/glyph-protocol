@@ -1,5 +1,47 @@
 # @glyphp/cli
 
+## 1.3.0
+
+### Minor Changes
+
+- 2fa9732: Add `FilePendingAuditQueue` (a persistent `PendingAuditQueue` that mirrors
+  `FilePinStore`) and the `glyph audit list` CLI command. The command reads the
+  persisted queue (default `~/.glyph/pending-audits.json`, override with `--file`)
+  and renders each parked tool update with its diff and a breaking/review verdict,
+  read-only. It exits non-zero when any parked update carries a breaking change
+  awaiting review, so it can gate CI. Promotion stays a separate step
+  (`glyph approve` or the autonomous runner).
+- c552787: Add interactive write actions to the `glyphp` shell: **Approve** (pin a card
+  from a file or URL) and **Revoke** (block a previously approved tool). Both run
+  through a three-step `ActionFlow` — type the argument, then an explicit
+  confirmation gate (`y`/`n`) that must be accepted before anything executes;
+  typing or `esc` never triggers the action. Adds `ink-text-input`.
+- ef85149: Polish the `glyphp` interactive shell: add `glyphp --help` (and `-h`) with
+  plain, scriptable usage text, and a non-TTY fallback — when stdout is not a
+  terminal (piped, redirected, CI) `glyphp` prints a short message pointing at
+  the one-shot `glyph <command>` CLI instead of hanging on an interactive
+  render. Both paths emit color-free text and respect `NO_COLOR`.
+- 691cb3c: Add the `glyphp` interactive terminal — a new binary that boots an Ink-based
+  shell with an animated glyph cursor. `glyphp` (no args) opens a navigable menu
+  (↑/↓ or j/k, Enter, esc/q) with read-only panels for pins and the local key
+  registry, plus a help view. The one-shot `glyph <command>` binary is unchanged
+  and remains the path for scripting and CI. Adds `ink` + `react`. Write actions
+  (approve/revoke/keys) and the non-TTY fallback land in follow-up PRs.
+
+### Patch Changes
+
+- Updated dependencies [2fa9732]
+- Updated dependencies [ad538e4]
+- Updated dependencies [7945823]
+- Updated dependencies [0e8846b]
+- Updated dependencies [34dcfd4]
+- Updated dependencies [6dc6c84]
+- Updated dependencies [2fb8e2b]
+  - @glyphp/client@1.2.0
+  - @glyphp/core@1.4.0
+  - @glyphp/types@1.5.0
+  - @glyphp/adapter-mcp@1.0.5
+
 ## 1.2.3
 
 ### Patch Changes
