@@ -25,3 +25,12 @@ examples/05-hermes-integration/workspace/landing/
 .tmp-landings.*
 .atl/
 coverage/
+
+# AI coding-assistant / spec-tooling artifacts — not part of the protocol
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+.aider*
+.windsurf/
+openspec/
