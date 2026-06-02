@@ -43,8 +43,8 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -68,8 +68,8 @@ importers:
         specifier: ^25.9.1
         version: 25.9.1
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/01-hello-glyph:
     dependencies:
@@ -87,8 +87,8 @@ importers:
         version: 4.4.3
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/02-resolver-agent:
     dependencies:
@@ -109,8 +109,8 @@ importers:
         version: 4.4.3
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/03-mcp-filesystem:
     dependencies:
@@ -134,8 +134,8 @@ importers:
         version: 4.4.3
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/04-inert-data:
     dependencies:
@@ -153,8 +153,8 @@ importers:
         version: 4.4.3
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/05-hermes-integration:
     dependencies:
@@ -178,8 +178,8 @@ importers:
         specifier: ^7.6.11
         version: 7.6.13
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/07-resilient-update:
     dependencies:
@@ -194,8 +194,8 @@ importers:
         version: link:../../packages/types
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   examples/11-production-deploy:
     dependencies:
@@ -213,8 +213,8 @@ importers:
         version: 4.4.3
     devDependencies:
       tsx:
-        specifier: ^4.11.0
-        version: 4.22.3
+        specifier: ^4.22.4
+        version: 4.22.4
 
   packages/adapters/mcp:
     dependencies:
@@ -1850,8 +1850,8 @@ packages:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
 
-  tsx@4.22.3:
-    resolution: {integrity: sha512-mdoNxBC/cSQObGGVQ5Bpn5i+yv7j68gk3Nfm3wFjcJg3Z0Mix9jzAFfP12prmm5eVGmDKtp0yyArrs0Q+8gZHg==}
+  tsx@4.22.4:
+    resolution: {integrity: sha512-X8EX+XV4QR5xCsrgxaED954zTDfY8KqlDtskKEL0cHhyS/P8b4IFOvGDQpsC9Q1XnLq915wEfwwY/zzskCtmhg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -3329,7 +3329,7 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
-  tsx@4.22.3:
+  tsx@4.22.4:
     dependencies:
       esbuild: 0.28.0
     optionalDependencies:
