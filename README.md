@@ -230,8 +230,10 @@ const client = new GlyphClient({
 ```
 
 Built-in Sigstore/SLSA helpers are structural verifier hooks, not a complete
-runtime or external trust-root guarantee. Full execution attestation remains a
-separate operational policy.
+runtime or external trust-root guarantee. Full execution attestation — the wire
+conventions, the subject-digest binding, and the verification contract — is
+specified in
+[`spec/rfcs/RFC-0008-execution-attestation.md`](spec/rfcs/RFC-0008-execution-attestation.md).
 
 ### Production hardening checklist
 
