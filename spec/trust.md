@@ -102,7 +102,10 @@ explicit. Today they are only distinguishable by inspection.
   verifying the payload requires a trust root the consumer already trusts
   (Sigstore registry, GitHub OIDC, SLSA verifier, etc.). The SDK can never
   attest to its own host: a program cannot certify its own integrity, only
-  an external authority can. See [`update-governance.md §8`](update-governance.md).
+  an external authority can. See [`update-governance.md §8`](update-governance.md)
+  and [`rfcs/RFC-0008-execution-attestation.md`](rfcs/RFC-0008-execution-attestation.md),
+  which specifies the wire conventions, the subject-digest binding rule, and the
+  verification contract for closing this gap.
 
 ## Threat posture
 

@@ -198,7 +198,9 @@ Closing that gap requires *execution attestation*: evidence of which code ran
 (a signed build digest, a source commit, a container digest, or formal
 provenance). That is a distinct, larger effort that needs cooperation from
 build systems and runtimes — the same class of problem as host-enforced inert
-data; see [`trust.md`](trust.md).
+data; see [`trust.md`](trust.md). The wire conventions, the subject-digest
+binding rule, and the verification contract are specified in
+[`rfcs/RFC-0008-execution-attestation.md`](rfcs/RFC-0008-execution-attestation.md).
 
 A card MAY carry an optional `attestation` envelope (a `{type, payload}` pair,
 opaque to the SDK). Because it is canonical, any change to it changes the
