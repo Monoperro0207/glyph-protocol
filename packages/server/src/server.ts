@@ -26,6 +26,8 @@ import type { AuthConfig, RateLimitConfig } from './middleware.js'
 import { authMiddleware, buildVerify, rateLimitMiddleware } from './middleware.js'
 import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { missingScopes } from './policy.js'
+import type { ConfirmationStore, RateLimitStore } from './stores.js'
+import { MemoryConfirmationStore } from './stores.js'
 
 const SERVER_VERSION = '0.1.0'
 const CONFIRMATION_TTL_MS = 5 * 60_000
@@ -84,10 +86,8 @@ export class GlyphServer {
   private app = new Hono()
   private glyphs = new Map<string, GlyphDefinition<any, any>>()
   private manifests = new Map<string, UpdateManifest>()
-  private pendingConfirmations = new Map<
-    string,
-    { glyphName: string; inputHash: string; expiresAt: number }
-  >()
+  private confirmations: ConfirmationStore
+  private rateLimitStore?: RateLimitStore
   private port: number
   private signer: GlyphSigner
   private auth?: AuthConfig
@@ -127,6 +127,18 @@ export class GlyphServer {
     /** Max request body size in bytes (default 1_048_576 = 1 MiB). */
     maxBodyBytes?: number
     /**
+     * Storage for single-use confirmation tickets. Defaults to in-memory
+     * (per process). Inject a shared backend (Redis, database) so a ticket
+     * issued by one replica can be consumed on another. See `stores.ts`.
+     */
+    confirmationStore?: ConfirmationStore
+    /**
+     * Counter storage for the rate limiter. Defaults to in-memory (per
+     * process — with N replicas the effective limit is N × max). Inject a
+     * shared backend to enforce one global limit. See `stores.ts`.
+     */
+    rateLimitStore?: RateLimitStore
+    /**
      * Enforce that production-critical configs (auth, rateLimit, keyPair) are
      * present when `NODE_ENV=production`. Defaults to `true` in production,
      * `false` otherwise. When true and configs are missing, the constructor
@@ -160,6 +172,8 @@ export class GlyphServer {
     this.policy = options?.policy
     this.maxPendingConfirmations = options?.maxPendingConfirmations ?? MAX_PENDING_CONFIRMATIONS
     this.maxBodyBytes = options?.maxBodyBytes ?? MAX_BODY_BYTES
+    this.confirmations = options?.confirmationStore ?? new MemoryConfirmationStore()
+    this.rateLimitStore = options?.rateLimitStore
     if (options?.signer) {
       this.signer = options.signer
     } else if (options?.keyPair) {
@@ -289,7 +303,7 @@ export class GlyphServer {
     // unverified token cannot escape the limit by rotating fake values.
     if (this.rateLimit) {
       const verifyToken = this.auth ? buildVerify(this.auth) : undefined
-      app.use('*', rateLimitMiddleware(this.rateLimit, verifyToken))
+      app.use('*', rateLimitMiddleware(this.rateLimit, verifyToken, this.rateLimitStore))
     }
     if (this.auth) app.use('*', authMiddleware(this.auth))
 
@@ -418,16 +432,11 @@ export class GlyphServer {
       const now = Date.now()
       // Unconditional sweep: expired entries are always cleaned before
       // checking the hard limit so short-lived spikes self-recover.
-      for (const [token, pending] of this.pendingConfirmations) {
-        if (now >= pending.expiresAt) this.pendingConfirmations.delete(token)
-      }
+      const backlog = await this.confirmations.sweep(now)
 
-      if (this.pendingConfirmations.size >= this.maxPendingConfirmations) {
-        // Pick the earliest expiring entry to derive a reasonable Retry-After.
-        let earliestExpiry = Infinity
-        for (const pending of this.pendingConfirmations.values()) {
-          if (pending.expiresAt < earliestExpiry) earliestExpiry = pending.expiresAt
-        }
+      if (backlog.size >= this.maxPendingConfirmations) {
+        // Use the earliest expiring entry to derive a reasonable Retry-After.
+        const earliestExpiry = backlog.earliestExpiresAt ?? now + CONFIRMATION_TTL_MS
         const retryAfter = Math.max(1, Math.ceil((earliestExpiry - now) / 1000))
         c.header('Retry-After', String(retryAfter))
         return errorResponse(
@@ -441,7 +450,7 @@ export class GlyphServer {
 
       const confirmationToken = randomUUID()
       const expiresAt = now + CONFIRMATION_TTL_MS
-      this.pendingConfirmations.set(confirmationToken, {
+      await this.confirmations.put(confirmationToken, {
         glyphName: name,
         inputHash: canonicalHash(parsed.data),
         expiresAt,
@@ -519,7 +528,7 @@ export class GlyphServer {
             },
           )
         }
-        const pending = this.pendingConfirmations.get(token)
+        const pending = await this.confirmations.consume(token) // single-use
         if (!pending) {
           return errorResponse(
             c,
@@ -528,7 +537,6 @@ export class GlyphServer {
             'Unknown or already-consumed confirmation token',
           )
         }
-        this.pendingConfirmations.delete(token) // single-use
         const valid =
           Date.now() < pending.expiresAt &&
           pending.glyphName === name &&

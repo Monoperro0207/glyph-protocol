@@ -77,6 +77,66 @@ Rotate via `glyph keys rotate` (see `glyph --help`). Update the secret
 manager with the new private key; the old key remains valid until its
 `validUntil` window expires.
 
+## Running more than one replica
+
+Two pieces of server state are process-local by default, and both change
+behavior behind a load balancer:
+
+- **Confirmation tickets.** A `confirmationToken` issued by replica A fails on
+  replica B with `INVALID_CONFIRMATION`.
+- **Rate-limit counters.** Each replica counts independently, so the effective
+  limit is `N × max`.
+
+Both stores are injectable. Implement `ConfirmationStore` and `RateLimitStore`
+(exported by `@glyphp/server`) over shared storage and pass them in:
+
+```ts
+import { createClient } from 'redis'
+import type { ConfirmationStore, PendingConfirmation, RateLimitStore } from '@glyphp/server'
+import { GlyphServer } from '@glyphp/server'
+
+const redis = createClient({ url: process.env.REDIS_URL })
+
+const confirmations: ConfirmationStore = {
+  async put(token, entry) {
+    await redis.set(`confirm:${token}`, JSON.stringify(entry), {
+      PX: entry.expiresAt - Date.now(),
+    })
+  },
+  async consume(token) {
+    // GETDEL is atomic: two replicas racing on the same token cannot both win.
+    const raw = await redis.getDel(`confirm:${token}`)
+    return raw ? (JSON.parse(raw) as PendingConfirmation) : undefined
+  },
+  async sweep() {
+    // Redis evicts by TTL on its own; report an approximate backlog.
+    const size = await redis.eval(
+      "return #redis.call('KEYS', 'confirm:*')", { keys: [], arguments: [] },
+    )
+    return { size: Number(size) }
+  },
+}
+
+const rateLimit: RateLimitStore = {
+  async hit(key, windowMs, now) {
+    const bucket = `rl:${key}:${Math.floor(now / windowMs)}`
+    const count = await redis.incr(bucket)
+    if (count === 1) await redis.pExpire(bucket, windowMs)
+    return { count, resetAt: (Math.floor(now / windowMs) + 1) * windowMs }
+  },
+}
+
+const server = new GlyphServer({
+  confirmationStore: confirmations,
+  rateLimitStore: rateLimit,
+  /* ... */
+})
+```
+
+Cards, manifests and the key registry are immutable or registered at boot on
+every replica, so they need no shared store. Receipts are signed per replica
+by the same key.
+
 ## Observability
 
 - Receipts are the audit trail — pipe them to a SIEM via `onCall`.
