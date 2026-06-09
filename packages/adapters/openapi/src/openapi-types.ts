@@ -28,6 +28,13 @@ export interface Operation {
   requestBody?: RequestBody
   responses?: Record<string, ResponseObject>
   security?: Array<Record<string, string[]>>
+  /**
+   * Vendor extension: the API author's explicit Glyph risk tier for this
+   * operation, overriding the HTTP-method heuristic. Trusted at the same level
+   * as the rest of the spec (the API owner writes it). Must be one of
+   * `safe` | `caution` | `danger`; an unrecognised value is rejected.
+   */
+  'x-glyph-risk'?: string
 }
 
 export interface SecurityScheme {

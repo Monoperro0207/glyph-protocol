@@ -165,7 +165,7 @@ export function glyphsFromOpenApi(
         name: operationName(method, path, op),
         intent: op.summary ?? op.description ?? `${method.toUpperCase()} ${path}`,
         tags: op.tags ?? [],
-        cost: deriveCost(method),
+        cost: deriveCost(method, op),
         idempotent: method === 'get' || method === 'put' || method === 'delete',
         input: buildInputSchema(op, doc),
         output: outputSchemaJson,
@@ -214,14 +214,31 @@ function extractHost(url: string): string {
   }
 }
 
-function deriveCost(method: HttpMethod): GlyphCard['cost'] {
+const RISK_TIERS = new Set<GlyphCard['cost']['riskTier']>(['safe', 'caution', 'danger'])
+
+function deriveCost(method: HttpMethod, op?: Operation): GlyphCard['cost'] {
   const isRead = method === 'get'
+  const derivedTier: GlyphCard['cost']['riskTier'] =
+    method === 'delete' ? 'danger' : isRead ? 'safe' : 'caution'
+
+  // `x-glyph-risk` lets the API author override the method heuristic (e.g. a
+  // POST that is genuinely safe, or a GET that triggers an expensive/irreversible
+  // job). It is trusted at the same level as the rest of the spec. An unknown
+  // value fails closed rather than being silently ignored.
+  const override = op?.['x-glyph-risk']
+  if (override != null && !RISK_TIERS.has(override as GlyphCard['cost']['riskTier'])) {
+    throw new Error(`invalid x-glyph-risk "${override}" — expected one of safe, caution, danger`)
+  }
+  const riskTier = (override as GlyphCard['cost']['riskTier']) ?? derivedTier
+
+  // sideEffects / reversible stay factual to the HTTP method — overriding the
+  // risk classification must not misreport whether the call mutates state.
   return {
     latency: 'medium',
     sideEffects: !isRead,
     reversible: isRead,
-    riskTier: method === 'delete' ? 'danger' : isRead ? 'safe' : 'caution',
-    requiresConfirmation: method === 'delete',
+    riskTier,
+    requiresConfirmation: riskTier === 'danger',
   }
 }
 
