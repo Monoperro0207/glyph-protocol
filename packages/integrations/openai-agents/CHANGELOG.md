@@ -1,5 +1,12 @@
 # @glyphp/integration-openai-agents
 
+## 1.1.6
+
+### Patch Changes
+
+- Updated dependencies [c51a47c]
+  - @glyphp/client@1.3.0
+
 ## 1.1.5
 
 ### Patch Changes

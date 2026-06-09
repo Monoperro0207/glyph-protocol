@@ -1,5 +1,12 @@
 # 02-resolver-agent
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [c51a47c]
+  - @glyphp/client@1.3.0
+
 ## 0.1.8
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # 05-hermes-integration
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [c51a47c]
+  - @glyphp/client@1.3.0
+  - @glyphp/adapter-mcp-server@1.0.6
+
 ## 0.0.6
 
 ### Patch Changes
