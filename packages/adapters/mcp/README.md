@@ -53,3 +53,23 @@ the card `input`, and the handler proxies the call through `callTool`.
 the tool **name**: if it contains a dangerous word (`delete`, `write`,
 `destroy`, `drop`, `exec`, `update`, …) the glyph is forced to `riskTier:
 danger` and `requiresConfirmation`, overriding a benign annotation.
+
+## Hardening an untrusted server
+
+All four limits below are **opt-in** and default to the existing behavior:
+
+| Option | Effect |
+|---|---|
+| `maxTools` | Throws if the server advertises more than N tools, bounding the agent's tool surface instead of importing thousands. |
+| `redactDescriptions` | Keeps attacker-controlled descriptions out of `card.intent` (uses the tool name), so a server can't smuggle instructions or secrets into a card a human reviews. |
+| `sanitizeErrors` | Surfaces a generic failure message instead of echoing upstream error text that may carry secrets or injected content. |
+| `listToolsTimeoutMs` | Bounds the `listTools()` call so a hung or slow server can't stall import. |
+
+```ts
+const glyphs = await glyphsFromMcpClient(client, {
+  maxTools: 128,
+  redactDescriptions: true,
+  sanitizeErrors: true,
+  listToolsTimeoutMs: 5000,
+})
+```

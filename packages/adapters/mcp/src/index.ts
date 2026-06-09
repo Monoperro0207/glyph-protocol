@@ -27,6 +27,34 @@ export interface McpAdapterOptions {
    *   trusted to honor its own schema; the card still publishes the schema.
    */
   outputValidation?: 'schema' | 'none'
+  /**
+   * Maximum number of tools to import. A hostile or misconfigured MCP server
+   * can advertise thousands of tools, inflating the agent's tool surface and
+   * attack blast radius. When the server exposes more than this, the import
+   * throws rather than silently truncating (dropping a tool you expected is
+   * itself a hazard). Default: no limit (the current behavior).
+   */
+  maxTools?: number
+  /**
+   * When `true`, MCP tool descriptions are NOT copied into `card.intent`; a
+   * neutral placeholder (the tool name) is used instead. A description is
+   * attacker-controlled text — redacting it prevents an untrusted server from
+   * smuggling instructions or secrets into the card a human reviews. The MCP
+   * tool name is still used (it drives risk derivation). Default: `false`.
+   */
+  redactDescriptions?: boolean
+  /**
+   * When `true`, an MCP tool error surfaces a generic message instead of the
+   * upstream error text, which may carry secrets or injected content. Default:
+   * `false` (the upstream text is included, aiding debugging of trusted servers).
+   */
+  sanitizeErrors?: boolean
+  /**
+   * Timeout (ms) for the `listTools()` call in {@link glyphsFromMcpClient}.
+   * Throws on timeout so a hung or slow server cannot stall import
+   * indefinitely. Default: no timeout (the current behavior).
+   */
+  listToolsTimeoutMs?: number
 }
 
 /**
@@ -40,12 +68,20 @@ export function glyphsFromMcpTools(
 ): GlyphDefinition<any, any>[] {
   const provider = options?.provider ?? 'mcp'
   const outputValidation = options?.outputValidation ?? 'schema'
+  const redactDescriptions = options?.redactDescriptions ?? false
+  const sanitizeErrors = options?.sanitizeErrors ?? false
+
+  if (options?.maxTools != null && tools.length > options.maxTools) {
+    throw new Error(
+      `MCP server exposed ${tools.length} tools, exceeding maxTools=${options.maxTools}`,
+    )
+  }
 
   return tools.map((tool) => {
     const cardBase = {
       version: '1.0.0',
       name: toKebab(tool.name),
-      intent: tool.description ?? tool.name,
+      intent: redactDescriptions ? tool.name : (tool.description ?? tool.name),
       tags: ['mcp'],
       cost: deriveCost(tool.name, tool.annotations),
       idempotent: tool.annotations?.idempotentHint ?? false,
@@ -71,7 +107,7 @@ export function glyphsFromMcpTools(
           ? compileJsonSchema(tool.outputSchema)
           : z.unknown(),
       // The handler uses the original (non-kebab) MCP tool name.
-      handler: buildHandler(tool.name, callTool),
+      handler: buildHandler(tool.name, callTool, sanitizeErrors),
     }
   })
 }
@@ -84,9 +120,34 @@ export async function glyphsFromMcpClient(
   client: McpClientLike,
   options?: McpAdapterOptions,
 ): Promise<GlyphDefinition<any, any>[]> {
-  const { tools } = await client.listTools()
+  const { tools } = await withTimeout(client.listTools(), options?.listToolsTimeoutMs, 'listTools')
   const callTool: McpCallFn = (name, args) => client.callTool({ name, arguments: args })
   return glyphsFromMcpTools(tools, callTool, options)
+}
+
+/** Rejects with a clear error if `promise` does not settle within `timeoutMs`. */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number | undefined,
+  label: string,
+): Promise<T> {
+  if (timeoutMs == null) return promise
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`MCP ${label} timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    )
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
 }
 
 // Re-export for tests and downstream consumers that want to validate raw
@@ -124,10 +185,16 @@ function deriveCost(toolName: string, annotations?: McpToolAnnotations): GlyphCa
 function buildHandler(
   toolName: string,
   callTool: McpCallFn,
+  sanitizeErrors: boolean,
 ): (input: Record<string, unknown>) => Promise<unknown> {
   return async (input: Record<string, unknown>): Promise<unknown> => {
     const result = await callTool(toolName, input ?? {})
     if (result.isError) {
+      if (sanitizeErrors) {
+        // Do not echo upstream error text — it may carry secrets or injected
+        // content. The failure mode and tool name are enough to act on.
+        throw new Error(`MCP tool "${toolName}" failed`)
+      }
       const text =
         result.content
           ?.map((block) => block.text)
