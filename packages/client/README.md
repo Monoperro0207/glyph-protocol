@@ -20,6 +20,23 @@ const result = await client.invoke('greet', { name: 'Ada' })
 For a glyph whose card declares `cost.requiresConfirmation`, call `prepare()`
 first to obtain a single-use confirmation token, then pass it to `call()`.
 
+## Production posture
+
+`GlyphClient.production(options)` builds a client with the recommended hardened
+defaults so the safe configuration is the easy path — `secureMode`,
+`verifyReceipts`, no auto-approval of card changes, and no trust-on-first-use. A
+`PinStore` is **required** (it throws if missing); every default stays
+overridable.
+
+```typescript
+import { GlyphClient, FilePinStore } from '@glyphp/client'
+
+const client = GlyphClient.production({
+  baseUrl: 'https://glyph.example',
+  pins: new FilePinStore('./pins.json'),
+})
+```
+
 ## Rendering tool output for an LLM
 
 `renderEnvelope` turns a `SealedEnvelope` into the exact text block to hand a
