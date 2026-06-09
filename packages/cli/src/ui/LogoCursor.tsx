@@ -1,5 +1,5 @@
 import { Text } from 'ink'
-import { useEffect, useState } from 'react'
+import { type JSX, useEffect, useState } from 'react'
 
 // A pulsing glyph mark — the animated cursor that gives the shell its identity.
 // Evokes the signed-glyph diamond from the logo (assets/glyphp.png) cycling

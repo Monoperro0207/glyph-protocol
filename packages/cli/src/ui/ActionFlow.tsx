@@ -1,6 +1,6 @@
 import { Box, Text, useInput } from 'ink'
 import TextInput from 'ink-text-input'
-import { useState } from 'react'
+import { type JSX, useState } from 'react'
 
 export interface ActionResult {
   ok: boolean

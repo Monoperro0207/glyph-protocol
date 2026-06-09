@@ -1,5 +1,5 @@
 import { Box, Text, useApp, useInput } from 'ink'
-import { useEffect, useState } from 'react'
+import { type JSX, useEffect, useState } from 'react'
 import { runKeysList } from '../commands/keys.js'
 import { runPinsApprove, runPinsList, runPinsRevoke } from '../commands/pins.js'
 import { ActionFlow } from './ActionFlow.js'
