@@ -2,6 +2,8 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { getConnInfo } from '@hono/node-server/conninfo'
 import type { Context, MiddlewareHandler } from 'hono'
 import { errorResponse } from './errors.js'
+import type { RateLimitStore } from './stores.js'
+import { MemoryRateLimitStore } from './stores.js'
 
 export interface AuthConfig {
   tokens?: string[]
@@ -58,40 +60,29 @@ export function authMiddleware(config: AuthConfig): MiddlewareHandler {
 }
 
 /**
- * Fixed-window rate limiter, in-memory. Keyed by a *verified* bearer token
- * when one is present, otherwise by remote IP. `/health` is never limited.
+ * Fixed-window rate limiter. Keyed by a *verified* bearer token when one is
+ * present, otherwise by remote IP. `/health` is never limited.
  *
  * Pass `verifyToken` (the server does this whenever auth is configured) so an
  * unverified token cannot mint its own bucket: without it, an attacker rotates
  * fake tokens to get a fresh bucket per request and escapes the limit entirely.
+ *
+ * Counters live in a {@link RateLimitStore} — in-memory by default (per
+ * process), or an injected shared backend so multiple replicas enforce one
+ * global limit.
  */
 export function rateLimitMiddleware(
   config: RateLimitConfig,
   verifyToken?: (token: string) => boolean,
+  store: RateLimitStore = new MemoryRateLimitStore(),
 ): MiddlewareHandler {
-  const hits = new Map<string, { count: number; resetAt: number }>()
   return async (c, next) => {
     if (c.req.path === '/health') return next()
     const now = Date.now()
-    // Sweep up to 100 expired entries every request so the hits map never
-    // grows unbounded. A full O(n) sweep would be too expensive per-request;
-    // 100-entry batches keep amortised cost negligible while preventing leaks.
-    let swept = 0
-    for (const [key, entry] of hits) {
-      if (now >= entry.resetAt) {
-        hits.delete(key)
-        if (++swept >= 100) break
-      }
-    }
     const key = clientKey(c, verifyToken)
-    let entry = hits.get(key)
-    if (!entry || now >= entry.resetAt) {
-      entry = { count: 0, resetAt: now + config.windowMs }
-      hits.set(key, entry)
-    }
-    entry.count++
-    if (entry.count > config.max) {
-      c.header('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)))
+    const { count, resetAt } = await store.hit(key, config.windowMs, now)
+    if (count > config.max) {
+      c.header('Retry-After', String(Math.ceil((resetAt - now) / 1000)))
       return errorResponse(c, 429, 'RATE_LIMITED', 'Too many requests')
     }
     return next()
