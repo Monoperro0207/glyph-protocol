@@ -13,6 +13,6 @@
     "@glyphp/types": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.11.0"
+    "tsx": "^4.22.4"
   }
 }
