@@ -191,6 +191,24 @@ export class GlyphServer {
   }
 
   /**
+   * Like {@link register}, but signs through the signer's async path. Required
+   * for signers whose key material needs asynchronous coordination (KMS/HSM,
+   * threshold signing) and whose `signGlyphSync` therefore throws.
+   */
+  async registerAsync(glyph: GlyphDefinition<any, any>): Promise<this> {
+    if (this.glyphs.has(glyph.card.name)) {
+      throw new Error(`A glyph named "${glyph.card.name}" is already registered`)
+    }
+    const signedCard = {
+      ...glyph.card,
+      publicKey: this.signer.publicKey,
+      signature: await this.signer.signGlyph(glyph.card),
+    }
+    this.glyphs.set(signedCard.name, { ...glyph, card: signedCard })
+    return this
+  }
+
+  /**
    * Publishes a signed update manifest for an already-registered glyph: an
    * on-the-record statement that the tool changed from `previousCardId` to the
    * glyph's current card. The server fills in `newCardId`, `issuedAt` and the

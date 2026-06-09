@@ -7,14 +7,16 @@ import { signGlyph, signManifest, signReceipt } from './index.js'
  *
  * The GlyphServer delegates all signing through this interface. The default
  * {@link Ed25519Signer} preserves the current single-key ed25519 behavior.
- * Pluggable implementations (e.g. FrostSigner) enable multi-signer threshold
- * signing without changing the wire format — threshold signatures are
- * standard ed25519.
+ * Pluggable implementations (threshold/KMS/HSM-backed signers) can produce
+ * signatures without changing the wire format, as long as the result verifies
+ * as a standard RFC 8032 ed25519 signature over the same message.
  *
- * Multi-signer signers (FrostSigner) only support the async path. The sync
+ * Async-only signers (e.g. one that coordinates remote key material) may not
+ * support the sync path — implement the sync variants by throwing. The sync
  * variants (`signGlyphSync`, `signManifestSync`) exist so that
  * {@link GlyphServer.register} and {@link GlyphServer.registerManifest}
- * remain synchronous for the common single-key case.
+ * remain synchronous for the common single-key case; async signers use
+ * `GlyphServer.registerAsync` instead.
  */
 export interface GlyphSigner {
   readonly publicKey: string

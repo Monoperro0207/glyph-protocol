@@ -54,7 +54,6 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
-    "@myecoria/frost-ed25519-blake2b-wasm": "^0.1.4",
     "@noble/curves": "^2.2.0"
   }
 }

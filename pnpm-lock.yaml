@@ -11,9 +11,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.4
         version: 2.0.4(hono@4.12.24)
-      '@myecoria/frost-ed25519-blake2b-wasm':
-        specifier: ^0.1.4
-        version: 0.1.4
       '@noble/curves':
         specifier: ^2.2.0
         version: 2.2.0
@@ -391,10 +388,6 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
-    optionalDependencies:
-      '@myecoria/frost-ed25519-blake2b-wasm':
-        specifier: ^0.1.4
-        version: 0.1.4
 
   packages/exporter-otel:
     dependencies:
@@ -844,9 +837,6 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
-
-  '@myecoria/frost-ed25519-blake2b-wasm@0.1.4':
-    resolution: {integrity: sha512-NMtWkwiZhMLWq+eSZvYCD+PcEaOOPJoc/K1OaGMTTSos3ad7QWsIiDSud7Clz7mKUtsfTBQT3G9XTmvwTLZaVg==}
 
   '@noble/curves@2.2.0':
     resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
@@ -2327,8 +2317,6 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.4.3)
     transitivePeerDependencies:
       - supports-color
-
-  '@myecoria/frost-ed25519-blake2b-wasm@0.1.4': {}
 
   '@noble/curves@2.2.0':
     dependencies:

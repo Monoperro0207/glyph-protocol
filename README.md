@@ -216,10 +216,11 @@ Anyone can verify a receipt with `verifyReceipt()` from `@glyphp/core`. See
 standard `Ed25519Signer` path, or an advanced `signer` implementation of
 `GlyphSigner` when key material lives behind a custom boundary.
 
-`@glyphp/core/frost` also exposes an experimental `FrostSigner` for threshold
-signing (RFC-0006). It is opt-in, uses an optional dependency, and is not a
-drop-in replacement for every server flow today: synchronous card/manifest
-registration still requires a sync-capable signer.
+Threshold (FROST) signing was explored in RFC-0006 and withdrawn: the only
+available JS implementations either use a non-standard ciphersuite (signatures
+that do not verify as RFC 8032 ed25519) or are not production-ready. The
+`GlyphSigner` interface remains the seam for plugging in an external threshold
+or KMS/HSM-backed signer; see the RFC for the status and requirements.
 
 ### Attestation policy
 
