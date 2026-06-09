@@ -144,7 +144,11 @@ interface) MUST, in order, and fail closed on any miss:
    consumer's policy. Default policy when none is configured: accept any
    identity from a trusted issuer (provenance is *recorded and auditable*, even
    if unrestricted). A stricter policy pins an allow-list of
-   `issuer`+`identity` patterns.
+   `issuer`+`identity` patterns. An allow-list entry matches **exactly, or as
+   a prefix that ends at a segment boundary** (`:` or `/`): `repo:acme/tools`
+   matches `repo:acme/tools:ref:refs/heads/main` but MUST NOT match
+   `repo:acme/tools-evil` — a bare prefix match would silently widen the
+   authorization.
 
 The result maps onto the existing `AttestationResult`: `valid` for checks 1–2,
 `trusted` reflecting check 3 (`trusted: false` = "well-formed and logged, but
