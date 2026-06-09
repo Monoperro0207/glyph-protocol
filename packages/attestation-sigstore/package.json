@@ -1,0 +1,31 @@
+{
+  "name": "@glyphp/attestation-sigstore",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SPIKE — opt-in AttestationVerifier that performs real cryptographic Sigstore-bundle verification via @sigstore/verify. Not yet published.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@glyphp/core": "workspace:*",
+    "@glyphp/types": "workspace:*",
+    "@sigstore/bundle": "^5.0.0",
+    "@sigstore/verify": "^4.0.0"
+  },
+  "devDependencies": {
+    "@glyphp/client": "workspace:*"
+  }
+}

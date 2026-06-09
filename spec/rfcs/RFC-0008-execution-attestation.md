@@ -201,7 +201,12 @@ back to today's behavior. No wire-version bump.
 1. **Upstream verifier dependency.** Which library performs the real Sigstore/
    SLSA chain verification (`sigstore-js`?), and whether it is a hard dependency
    of `@glyphp/core` or an injected peer. Leaning peer, to keep core light —
-   consistent with RFC-0007.
+   consistent with RFC-0007. _A spike (`packages/attestation-sigstore`,
+   private/unpublished) validated `@sigstore/verify` for this: ~940 KB across 4
+   pure-JS packages (no native bindings), capable of fully offline, deterministic
+   DSSE + chain verification with injected trust material. It is wired as a
+   separate opt-in package implementing `AttestationVerifier`, so `@glyphp/core`
+   and `@glyphp/client` take zero new runtime dependencies._
 2. **Expected-digest distribution.** How a deployment publishes "card `X` →
    image `sha256:…`": inside the card (a self-referential digest is circular), a
    side-channel signed by the server key, or the public registry (RFC-0003).
