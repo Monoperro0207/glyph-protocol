@@ -16,7 +16,10 @@ For glyphs created with `defineGlyph`, publisher = server. For adapted glyphs
 (`@glyphp/adapter-openapi`, `@glyphp/adapter-mcp`) the publisher is the upstream
 API/MCP server named in `provider`, while the Glyph server is the signer — the
 two genuinely differ, and a future version should make that cryptographically
-explicit. Today they are only distinguishable by inspection.
+explicit. Today they are only distinguishable by inspection. The wire format for
+that cryptographic Publisher identity — a publisher-signed binding to the cards
+or server keys it stands behind — is specified in
+[`rfcs/RFC-0009-publisher-identity.md`](rfcs/RFC-0009-publisher-identity.md).
 
 ## What is signed
 
@@ -114,7 +117,9 @@ server's keyspace** — with key rotation and revocation (RFC-0001). You can
 detect a modified card or a forged receipt, prove which server produced a
 result, and invalidate a compromised key. It does **not** yet give you a
 cross-organization PKI or multi-signer trust. Treat `provider` as a claim
-until trust roots and multi-key verification exist.
+until trust roots and multi-key verification exist — the cryptographic Publisher
+identity that turns `provider` from a string into a verifiable claim is specified
+in [`rfcs/RFC-0009-publisher-identity.md`](rfcs/RFC-0009-publisher-identity.md).
 
 ## Inert data
 
