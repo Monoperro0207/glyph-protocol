@@ -140,6 +140,11 @@ for which client adapters are stable today vs. pending verification.
   tool ships a new card mid-flight: fail-to-last-known-good, quarantine,
   autonomous audit, policy-gated promotion, and tamper rejection — narrated as a
   runnable demo and asserted by a test
+- [`08-attestation-gate`](examples/08-attestation-gate) — the
+  `requireAttestation` gate end to end: an unattested `danger` tool is refused, a
+  valid `container-digest` opens the gate, and a structure-only SLSA bundle fails
+  *closed* (`trusted: false`) — showing both what the gate guarantees and the
+  exact limit [`RFC-0008`](spec/rfcs/RFC-0008-execution-attestation.md) closes
 
 ## Verify
 
