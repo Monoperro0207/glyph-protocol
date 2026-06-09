@@ -22,9 +22,17 @@ export interface KeylessBundle {
 
 /** Consumer policy over which provenance identities to trust (RFC-0007 §4.2.3). */
 export interface KeylessIdentityPolicy {
-  /** Allowed issuers (exact match). Empty/undefined ⇒ any issuer. */
+  /**
+   * Allowed issuers — exact match, or a prefix that ends at a segment
+   * boundary (`:` or `/`). Empty/undefined ⇒ any issuer.
+   */
   issuers?: string[]
-  /** Allowed identity prefixes (or exact). Empty/undefined ⇒ any identity. */
+  /**
+   * Allowed identities — exact match, or a prefix that ends at a segment
+   * boundary (`:` or `/`): `repo:acme/tools` matches itself and
+   * `repo:acme/tools:ref:...`, but never `repo:acme/tools-evil`.
+   * Empty/undefined ⇒ any identity.
+   */
   identities?: string[]
 }
 
@@ -43,9 +51,22 @@ export interface KeylessBackend {
 
 const KEYLESS_TYPE = 'glyph-keyless-v1'
 
+const SEGMENT_DELIMITERS = new Set([':', '/'])
+
 function matchesAny(value: string, allow: string[] | undefined): boolean {
   if (!allow || allow.length === 0) return true // unconstrained
-  return allow.some((a) => value === a || value.startsWith(a))
+  return allow.some((a) => {
+    if (value === a) return true
+    if (a.length === 0 || !value.startsWith(a)) return false
+    // A bare prefix would widen authorization: `repo:acme/tools` must not
+    // admit `repo:acme/tools-evil`. A prefix only matches when it ends at a
+    // segment boundary — the allow entry itself ends with a delimiter, or the
+    // next character of the candidate value is one.
+    return (
+      SEGMENT_DELIMITERS.has(a[a.length - 1] as string) ||
+      SEGMENT_DELIMITERS.has(value[a.length] as string)
+    )
+  })
 }
 
 /**

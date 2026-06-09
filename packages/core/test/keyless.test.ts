@@ -145,6 +145,63 @@ test('keyless: identity policy prefix match allows a trusted identity', async ()
   assert.equal(result.trusted, true)
 })
 
+test('keyless: a prefix without a segment boundary does NOT authorize (tools-evil)', async () => {
+  const backend: KeylessBackend = {
+    async verifyBundle() {
+      return { trusted: true }
+    },
+  }
+  const verifier = new KeylessVerifier({
+    backend,
+    policy: { identities: ['repo:acme/tools'] },
+  })
+  for (const identity of [
+    'repo:acme/tools-evil:ref:refs/heads/main',
+    'repo:acme/toolsX:ref:refs/heads/main',
+    'repo:acme/tools.bak',
+  ]) {
+    const result = await verifier.verify(cardWithBundle({ identity }))
+    assert.equal(result.valid, true, identity)
+    assert.equal(result.trusted, false, `must not authorize ${identity}`)
+  }
+})
+
+test('keyless: a prefix at a segment boundary still authorizes', async () => {
+  const backend: KeylessBackend = {
+    async verifyBundle() {
+      return { trusted: true }
+    },
+  }
+  const verifier = new KeylessVerifier({
+    backend,
+    policy: { identities: ['repo:acme/tools'] },
+  })
+  for (const identity of [
+    'repo:acme/tools', // exact
+    'repo:acme/tools:ref:refs/heads/main', // ':' boundary
+    'repo:acme/tools/sub', // '/' boundary
+  ]) {
+    const result = await verifier.verify(cardWithBundle({ identity }))
+    assert.equal(result.trusted, true, `must authorize ${identity}`)
+  }
+})
+
+test('keyless: an allow entry ending in a delimiter matches as a namespace prefix', async () => {
+  const backend: KeylessBackend = {
+    async verifyBundle() {
+      return { trusted: true }
+    },
+  }
+  const verifier = new KeylessVerifier({
+    backend,
+    policy: { identities: ['repo:acme/'] },
+  })
+  const ok = await verifier.verify(cardWithBundle({ identity: 'repo:acme/anything' }))
+  assert.equal(ok.trusted, true)
+  const evil = await verifier.verify(cardWithBundle({ identity: 'repo:acmeX/anything' }))
+  assert.equal(evil.trusted, false)
+})
+
 test('keyless: an issuer outside the policy is not trusted', async () => {
   const backend: KeylessBackend = {
     async verifyBundle() {
