@@ -58,6 +58,7 @@ if (full) {
 }
 
 let failed = 0
+const skipped = []
 for (const step of steps) {
   process.stdout.write(`\n▸ ${step.name}\n`)
   const result = spawnSync(step.cmd, step.args, {
@@ -67,7 +68,11 @@ for (const step of steps) {
   })
   if (result.error && result.error.code === 'ENOENT') {
     if (step.optional) {
+      // The toolchain is genuinely absent. This is an acceptable skip, but it
+      // must be surfaced in the final summary so a partial run is never read
+      // as full coverage.
       process.stdout.write(`  (skipped — ${step.cmd} not installed)\n`)
+      skipped.push(step.name)
       continue
     }
     console.error(`  ${step.cmd} not found and step is required.`)
@@ -75,10 +80,9 @@ for (const step of steps) {
     continue
   }
   if (result.status !== 0) {
-    if (step.optional) {
-      console.warn(`  (warning — optional step ${step.name} exited ${result.status})`)
-      continue
-    }
+    // The step actually ran and failed. `optional` means a step may be ABSENT,
+    // never that its failure may be swallowed — a present-but-red SDK suite is
+    // a real failure, or `verify:full` would report green over red tests.
     failed++
     console.error(`  ${step.name} failed (exit ${result.status}).`)
   }
@@ -88,4 +92,10 @@ if (failed > 0) {
   console.error(`\nverify: ${failed} step(s) failed.`)
   process.exit(1)
 }
-console.log('\nverify: all steps passed.')
+if (skipped.length > 0) {
+  console.log(
+    `\nverify: all executed steps passed — but ${skipped.length} optional step(s) were SKIPPED (not full coverage): ${skipped.join(', ')}.`,
+  )
+} else {
+  console.log('\nverify: all steps passed.')
+}

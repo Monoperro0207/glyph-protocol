@@ -14,7 +14,9 @@ pnpm verify:full    # also runs the Python and Go SDK suites if installed
 ```
 
 If you do not have Python 3.10+ or Go 1.22+ installed, `verify:full`
-skips those steps with a warning rather than failing.
+skips those steps and **names them in the final summary**, so a partial run is
+never reported as full coverage. A toolchain that *is* installed but whose
+tests fail is a real failure — `verify:full` exits non-zero, never a warning.
 
 ## Where things live
 
