@@ -1,8 +1,29 @@
 # RFC-0006: FROST Threshold Signatures
 
-- **Status**: Draft
+- **Status**: Withdrawn (2026-06-09)
 - **Author**: Patrick Espino
 - **Date**: 2026-05-25
+
+> **Withdrawal note (2026-06-09).** The `FrostSigner` implementation this RFC
+> describes was removed from `@glyphp/core`. An external audit, confirmed by
+> testing, found the premise below ("FROST signatures are standard ed25519")
+> did not hold for the implementation: `@myecoria/frost-ed25519-blake2b-wasm`
+> uses a BLAKE2b challenge hash, so its group signatures **never verify under
+> RFC 8032 ed25519** (`verifyGlyph`/`verifyReceipt`), only under its own
+> `verify_group_signature`. Additionally, it signed `canonicalHash(card)`
+> while the protocol signs `card.id`, and the published package never exposed
+> the module (no `./frost` export), so no npm consumer could have used it.
+> The standard-ciphersuite alternative evaluated (`@frosts/ed25519`,
+> FROST(Ed25519, SHA-512) per RFC 9591) is self-described as an unaudited
+> learning project and its published dists fail at import time (they require
+> `vitest` at runtime), so it is not shippable either.
+>
+> The design below remains valid for a future implementation: the
+> `GlyphSigner` interface and `GlyphServer.registerAsync` are the seams. A
+> revived implementation MUST produce signatures over `card.id` that verify
+> under RFC 8032 against a 32-byte group verifying key exposed as
+> `GlyphSigner.publicKey`, and MUST be covered by tests that assert
+> `verifyGlyph`/`verifyReceipt`/`verifyManifest` pass.
 
 ## Summary
 
