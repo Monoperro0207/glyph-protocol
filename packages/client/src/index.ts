@@ -357,6 +357,37 @@ export class GlyphClient {
     }
   }
 
+  /**
+   * Constructs a client with the recommended production-hardened posture, so
+   * the safe configuration is the easy path rather than something each caller
+   * must assemble correctly.
+   *
+   * Hardened defaults applied (each still overridable by `options`):
+   * - `secureMode: true` — refuse to run a tool that is not pinned/approved.
+   * - `verifyReceipts: true` — verify every response receipt against the pin.
+   * - `autoApproveReviewChanges: false` — even descriptive card changes pause.
+   * - `tofu: false` — never auto-trust a tool on first sight.
+   *
+   * A {@link PinStore} is **required** (use a persistent `FilePinStore`); the
+   * factory throws if it is missing rather than silently degrading. Provider
+   * trust ({@link TrustConfig}) and `requireAttestation` are left to the caller
+   * because they need a resolver / verifier the operator supplies.
+   */
+  static production(options: ConstructorParameters<typeof GlyphClient>[0]): GlyphClient {
+    if (!options.pins) {
+      throw new Error(
+        'GlyphClient.production() requires a PinStore — pass `pins` (FilePinStore for persistence)',
+      )
+    }
+    return new GlyphClient({
+      secureMode: true,
+      verifyReceipts: true,
+      autoApproveReviewChanges: false,
+      tofu: false,
+      ...options,
+    })
+  }
+
   async connect(options?: {
     cardDepth?: 'minimal' | 'standard' | 'rich'
   }): Promise<HandshakeResponse> {
