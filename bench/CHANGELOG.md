@@ -1,5 +1,12 @@
 # @glyphp/bench
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [c51a47c]
+  - @glyphp/client@1.3.0
+
 ## 0.0.4
 
 ### Patch Changes
