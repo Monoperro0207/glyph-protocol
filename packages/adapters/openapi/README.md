@@ -20,7 +20,13 @@ Each generated glyph:
 
 - takes its `name` from `operationId` (kebab-cased), `intent` from `summary`
 - derives `cost` from the HTTP method — GET is `safe`, POST/PUT/PATCH are
-  `caution`, DELETE is `danger` and requires confirmation
+  `caution`, DELETE is `danger` and requires confirmation. An operation may
+  override this with the **`x-glyph-risk`** vendor extension (`safe` |
+  `caution` | `danger`) when the method heuristic is wrong — e.g. a safe POST
+  search, or a GET that kicks off an expensive irreversible job. The override
+  sets the risk tier (and `requiresConfirmation` follows it), but
+  `sideEffects`/`reversible` stay factual to the method. An unrecognised value
+  is rejected.
 - carries the operation's parameter and response JSON Schemas (local `$ref`s
   resolved) as the card `input`/`output`
 - has a handler that proxies the call to the real REST endpoint: path
