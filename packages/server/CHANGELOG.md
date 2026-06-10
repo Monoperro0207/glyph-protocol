@@ -1,5 +1,52 @@
 # @glyphp/server
 
+## 1.4.0
+
+### Minor Changes
+
+- 0d3149a: Pluggable `ConfirmationStore` and `RateLimitStore` for multi-replica
+  deployments. By default both stay in-memory (existing behavior, per process).
+  Injecting shared-storage implementations via the new `confirmationStore` /
+  `rateLimitStore` server options makes a confirmation ticket issued by one
+  replica consumable on another, and the rate limit global instead of per
+  process. `MemoryConfirmationStore` / `MemoryRateLimitStore` are exported, and
+  `docs/deployment.md` gains a Redis example.
+- 755ebf6: Remove the experimental FROST signer; add `GlyphServer.registerAsync` for async signers.
+
+  An external audit (confirmed by testing) found the `FrostSigner` route was
+  broken end-to-end: it signed `canonicalHash(card)` while the protocol verifies
+  signatures over `card.id`, exposed the FROST public-key package instead of a
+  32-byte ed25519 verifying key, and — decisively — the underlying
+  `@myecoria/frost-ed25519-blake2b-wasm` uses a BLAKE2b challenge hash, so its
+  group signatures can never verify under RFC 8032 ed25519 (`verifyGlyph`).
+  No published consumer is affected: `@glyphp/core`'s export map never exposed
+  the module. RFC-0006 is updated to Withdrawn with the requirements a future
+  implementation must meet.
+
+  `GlyphServer.registerAsync(glyph)` is the new, additive registration path for
+  signers that only support asynchronous signing (KMS/HSM-backed, threshold):
+  `register()` stays synchronous for the default `Ed25519Signer`.
+
+- f702300: Production polish from the external audit's minor findings:
+
+  - `/health` and the handshake now report the real package version (was
+    hardcoded `0.1.0`).
+  - Injectable `logger` option (`GlyphLogger`: info/warn/error, defaults to
+    `console`) — all operational output, including the startup publicKey
+    notice, goes through it.
+  - Opt-in idempotency via `dedupeByClientCallId`: a retried call carrying the
+    same client `callId` and identical input replays the recorded response
+    instead of re-executing the handler. Keyed on
+    `glyph + callId + inputHash`, default TTL 5 minutes, pluggable
+    `DedupeStore` (with `MemoryDedupeStore` default) for multi-replica
+    deployments.
+
+### Patch Changes
+
+- Updated dependencies [25173f4]
+- Updated dependencies [755ebf6]
+  - @glyphp/core@1.5.0
+
 ## 1.3.2
 
 ### Patch Changes
