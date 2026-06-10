@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-23T23:56:46.013Z",
+  "generated": "2026-06-10T03:25:00.101Z",
   "cases": [
     {
       "name": "primitive-null",
@@ -75,6 +75,76 @@
         }
       ],
       "sha256": "ecb97e20cb3047c7c6aa7f58a8ccc31c1efb6c565a5c2e4fc62524571f37ed6b"
+    },
+    {
+      "name": "jcs-integral-float",
+      "inputJson": "1.0",
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "name": "jcs-negative-zero",
+      "inputJson": "-0.0",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "name": "jcs-exponent-large",
+      "inputJson": "1e21",
+      "sha256": "241c4643fa70b1dcde1205b71be4e3bebb17e9f880c8e1a33d0ead6c27271d3c"
+    },
+    {
+      "name": "jcs-exponent-small",
+      "inputJson": "1e-7",
+      "sha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+    },
+    {
+      "name": "jcs-exponent-zero-padded",
+      "inputJson": "1e-07",
+      "sha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+    },
+    {
+      "name": "jcs-decimal-boundary",
+      "inputJson": "0.000001",
+      "sha256": "159fb29a827ad04b260aa6c8ab6d8637f8f2b38af5c4f3cb49d6a21205e040f8"
+    },
+    {
+      "name": "jcs-shortest-roundtrip",
+      "inputJson": "0.1",
+      "sha256": "14be4b45f18e0d8c67b4f719b5144eee88497e413709d11d85b096d8e2346310"
+    },
+    {
+      "name": "jcs-long-float",
+      "inputJson": "123456789.123456789",
+      "sha256": "773807b45c9a120b28c7173e360024cce99d0608d4c5d8f25b9e954d9f1c7ba4"
+    },
+    {
+      "name": "jcs-max-double",
+      "inputJson": "1.7976931348623157e+308",
+      "sha256": "c2784e1abd6317452708f3fbf9641c16b959561bc621a1d408c23a20aa2cb585"
+    },
+    {
+      "name": "jcs-min-subnormal",
+      "inputJson": "5e-324",
+      "sha256": "c46e7ca1be4c8734f373a56530787288fa2058d73d07855e9247e949f811a42a"
+    },
+    {
+      "name": "jcs-max-safe-integer",
+      "inputJson": "9007199254740991",
+      "sha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26"
+    },
+    {
+      "name": "jcs-beyond-safe-integer",
+      "inputJson": "9007199254740993",
+      "sha256": "c681da39d7273a6a24c15c9cac3a75526ff2ecf8ba4ee60346a0c70c8163bdb2"
+    },
+    {
+      "name": "jcs-nested-numbers",
+      "inputJson": "{\"a\":1.0,\"b\":[1e-07,-0.0],\"c\":1e21}",
+      "sha256": "4100d8a88288ae0764d53547980fba1d98402215645cb9ddcfeb44fa38938525"
+    },
+    {
+      "name": "jcs-utf16-key-order",
+      "inputJson": "{\"｡\":1,\"𐀀\":2}",
+      "sha256": "008299302d4285e1ad392de6286154793c97714e131e22778355d21073453feb"
     }
   ]
 }

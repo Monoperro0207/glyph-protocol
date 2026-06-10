@@ -55,6 +55,14 @@ if (full) {
       optional: true,
     })
   }
+  // Differential canonicalization fuzz (spec §8.1): same random JSON texts
+  // hashed by TS, Python, and Go — any divergence breaks ids/signatures.
+  // The script itself skips (and says so) for runtimes that are absent.
+  steps.push({
+    name: 'fuzz canonical (differential)',
+    cmd: 'pnpm',
+    args: ['exec', 'tsx', 'scripts/fuzz-canonical.mjs'],
+  })
 }
 
 let failed = 0

@@ -6,17 +6,24 @@ against `spec/canonical/*-vectors.json` in the test suite.
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import unicodedata
 from typing import Any
+
+import rfc8785
+
+# ECMAScript Number.MAX_SAFE_INTEGER — beyond it, integers are not exactly
+# representable as IEEE-754 doubles and ECMAScript silently rounds at parse.
+_MAX_SAFE_INTEGER = 2**53 - 1
 
 
 def canonicalize(value: Any) -> Any:
     """Sort object keys and recurse into lists. Preserves primitive types.
 
-    Matches the TypeScript `canonicalize()` — JSON.stringify of the result
-    is the canonical pre-image of the SHA-256 hash.
+    Matches the TypeScript `canonicalize()` — the JCS serialization of the
+    result is the canonical pre-image of the SHA-256 hash. Note: the key
+    order of the output bytes is decided by `canonical_bytes` (UTF-16 code
+    units, per RFC 8785), not by this function's code-point sort.
     """
     if isinstance(value, dict):
         return {k: canonicalize(value[k]) for k in sorted(value.keys())}
@@ -25,17 +32,33 @@ def canonicalize(value: Any) -> Any:
     return value
 
 
-def canonical_bytes(value: Any) -> bytes:
-    """Canonical UTF-8 bytes of a JSON value (without trailing newline).
+def _coerce_large_ints(value: Any) -> Any:
+    """Convert ints beyond ±(2^53 − 1) to floats, replicating ECMAScript.
 
-    Uses `separators=(',', ':')` and `ensure_ascii=False` to match Node's
-    `JSON.stringify` defaults exactly.
+    `JSON.parse` in ECMAScript reads every number as a double, silently
+    rounding integers above MAX_SAFE_INTEGER. Python's `json.loads` keeps
+    full-precision ints, which `rfc8785` rejects; coercing to float applies
+    the same rounding ECMAScript already applied, so both SDKs serialize the
+    same bytes.
     """
-    return json.dumps(
-        canonicalize(value),
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
+    if isinstance(value, dict):
+        return {k: _coerce_large_ints(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_coerce_large_ints(v) for v in value]
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) > _MAX_SAFE_INTEGER:
+        return float(value)
+    return value
+
+
+def canonical_bytes(value: Any) -> bytes:
+    """Canonical UTF-8 bytes of a JSON value per RFC 8785 (JCS).
+
+    Delegates to `rfc8785` for the serialization the spec mandates
+    (spec/protocol.md §8.1): keys sorted by UTF-16 code units and ECMAScript
+    number formatting (`1.0` → `1`, `1e-07` → `1e-7`, `-0.0` → `0`) — Python's
+    `json.dumps` diverges on all three.
+    """
+    return rfc8785.dumps(_coerce_large_ints(value))
 
 
 def canonical_hash(value: Any) -> str:
