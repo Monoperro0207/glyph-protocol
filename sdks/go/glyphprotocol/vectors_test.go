@@ -47,11 +47,26 @@ func loadVectors(t *testing.T, name string) map[string]any {
 	return out
 }
 
+// caseInput returns the case's input value. Cases carrying raw JSON text
+// (`inputJson`) are parsed here, so this SDK's own parser + serializer are
+// what the vector exercises (spec/protocol.md §8.1).
+func caseInput(t *testing.T, c map[string]any) any {
+	t.Helper()
+	if rawJSON, ok := c["inputJson"].(string); ok {
+		var v any
+		if err := json.Unmarshal([]byte(rawJSON), &v); err != nil {
+			t.Fatalf("%v: bad inputJson: %v", c["name"], err)
+		}
+		return v
+	}
+	return c["input"]
+}
+
 func TestCanonicalizeMatchesReference(t *testing.T) {
 	cases := loadVectors(t, "canonicalize-vectors.json")["cases"].([]any)
 	for _, raw := range cases {
 		c := raw.(map[string]any)
-		got, err := CanonicalBytes(c["input"])
+		got, err := CanonicalBytes(caseInput(t, c))
 		if err != nil {
 			t.Fatalf("%v: %v", c["name"], err)
 		}
@@ -65,7 +80,7 @@ func TestHashingMatchesReference(t *testing.T) {
 	cases := loadVectors(t, "hashing-vectors.json")["cases"].([]any)
 	for _, raw := range cases {
 		c := raw.(map[string]any)
-		got, err := CanonicalHash(c["input"])
+		got, err := CanonicalHash(caseInput(t, c))
 		if err != nil {
 			t.Fatalf("%v: %v", c["name"], err)
 		}

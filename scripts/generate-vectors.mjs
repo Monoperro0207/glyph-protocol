@@ -20,12 +20,8 @@ import { fileURLToPath } from 'node:url'
 import { canonicalHash, canonicalize, sanitize } from '@glyphp/core'
 import * as ed from '@noble/ed25519'
 
-// Sync sha512 needed for synchronous ed25519 usage.
-ed.etc.sha512Sync = (...msgs) => {
-  const hash = createHash('sha512')
-  for (const msg of msgs) hash.update(msg)
-  return new Uint8Array(hash.digest())
-}
+// Sync sha512 needed for synchronous ed25519 usage (@noble/ed25519 v3 API).
+ed.hashes.sha512 = (msg) => Uint8Array.from(createHash('sha512').update(msg).digest())
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(repoRoot, 'spec/canonical')
@@ -49,11 +45,41 @@ const canonicalCases = [
   { name: 'mixed-array', input: [1, 'two', true, null, { k: 'v' }] },
 ]
 
-const canonicalVectors = canonicalCases.map(({ name, input }) => ({
-  name,
-  input,
-  canonical: JSON.stringify(canonicalize(input)),
-}))
+// JCS (RFC 8785) edge cases, expressed as RAW JSON text so each SDK exercises
+// its own parser + serializer (spec/protocol.md §8.1). Written via JS values
+// they would normalize before the SDK under test ever saw them — e.g. `1.0`
+// already parses to `1` here.
+const rawJsonCases = [
+  { name: 'jcs-integral-float', inputJson: '1.0' },
+  { name: 'jcs-negative-zero', inputJson: '-0.0' },
+  { name: 'jcs-exponent-large', inputJson: '1e21' },
+  { name: 'jcs-exponent-small', inputJson: '1e-7' },
+  { name: 'jcs-exponent-zero-padded', inputJson: '1e-07' },
+  { name: 'jcs-decimal-boundary', inputJson: '0.000001' },
+  { name: 'jcs-shortest-roundtrip', inputJson: '0.1' },
+  { name: 'jcs-long-float', inputJson: '123456789.123456789' },
+  { name: 'jcs-max-double', inputJson: '1.7976931348623157e+308' },
+  { name: 'jcs-min-subnormal', inputJson: '5e-324' },
+  { name: 'jcs-max-safe-integer', inputJson: '9007199254740991' },
+  { name: 'jcs-beyond-safe-integer', inputJson: '9007199254740993' },
+  { name: 'jcs-nested-numbers', inputJson: '{"a":1.0,"b":[1e-07,-0.0],"c":1e21}' },
+  // U+10000 (surrogate pair D800 DC00) sorts BEFORE U+FF61 in UTF-16 code
+  // units, but AFTER it in code points/UTF-8 bytes — the JCS ordering test.
+  { name: 'jcs-utf16-key-order', inputJson: '{"｡":1,"\u{10000}":2}' },
+]
+
+const canonicalVectors = [
+  ...canonicalCases.map(({ name, input }) => ({
+    name,
+    input,
+    canonical: JSON.stringify(canonicalize(input)),
+  })),
+  ...rawJsonCases.map(({ name, inputJson }) => ({
+    name,
+    inputJson,
+    canonical: JSON.stringify(canonicalize(JSON.parse(inputJson))),
+  })),
+]
 writeFileSync(
   join(outDir, 'canonicalize-vectors.json'),
   `${JSON.stringify({ generated: new Date().toISOString(), cases: canonicalVectors }, null, 2)}\n`,
@@ -61,11 +87,18 @@ writeFileSync(
 
 // ---------- 2. hashing -----------------------------------------------------
 
-const hashingVectors = canonicalCases.map(({ name, input }) => ({
-  name,
-  input,
-  sha256: canonicalHash(input),
-}))
+const hashingVectors = [
+  ...canonicalCases.map(({ name, input }) => ({
+    name,
+    input,
+    sha256: canonicalHash(input),
+  })),
+  ...rawJsonCases.map(({ name, inputJson }) => ({
+    name,
+    inputJson,
+    sha256: canonicalHash(JSON.parse(inputJson)),
+  })),
+]
 writeFileSync(
   join(outDir, 'hashing-vectors.json'),
   `${JSON.stringify({ generated: new Date().toISOString(), cases: hashingVectors }, null, 2)}\n`,
@@ -122,6 +155,12 @@ const sanitizeCases = [
   {
     name: 'array-with-control',
     input: ['onetwo', { k: 'three​' }],
+  },
+  {
+    // Object keys containing JSON-pointer special characters: the report
+    // paths must escape them per RFC 6901 (`~` → `~0`, `/` → `~1`).
+    name: 'escaped-object-keys',
+    input: { 'a/b': 'x​y', 'a~b': 'z​w' },
   },
 ]
 

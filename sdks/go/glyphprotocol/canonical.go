@@ -10,7 +10,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"math"
 	"sort"
+	"unicode/utf16"
 )
 
 // Canonicalize returns a value with all map keys recursively sorted so a
@@ -40,22 +43,102 @@ func Canonicalize(value any) any {
 	}
 }
 
-// CanonicalBytes returns the canonical UTF-8 JSON encoding of `value` —
-// without HTML escaping or trailing newline — matching Node's JSON.stringify
-// defaults.
-func CanonicalBytes(value any) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(Canonicalize(value)); err != nil {
-		return nil, err
+// utf16Less compares two strings by their UTF-16 code units — the JCS
+// (RFC 8785) sort order, matching ECMAScript's default string comparison.
+// It differs from Go's native byte/code-point order for keys containing
+// characters above U+FFFF (surrogate pairs sort below U+E000–U+FFFF).
+func utf16Less(a, b string) bool {
+	ua := utf16.Encode([]rune(a))
+	ub := utf16.Encode([]rune(b))
+	for i := 0; i < len(ua) && i < len(ub); i++ {
+		if ua[i] != ub[i] {
+			return ua[i] < ub[i]
+		}
 	}
-	// encoding/json appends a trailing newline; strip it to match JSON.stringify.
-	out := buf.Bytes()
+	return len(ua) < len(ub)
+}
+
+// appendJSONScalar encodes a single scalar with encoding/json semantics but
+// without HTML escaping or the encoder's trailing newline.
+func appendJSONScalar(buf *bytes.Buffer, v any) error {
+	var tmp bytes.Buffer
+	enc := json.NewEncoder(&tmp)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return err
+	}
+	out := tmp.Bytes()
 	if n := len(out); n > 0 && out[n-1] == '\n' {
 		out = out[:n-1]
 	}
-	return out, nil
+	buf.Write(out)
+	return nil
+}
+
+// appendCanonical writes the RFC 8785 canonical JSON encoding of `value`.
+// Numbers already serialize ECMAScript-style under encoding/json (shortest
+// round-trip, exponent form outside [1e-6, 1e21), `1e-7` not `1e-07`) — the
+// only divergences handled here are negative zero (JCS: `0`) and map key
+// order (JCS: UTF-16 code units).
+func appendCanonical(buf *bytes.Buffer, value any) error {
+	switch v := value.(type) {
+	case map[string]any:
+		buf.WriteByte('{')
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Slice(keys, func(i, j int) bool { return utf16Less(keys[i], keys[j]) })
+		for i, k := range keys {
+			if i > 0 {
+				buf.WriteByte(',')
+			}
+			if err := appendJSONScalar(buf, k); err != nil {
+				return err
+			}
+			buf.WriteByte(':')
+			if err := appendCanonical(buf, v[k]); err != nil {
+				return err
+			}
+		}
+		buf.WriteByte('}')
+		return nil
+	case []any:
+		buf.WriteByte('[')
+		for i, item := range v {
+			if i > 0 {
+				buf.WriteByte(',')
+			}
+			if err := appendCanonical(buf, item); err != nil {
+				return err
+			}
+		}
+		buf.WriteByte(']')
+		return nil
+	case float64:
+		if v == 0 {
+			// Covers negative zero: JCS serializes -0 as 0.
+			buf.WriteByte('0')
+			return nil
+		}
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return fmt.Errorf("glyphprotocol: cannot canonicalize non-finite number %v", v)
+		}
+		return appendJSONScalar(buf, v)
+	default:
+		return appendJSONScalar(buf, v)
+	}
+}
+
+// CanonicalBytes returns the canonical UTF-8 JSON encoding of `value` per
+// RFC 8785 (JCS) — UTF-16-ordered keys, ECMAScript number formatting, no HTML
+// escaping, no insignificant whitespace. See spec/protocol.md §8.1.
+func CanonicalBytes(value any) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := appendCanonical(&buf, value); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // CanonicalHash returns the SHA-256 hex of `CanonicalBytes(value)`.

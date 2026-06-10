@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-23T23:56:46.012Z",
+  "generated": "2026-06-10T03:25:00.100Z",
   "cases": [
     {
       "name": "primitive-null",
@@ -75,6 +75,76 @@
         }
       ],
       "canonical": "[1,\"two\",true,null,{\"k\":\"v\"}]"
+    },
+    {
+      "name": "jcs-integral-float",
+      "inputJson": "1.0",
+      "canonical": "1"
+    },
+    {
+      "name": "jcs-negative-zero",
+      "inputJson": "-0.0",
+      "canonical": "0"
+    },
+    {
+      "name": "jcs-exponent-large",
+      "inputJson": "1e21",
+      "canonical": "1e+21"
+    },
+    {
+      "name": "jcs-exponent-small",
+      "inputJson": "1e-7",
+      "canonical": "1e-7"
+    },
+    {
+      "name": "jcs-exponent-zero-padded",
+      "inputJson": "1e-07",
+      "canonical": "1e-7"
+    },
+    {
+      "name": "jcs-decimal-boundary",
+      "inputJson": "0.000001",
+      "canonical": "0.000001"
+    },
+    {
+      "name": "jcs-shortest-roundtrip",
+      "inputJson": "0.1",
+      "canonical": "0.1"
+    },
+    {
+      "name": "jcs-long-float",
+      "inputJson": "123456789.123456789",
+      "canonical": "123456789.12345679"
+    },
+    {
+      "name": "jcs-max-double",
+      "inputJson": "1.7976931348623157e+308",
+      "canonical": "1.7976931348623157e+308"
+    },
+    {
+      "name": "jcs-min-subnormal",
+      "inputJson": "5e-324",
+      "canonical": "5e-324"
+    },
+    {
+      "name": "jcs-max-safe-integer",
+      "inputJson": "9007199254740991",
+      "canonical": "9007199254740991"
+    },
+    {
+      "name": "jcs-beyond-safe-integer",
+      "inputJson": "9007199254740993",
+      "canonical": "9007199254740992"
+    },
+    {
+      "name": "jcs-nested-numbers",
+      "inputJson": "{\"a\":1.0,\"b\":[1e-07,-0.0],\"c\":1e21}",
+      "canonical": "{\"a\":1,\"b\":[1e-7,0],\"c\":1e+21}"
+    },
+    {
+      "name": "jcs-utf16-key-order",
+      "inputJson": "{\"｡\":1,\"𐀀\":2}",
+      "canonical": "{\"𐀀\":2,\"｡\":1}"
     }
   ]
 }

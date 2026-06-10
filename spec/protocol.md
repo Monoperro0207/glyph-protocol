@@ -153,6 +153,42 @@ is human-readable and MUST NOT be matched on.
 
 ## 8. Integrity, receipts, and inert data
 
+### 8.1 Canonical form (JCS, RFC 8785)
+
+Every hash in the protocol — the card `id`, `canonicalHash`, `inputHash`,
+`outputHash`, `inspectionHash` — is the SHA-256 of the value's **canonical JSON
+form**. The canonical form MUST follow the JSON Canonicalization Scheme
+([RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)):
+
+- Object keys sorted by **UTF-16 code units** (not code points or bytes — the
+  two differ for keys containing characters above U+FFFF).
+- Numbers serialized exactly as ECMAScript `JSON.stringify`: integral values
+  without a fractional part (`1`, never `1.0`), shortest round-trip digits,
+  plain decimal notation in `[10⁻⁶, 10²¹)`, exponent form outside it with no
+  zero-padded exponent (`1e-7`, never `1e-07`), and negative zero as `0`.
+- Strings in UTF-8 with the standard JSON short escapes and no escaping beyond
+  what JSON requires.
+- No insignificant whitespace.
+
+An implementation in a language whose native JSON serializer differs (Python's
+`json.dumps`, for example, emits `1.0` and `1e-07`) MUST use a JCS-conformant
+serializer, or its ids and signatures will not interoperate. The reference
+ECMAScript implementation satisfies JCS natively (`JSON.stringify` is the
+normative reference for RFC 8785 number serialization); conformance across
+SDKs is locked by [`canonical/`](canonical) test vectors, which include
+number-edge cases expressed as raw JSON text (`inputJson`) so each language
+exercises its own parser and serializer.
+
+Integers beyond ±(2⁵³ − 1) are not exactly representable as IEEE-754 doubles:
+ECMAScript silently rounds them at parse, while languages with arbitrary-
+precision integers keep them exact — the same wire bytes then canonicalize
+differently. Producers SHOULD NOT emit integers outside that range; consumers
+in arbitrary-precision languages MUST apply IEEE-754 double rounding before
+canonicalizing (replicating ECMAScript parse semantics), as the Python SDK
+does.
+
+### 8.2 Signatures and receipts
+
 On `register()`, a server signs the card's `id` with its ed25519 key and embeds
 `publicKey` and `signature`. Every successful call also produces a signed
 [`CallReceipt`](schemas/call-receipt.schema.json), returned inside the

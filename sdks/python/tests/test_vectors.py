@@ -27,15 +27,24 @@ def _load(name: str) -> dict:
         return json.load(f)
 
 
+def _case_input(case: dict):
+    """Cases carrying raw JSON text (`inputJson`) are parsed here, so this
+    SDK's own parser + serializer are what the vector exercises
+    (spec/protocol.md §8.1)."""
+    if "inputJson" in case:
+        return json.loads(case["inputJson"])
+    return case["input"]
+
+
 @pytest.mark.parametrize("case", _load("canonicalize-vectors.json")["cases"])
 def test_canonicalize_matches_reference(case: dict) -> None:
     expected = case["canonical"].encode("utf-8")
-    assert canonical_bytes(case["input"]) == expected
+    assert canonical_bytes(_case_input(case)) == expected
 
 
 @pytest.mark.parametrize("case", _load("hashing-vectors.json")["cases"])
 def test_hashing_matches_reference(case: dict) -> None:
-    assert canonical_hash(case["input"]) == case["sha256"]
+    assert canonical_hash(_case_input(case)) == case["sha256"]
 
 
 @pytest.mark.parametrize("case", _load("signature-vectors.json")["cases"])
