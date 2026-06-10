@@ -37,6 +37,18 @@ const client = GlyphClient.production({
 })
 ```
 
+## Card caching within a session
+
+The client caches each card in memory the first time it fetches it and does
+**not** invalidate that cache for the lifetime of the client instance. This is
+deliberate: the trust model treats a card change as an *event to detect at a
+boundary* (the pin gate, `diffCards`, update manifests), not something to pick
+up silently mid-session — a server rotating a card under an in-flight session
+should not be able to change what you call without re-approval. If you need to
+observe a server-side card change within one process, create a fresh
+`GlyphClient` (or re-approve through the pin workflow, which always operates
+on the freshly fetched card).
+
 ## Rendering tool output for an LLM
 
 `renderEnvelope` turns a `SealedEnvelope` into the exact text block to hand a

@@ -84,6 +84,49 @@ export interface RateLimitStore {
   hit(key: string, windowMs: number, now: number): Promise<{ count: number; resetAt: number }>
 }
 
+/**
+ * Cache for opt-in call deduplication (idempotency). Keyed by
+ * `glyphName + clientCallId + inputHash`, so a retry with the same
+ * idempotency key and identical input replays the recorded response, while
+ * the same key with different input executes normally (it is a different
+ * request, not a retry).
+ */
+export interface DedupeStore {
+  /** Returns the recorded response JSON for `key`, if unexpired. */
+  get(key: string): Promise<string | undefined>
+  /** Records a successful response for `key`, expiring after `ttlMs`. */
+  put(key: string, responseJson: string, ttlMs: number): Promise<void>
+}
+
+/** In-memory {@link DedupeStore} — the single-instance default. */
+export class MemoryDedupeStore implements DedupeStore {
+  private entries = new Map<string, { responseJson: string; expiresAt: number }>()
+
+  async get(key: string): Promise<string | undefined> {
+    const entry = this.entries.get(key)
+    if (!entry) return undefined
+    if (Date.now() >= entry.expiresAt) {
+      this.entries.delete(key)
+      return undefined
+    }
+    return entry.responseJson
+  }
+
+  async put(key: string, responseJson: string, ttlMs: number): Promise<void> {
+    // Sweep expired entries (bounded batch, same rationale as the rate
+    // limiter) so the cache never grows unbounded.
+    const now = Date.now()
+    let swept = 0
+    for (const [k, entry] of this.entries) {
+      if (now >= entry.expiresAt) {
+        this.entries.delete(k)
+        if (++swept >= 100) break
+      }
+    }
+    this.entries.set(key, { responseJson, expiresAt: now + ttlMs })
+  }
+}
+
 /** In-memory {@link RateLimitStore} — the single-instance default. */
 export class MemoryRateLimitStore implements RateLimitStore {
   private hits = new Map<string, { count: number; resetAt: number }>()
