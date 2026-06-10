@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/integration-openai-agents",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Expose Glyph Protocol glyphs as OpenAI Agents SDK tools",
   "license": "Apache-2.0",
   "author": "Patrick Espino",

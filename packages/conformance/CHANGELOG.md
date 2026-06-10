@@ -1,5 +1,13 @@
 # @glyphp/conformance
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies [25173f4]
+- Updated dependencies [755ebf6]
+  - @glyphp/core@1.5.0
+
 ## 1.0.5
 
 ### Patch Changes

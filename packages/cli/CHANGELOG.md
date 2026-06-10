@@ -1,5 +1,15 @@
 # @glyphp/cli
 
+## 1.3.2
+
+### Patch Changes
+
+- Updated dependencies [25173f4]
+- Updated dependencies [755ebf6]
+  - @glyphp/core@1.5.0
+  - @glyphp/adapter-mcp@1.1.1
+  - @glyphp/client@1.3.1
+
 ## 1.3.1
 
 ### Patch Changes

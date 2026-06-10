@@ -1,5 +1,16 @@
 # @glyphp/adapter-openapi
 
+## 3.1.1
+
+### Patch Changes
+
+- Updated dependencies [25173f4]
+- Updated dependencies [0d3149a]
+- Updated dependencies [755ebf6]
+- Updated dependencies [f702300]
+  - @glyphp/core@1.5.0
+  - @glyphp/server@1.4.0
+
 ## 3.1.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/adapter-mcp-server",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Expose a Glyph Protocol server's tools to any MCP client (Claude Desktop, Hermes Agent, Cursor, etc.)",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
