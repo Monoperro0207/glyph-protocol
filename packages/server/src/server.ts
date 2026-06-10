@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { createRequire } from 'node:module'
 import type { GlyphKeyPair, GlyphSigner, KeyRegistrySource } from '@glyphp/core'
 import {
   applyDepth,
@@ -26,14 +27,26 @@ import type { AuthConfig, RateLimitConfig } from './middleware.js'
 import { authMiddleware, buildVerify, rateLimitMiddleware } from './middleware.js'
 import type { CallerPrincipal, PolicyResolver } from './policy.js'
 import { missingScopes } from './policy.js'
-import type { ConfirmationStore, RateLimitStore } from './stores.js'
-import { MemoryConfirmationStore } from './stores.js'
+import type { ConfirmationStore, DedupeStore, RateLimitStore } from './stores.js'
+import { MemoryConfirmationStore, MemoryDedupeStore } from './stores.js'
 
-const SERVER_VERSION = '0.1.0'
+// Resolved from package.json so /health and handshake report the real
+// release instead of a hardcoded constant. Works from src/ and dist/ alike.
+const SERVER_VERSION: string = createRequire(import.meta.url)('../package.json').version
 const CONFIRMATION_TTL_MS = 5 * 60_000
 const MAX_PENDING_CONFIRMATIONS = 10_000
 const DEFAULT_CALL_TIMEOUT_MS = 30_000
 const MAX_BODY_BYTES = 1_048_576
+
+/**
+ * Minimal logging seam. Defaults to `console`; inject a structured logger
+ * (pino, winston, an OTel bridge) to own the server's operational output.
+ */
+export interface GlyphLogger {
+  info(message: string, ...args: unknown[]): void
+  warn(message: string, ...args: unknown[]): void
+  error(message: string, ...args: unknown[]): void
+}
 
 class HandlerTimeoutError extends Error {}
 
@@ -88,6 +101,8 @@ export class GlyphServer {
   private manifests = new Map<string, UpdateManifest>()
   private confirmations: ConfirmationStore
   private rateLimitStore?: RateLimitStore
+  private dedupe?: { ttlMs: number; store: DedupeStore }
+  private logger: GlyphLogger
   private port: number
   private signer: GlyphSigner
   private auth?: AuthConfig
@@ -139,6 +154,20 @@ export class GlyphServer {
      */
     rateLimitStore?: RateLimitStore
     /**
+     * Logger for the server's operational output (startup notices, hook and
+     * policy errors). Defaults to `console`.
+     */
+    logger?: GlyphLogger
+    /**
+     * Opt-in idempotency: when set, a call that carries a client `callId` is
+     * deduplicated on `glyphName + callId + inputHash` — a retry with the
+     * same id and identical input replays the recorded response instead of
+     * re-executing the handler. The same id with different input is a
+     * different request and executes normally. Default TTL 5 minutes; inject
+     * a shared `store` for multi-replica deployments.
+     */
+    dedupeByClientCallId?: { ttlMs?: number; store?: DedupeStore }
+    /**
      * Enforce that production-critical configs (auth, rateLimit, keyPair) are
      * present when `NODE_ENV=production`. Defaults to `true` in production,
      * `false` otherwise. When true and configs are missing, the constructor
@@ -146,6 +175,8 @@ export class GlyphServer {
      */
     strictProduction?: boolean
   }) {
+    this.logger = options?.logger ?? console
+
     // ── Production Hardening Guard (PRODHARDEN-001) ──
     const isProduction = process.env.NODE_ENV === 'production'
     const strictProduction = options?.strictProduction ?? isProduction
@@ -159,7 +190,7 @@ export class GlyphServer {
         if (strictProduction) {
           throw new Error(msg)
         }
-        console.warn(msg)
+        this.logger.warn(msg)
       }
     }
 
@@ -174,6 +205,12 @@ export class GlyphServer {
     this.maxBodyBytes = options?.maxBodyBytes ?? MAX_BODY_BYTES
     this.confirmations = options?.confirmationStore ?? new MemoryConfirmationStore()
     this.rateLimitStore = options?.rateLimitStore
+    if (options?.dedupeByClientCallId) {
+      this.dedupe = {
+        ttlMs: options.dedupeByClientCallId.ttlMs ?? 5 * 60_000,
+        store: options.dedupeByClientCallId.store ?? new MemoryDedupeStore(),
+      }
+    }
     if (options?.signer) {
       this.signer = options.signer
     } else if (options?.keyPair) {
@@ -185,9 +222,9 @@ export class GlyphServer {
         // Should be unreachable — caught by guard above. Defense-in-depth.
         throw new Error('[glyph] Production mode forbids ephemeral key pairs.')
       }
-      console.warn('[glyph] No keyPair provided — generated an ephemeral one for this run.')
+      this.logger.warn('[glyph] No keyPair provided — generated an ephemeral one for this run.')
     }
-    console.log('[glyph] provider publicKey:', this.signer.publicKey)
+    this.logger.info('[glyph] provider publicKey:', this.signer.publicKey)
     this.setupRoutes()
   }
 
@@ -275,7 +312,7 @@ export class GlyphServer {
     try {
       return await this.policy(c)
     } catch (err) {
-      console.error('[glyph] policy resolver threw:', err)
+      this.logger.error('[glyph] policy resolver threw:', err)
       return undefined
     }
   }
@@ -295,7 +332,7 @@ export class GlyphServer {
       if (err instanceof MalformedJsonError) {
         return errorResponse(c, 400, 'MALFORMED_JSON', 'Request body is not valid JSON')
       }
-      console.error('[glyph] unhandled error:', err)
+      this.logger.error('[glyph] unhandled error:', err)
       return errorResponse(c, 500, 'INTERNAL_ERROR', 'Internal server error')
     })
 
@@ -325,7 +362,7 @@ export class GlyphServer {
         const registry = await this.keyRegistry.registry()
         return c.json(registry)
       } catch (err) {
-        console.error('[glyph] /keys failed:', err)
+        this.logger.error('[glyph] /keys failed:', err)
         return errorResponse(
           c,
           500,
@@ -507,6 +544,19 @@ export class GlyphServer {
         )
       }
 
+      // Opt-in idempotency: replay a recorded response for the same
+      // glyph + client callId + input. Placed after the scope gate (a replay
+      // must never leak a response policy would deny) and before the
+      // confirmation gate (a retry of a confirmed call must not fail on its
+      // already-consumed token).
+      const dedupe = this.dedupe
+      const dedupeKey =
+        dedupe && clientCallId ? `${name}:${clientCallId}:${canonicalHash(parsed.data)}` : undefined
+      if (dedupe && dedupeKey) {
+        const cached = await dedupe.store.get(dedupeKey)
+        if (cached) return c.json(JSON.parse(cached))
+      }
+
       // Policy gate: a glyph that declares requiresConfirmation cannot run
       // without a single-use confirmation token, bound to this exact glyph
       // and input, obtained from POST /glyphs/:name/prepare.
@@ -621,7 +671,7 @@ export class GlyphServer {
         try {
           this.onCall(receipt)
         } catch (err) {
-          console.error('[glyph] onCall audit hook threw:', err)
+          this.logger.error('[glyph] onCall audit hook threw:', err)
         }
       }
 
@@ -633,7 +683,11 @@ export class GlyphServer {
         glyph.card.provider,
         inspection,
       )
-      return c.json({ ...envelope, receipt })
+      const response = { ...envelope, receipt }
+      if (dedupe && dedupeKey) {
+        await dedupe.store.put(dedupeKey, JSON.stringify(response), dedupe.ttlMs)
+      }
+      return c.json(response)
     })
   }
 
