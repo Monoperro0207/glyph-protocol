@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { GlyphCard } from '@glyphp/types'
 import type { AttestationResult, AttestationVerifier } from './attestation.js'
+import { computeGlyphId } from './index.js'
 
 /**
  * The keyless provenance bundle carried (base64-encoded) in
@@ -8,7 +9,12 @@ import type { AttestationResult, AttestationVerifier } from './attestation.js'
  */
 export interface KeylessBundle {
   bundleVersion: 'glyph-keyless-v1'
-  /** SHA-256 (hex) of the card's content-addressed id — binds bundle ↔ card. */
+  /**
+   * SHA-256 (hex) of the card's **attestation-exclusive** canonical id
+   * ({@link keylessSubjectDigest}) — binds bundle ↔ card content. The bundle
+   * lives inside `card.attestation`, so it cannot commit to the final id that
+   * contains it (RFC-0007 §3.1).
+   */
   subjectDigest: string
   /** The OIDC issuer that minted the signing identity. */
   issuer: string
@@ -50,6 +56,25 @@ export interface KeylessBackend {
 }
 
 const KEYLESS_TYPE = 'glyph-keyless-v1'
+
+/**
+ * The digest a keyless bundle commits to: SHA-256 (hex) of the card's
+ * **attestation-exclusive** canonical id — the id `computeGlyphId` yields with
+ * the `attestation` slot absent (RFC-0007 §3.1). The bundle rides inside
+ * `card.attestation`, which itself enters the final id, so committing to
+ * `sha256(card.id)` would need a sha256 fixed point; excluding the slot that
+ * carries the proof mirrors how the ed25519 path signs an id that excludes
+ * `signature`. For a card without an attestation this equals `sha256(card.id)`.
+ *
+ * Producers call this on the card content *before* attaching the attestation;
+ * verifiers recompute it from the received card (never from `card.id`).
+ */
+export function keylessSubjectDigest(
+  card: Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'> | GlyphCard,
+): string {
+  const preId = computeGlyphId({ ...card, attestation: undefined })
+  return createHash('sha256').update(preId).digest('hex')
+}
 
 const SEGMENT_DELIMITERS = new Set([':', '/'])
 
@@ -107,10 +132,18 @@ export class KeylessVerifier implements AttestationVerifier {
       return { valid: false, type: KEYLESS_TYPE, error: 'unsupported or incomplete bundle' }
     }
 
-    // Subject binding — the bundle must commit to THIS card's id (RFC-0007 §4.2.1).
-    const expected = createHash('sha256').update(card.id).digest('hex')
+    // Subject binding — the bundle must commit to THIS card's content
+    // (RFC-0007 §4.2.1). Recomputed from the attestation-exclusive canonical
+    // id, never read from `card.id`: the bundle lives inside `attestation`,
+    // so it cannot commit to the final id that contains it. Content integrity
+    // of `card.id` itself remains `verifyGlyph`'s check (RFC-0007 §3.2).
+    const expected = keylessSubjectDigest(card)
     if (bundle.subjectDigest !== expected) {
-      return { valid: false, type: KEYLESS_TYPE, error: 'subject digest does not match card id' }
+      return {
+        valid: false,
+        type: KEYLESS_TYPE,
+        error: 'subject digest does not match card content',
+      }
     }
 
     // The bundle is well-formed and bound to this card. Trust now depends on
