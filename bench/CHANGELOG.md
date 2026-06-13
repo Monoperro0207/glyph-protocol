@@ -1,5 +1,14 @@
 # @glyphp/bench
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [4418e47]
+  - @glyphp/core@1.6.0
+  - @glyphp/client@1.3.2
+  - @glyphp/server@1.4.1
+
 ## 0.0.6
 
 ### Patch Changes
