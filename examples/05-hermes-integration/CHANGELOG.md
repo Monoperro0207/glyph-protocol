@@ -1,5 +1,13 @@
 # 05-hermes-integration
 
+## 0.0.9
+
+### Patch Changes
+
+- @glyphp/client@1.3.2
+- @glyphp/server@1.4.1
+- @glyphp/adapter-mcp-server@1.0.8
+
 ## 0.0.8
 
 ### Patch Changes

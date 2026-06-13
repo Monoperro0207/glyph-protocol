@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/attestation-sigstore",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "SPIKE — opt-in AttestationVerifier that performs real cryptographic Sigstore-bundle verification via @sigstore/verify. Not yet published.",
   "license": "Apache-2.0",
