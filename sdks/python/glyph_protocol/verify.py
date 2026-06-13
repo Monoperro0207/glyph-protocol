@@ -1,6 +1,7 @@
 """Signature verification — cards, receipts, manifests, key registries."""
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Optional
 
 from cryptography.exceptions import InvalidSignature
@@ -31,6 +32,28 @@ _CARD_CANONICAL_FIELDS = [
 def _compute_glyph_id(card: dict) -> str:
     picked = {f: card.get(f) for f in _CARD_CANONICAL_FIELDS if f in card}
     return canonical_hash(picked)
+
+
+def compute_keyless_subject_digest(card: dict) -> str:
+    """SHA-256 (hex) of the card's attestation-exclusive canonical id.
+
+    The digest a ``glyph-keyless-v1`` bundle commits to (RFC-0007 §3.1). The
+    bundle rides inside ``card["attestation"]``, which itself enters the final
+    id, so it cannot commit to ``sha256(card["id"])`` — it commits to the id
+    the card has with the attestation slot absent, mirroring how the ed25519
+    path signs an id that excludes ``signature``. For a card without an
+    attestation this equals ``sha256(card["id"])``.
+
+    Producers call this on the card content before attaching the attestation;
+    verifiers recompute it from the received card (never from ``card["id"]``).
+    """
+    picked = {
+        f: card.get(f)
+        for f in _CARD_CANONICAL_FIELDS
+        if f in card and f != "attestation"
+    }
+    pre_id = canonical_hash(picked)
+    return hashlib.sha256(pre_id.encode("ascii")).hexdigest()
 
 
 def _verify_ed25519(public_key_hex: str, message: bytes, signature_hex: str) -> bool:

@@ -439,7 +439,7 @@ export {
   verifyKeyRegistry,
 } from './key-registry.js'
 export type { KeylessBackend, KeylessBundle, KeylessIdentityPolicy } from './keyless.js'
-export { KeylessVerifier } from './keyless.js'
+export { KeylessVerifier, keylessSubjectDigest } from './keyless.js'
 export {
   PROVIDERS_REGISTRY_VERSION,
   signProvidersRegistry,

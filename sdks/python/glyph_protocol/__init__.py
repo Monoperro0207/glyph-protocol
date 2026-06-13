@@ -11,6 +11,7 @@ from .core import (
     fingerprint_key,
 )
 from .verify import (
+    compute_keyless_subject_digest,
     verify_glyph,
     verify_receipt,
     verify_manifest,
@@ -29,6 +30,7 @@ __all__ = [
     "canonical_bytes",
     "sanitize",
     "fingerprint_key",
+    "compute_keyless_subject_digest",
     "verify_glyph",
     "verify_receipt",
     "verify_manifest",
