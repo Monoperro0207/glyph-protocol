@@ -4,6 +4,11 @@
 - **Targets:** Glyph Protocol 1.x (additive, backwards-compatible)
 - **Author:** Glyph Protocol
 - **Created:** 2026-06-09
+- **Updated:** 2026-06-13 — `subjectCardId` redefined over the
+  **attestation-exclusive** canonical id (§3.1.1). The original definition
+  (the card's content-addressed id) was unsatisfiable: the binding lives inside
+  `card.attestation`, which itself enters `card.id`, so no binding could commit
+  to the id that contains it. Mirrors RFC-0007 §3.1.1.
 
 ## 1. Motivation
 
@@ -60,8 +65,9 @@ additive; a deployment MAY use either or both.
 
 ### 3.1 Per-card binding (rides the attestation hook)
 
-The publisher signs a statement over the card's `id` and delivers it in the
-existing `CardAttestation` envelope (RFC-0008) with a registered `type`:
+The publisher signs a statement over the card's id (specifically its
+attestation-exclusive canonical id, §3.1.1) and delivers it in the existing
+`CardAttestation` envelope (RFC-0008) with a registered `type`:
 
 ```json
 {
@@ -79,22 +85,59 @@ The binding (canonical JSON, base64-encoded into `payload`):
 {
   "bindingVersion": "publisher-identity-v1",
   "provider": "acme.payments",
-  "subjectCardId": "<the card's content-addressed id>",
+  "subjectCardId": "<the card's attestation-exclusive canonical id — see §3.1.1>",
   "publisherKey": "<ed25519 public key of the publisher, hex>",
   "signature": "<ed25519 over the canonical hash of this binding minus `signature`>"
 }
 ```
 
-- `subjectCardId` binds the statement to *this* card (like RFC-0007's
-  `subjectDigest`), so a binding cannot be replayed onto another card.
+- `subjectCardId` binds the statement to *this* card: it is the card's
+  **attestation-exclusive** canonical id (§3.1.1), the analogue of RFC-0007's
+  `subjectDigest` — RFC-0009 binds the id itself rather than its SHA-256. A
+  binding lifted onto a card with different content fails this check, so it
+  cannot be replayed.
 - `provider` MUST equal the card's `provider`; a verifier rejects a mismatch.
-- Because the envelope is canonical content, it enters the card `id` and a change
-  to it is a `breaking` diff — a publisher binding cannot be silently added,
-  swapped, or stripped past a pin (RFC-0008 §6).
+- The `attestation` envelope is canonical content, so it still enters the
+  **final** card `id`: adding, swapping, or stripping a binding changes `id` and
+  is a `breaking` diff — a publisher binding cannot slip past a pin (RFC-0008 §6).
 
 The publisher key is **distinct** from the server `publicKey`. For an adapted
 glyph the upstream API owner holds the publisher key; the Glyph server holds the
 signing key. For `defineGlyph` they MAY be the same key.
+
+#### 3.1.1 The subject id and the id fixed point
+
+The card's content-addressed `id` (RFC: `computeGlyphId`) covers the
+`attestation` field — an attested card and its unattested twin are different
+tools. But the publisher binding *is* the attestation payload: a binding whose
+`subjectCardId` was "the card's content-addressed id" would have to contain the
+very id that contains it, and no such fixed point exists. The original draft of
+this RFC required exactly that, which made a card that passes both
+`verifyGlyph()` and publisher verification unconstructible — the same
+contradiction RFC-0007 §3.1.1 hit for keyless `subjectDigest`.
+
+The resolution is identical, and mirrors the ed25519 path (the canonical id
+*excludes* `signature`/`publicKey` so the signature can commit to the id without
+containing itself). The binding commits to the id computed with the slot that
+carries *its* proof removed:
+
+> **`subjectCardId` = the card's canonical id computed with the `attestation`
+> slot absent** (the *attestation-exclusive id*). All other canonical fields are
+> covered. For a card without an attestation the attestation-exclusive id and
+> `card.id` coincide.
+
+RFC-0009 binds the **id itself** (string equality), where RFC-0007 binds its
+SHA-256: the fixed-point problem and its resolution are the same; only the
+representation differs. Binding the plain id keeps the value human-legible in
+the binding, and the binding is itself signed, so it needs no extra hashing.
+
+The final `card.id` still includes the attestation, so the published card
+remains tamper-evident end to end: the binding commits to the behavioral
+content, and the id commits to the content *plus* the binding. Producers compute
+`subjectCardId` on the card content *before* attaching the `attestation`
+envelope; verifiers recompute it from the received card (never read from
+`card.id`). This is the analogue of `keylessSubjectDigest()` in `@glyphp/core`,
+minus the SHA-256 step.
 
 ### 3.2 Per-provider binding (extends the public registry, RFC-0003)
 
@@ -138,7 +181,11 @@ stopping at the first that satisfies its policy:
    A later change to the bound publisher key is a trust event, exactly like a
    server key change (RFC-0001 §5, update-governance §3).
 2. **Per-card binding (§3.1).** Verify, in order:
-   1. `subjectCardId === card.id` (the binding is for this card);
+   1. `subjectCardId` equals the card's attestation-exclusive canonical id
+      (§3.1.1), **recomputed from the received card's content** — never compared
+      against `card.id`, which for an attested card covers the binding and so
+      never matches (content integrity of `card.id` itself remains
+      `verifyGlyph`'s check);
    2. `provider === card.provider`;
    3. the binding `signature` verifies against `publisherKey` (or, for §3.3, the
       keyless bundle verifies per RFC-0007).

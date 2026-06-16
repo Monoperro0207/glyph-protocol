@@ -1,7 +1,7 @@
 {
   "name": "05-hermes-integration",
   "private": true,
-  "version": "0.0.8",
+  "version": "0.0.9",
   "type": "module",
   "description": "Integration test: Hermes Agent + DeepSeek-V4 Flash + Glyph Protocol (via the MCP bridge)",
   "scripts": {
@@ -12,7 +12,7 @@
     "@glyphp/adapter-mcp-server": "workspace:*",
     "@glyphp/client": "workspace:*",
     "@glyphp/server": "workspace:*",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3": "^12.10.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

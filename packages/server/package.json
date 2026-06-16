@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/server",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Glyph Protocol server built on Hono — serve signed, self-describing glyph cards",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
@@ -50,7 +50,7 @@
     "@glyphp/core": "workspace:*",
     "@glyphp/types": "workspace:*",
     "@hono/node-server": "^2.0.4",
-    "hono": "^4.12.24",
+    "hono": "^4.12.25",
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.23.0"
   }

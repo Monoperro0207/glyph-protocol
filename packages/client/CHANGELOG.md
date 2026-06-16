@@ -1,5 +1,12 @@
 # @glyphp/client
 
+## 1.3.2
+
+### Patch Changes
+
+- Updated dependencies [4418e47]
+  - @glyphp/core@1.6.0
+
 ## 1.3.1
 
 ### Patch Changes

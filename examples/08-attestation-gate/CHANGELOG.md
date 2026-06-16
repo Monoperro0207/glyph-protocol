@@ -1,5 +1,13 @@
 # 08-attestation-gate
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [4418e47]
+  - @glyphp/core@1.6.0
+  - @glyphp/client@1.3.2
+
 ## 0.1.2
 
 ### Patch Changes

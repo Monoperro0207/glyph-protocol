@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from glyph_protocol import (
     canonical_hash,
+    compute_keyless_subject_digest,
     fingerprint_key,
     resolve_key,
     verify_glyph,
@@ -133,3 +134,43 @@ def test_verify_key_registry_round_trip() -> None:
     registry = {**base, "signature": sig}
     assert verify_key_registry(registry) is True
     assert resolve_key(registry, pub)["status"] == "active"
+
+
+def test_keyless_subject_digest_equals_sha256_id_without_attestation() -> None:
+    priv = Ed25519PrivateKey.generate()
+    card = _build_card(priv)
+    expected = hashlib.sha256(card["id"].encode("ascii")).hexdigest()
+    assert compute_keyless_subject_digest(card) == expected
+
+
+def test_keyless_attested_card_passes_verify_glyph_and_subject_binding() -> None:
+    priv = Ed25519PrivateKey.generate()
+    plain = _build_card(priv)
+    content = {
+        k: v
+        for k, v in plain.items()
+        if k not in ("id", "publicKey", "signature", "createdAt")
+    }
+    # Producer flow (RFC-0007 §3.1): bind to the attestation-exclusive id,
+    # attach the attestation, then compute the final id (which includes it).
+    subject = compute_keyless_subject_digest(content)
+    attested = {
+        **content,
+        "attestation": {"type": "glyph-keyless-v1", "payload": "PGJ1bmRsZT4="},
+    }
+    glyph_id = canonical_hash(attested)
+    card = {
+        **attested,
+        "id": glyph_id,
+        "publicKey": _hex_pub(priv),
+        "signature": _sign(priv, glyph_id),
+        "createdAt": "2026-01-01T00:00:00.000Z",
+    }
+    assert verify_glyph(card) is True
+    # The digest is invariant to attaching the attestation — and is NOT
+    # sha256 of the final id, which contains the attestation.
+    assert compute_keyless_subject_digest(card) == subject
+    assert (
+        compute_keyless_subject_digest(card)
+        != hashlib.sha256(card["id"].encode("ascii")).hexdigest()
+    )

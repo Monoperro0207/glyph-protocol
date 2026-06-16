@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 import type { GlyphCard } from '@glyphp/types'
 import {
   computeGlyphId,
+  generateKeyPair,
   type KeylessBackend,
   type KeylessBundle,
   KeylessVerifier,
+  keylessSubjectDigest,
+  signGlyph,
+  verifyGlyph,
 } from '../src/index.js'
 
 const baseCard = {
@@ -29,23 +32,26 @@ const baseCard = {
   provider: 'test',
 } satisfies Omit<GlyphCard, 'id' | 'signature' | 'createdAt' | 'publicKey'>
 
-function cardWithBundle(bundle: Partial<KeylessBundle>, id?: string): GlyphCard {
-  const cardId = id ?? computeGlyphId(baseCard)
+// Producer flow per RFC-0007 §3.1: bind the bundle to the attestation-
+// exclusive id, attach the attestation, then compute the final id (which
+// includes it).
+function cardWithBundle(bundle: Partial<KeylessBundle>): GlyphCard {
   const full: KeylessBundle = {
     bundleVersion: 'glyph-keyless-v1',
-    subjectDigest: createHash('sha256').update(cardId).digest('hex'),
+    subjectDigest: keylessSubjectDigest(baseCard),
     issuer: 'https://token.actions.githubusercontent.com',
     identity: 'repo:acme/tools:ref:refs/tags/v1.2.0',
     ...bundle,
   }
+  const attestation = {
+    type: 'glyph-keyless-v1',
+    payload: Buffer.from(JSON.stringify(full)).toString('base64'),
+  }
   return {
     ...baseCard,
-    id: cardId,
+    id: computeGlyphId({ ...baseCard, attestation }),
     createdAt: '2026-05-22T00:00:00.000Z',
-    attestation: {
-      type: 'glyph-keyless-v1',
-      payload: Buffer.from(JSON.stringify(full)).toString('base64'),
-    },
+    attestation,
   } as GlyphCard
 }
 
@@ -200,6 +206,50 @@ test('keyless: an allow entry ending in a delimiter matches as a namespace prefi
   assert.equal(ok.trusted, true)
   const evil = await verifier.verify(cardWithBundle({ identity: 'repo:acmeX/anything' }))
   assert.equal(evil.trusted, false)
+})
+
+test('keyless: subjectDigest is invariant to attaching the attestation', () => {
+  const before = keylessSubjectDigest(baseCard)
+  const attested = {
+    ...baseCard,
+    attestation: { type: 'glyph-keyless-v1', payload: 'irrelevant' },
+  }
+  assert.equal(keylessSubjectDigest(attested), before)
+})
+
+test('keyless: equals sha256(card.id) only for a card without an attestation', () => {
+  const card = cardWithBundle({})
+  // The attested card's final id includes the attestation, so it differs
+  // from the pre-attestation id the bundle commits to.
+  assert.notEqual(card.id, computeGlyphId(baseCard))
+})
+
+test('keyless: a key-signed + keyless-attested card passes verifyGlyph AND subject binding', async () => {
+  const attested = cardWithBundle({})
+  const { publicKey, privateKey } = generateKeyPair()
+  const card: GlyphCard = { ...attested, publicKey }
+  card.signature = signGlyph(card, privateKey)
+
+  // Belt-and-suspenders (RFC-0007 §3.2): both verifications hold at once.
+  assert.equal(verifyGlyph(card), true)
+  const result = await new KeylessVerifier().verify(card)
+  assert.equal(result.valid, true)
+})
+
+test('keyless: binding is recomputed from content, not read from card.id', async () => {
+  // A tampered id does not fool the binding (it commits to content); the
+  // id's own integrity is verifyGlyph's check, not the keyless verifier's.
+  const card = { ...cardWithBundle({}), id: 'tampered' } as GlyphCard
+  const result = await new KeylessVerifier().verify(card)
+  assert.equal(result.valid, true)
+  assert.equal(verifyGlyph({ ...card, publicKey: 'aa', signature: 'bb' } as GlyphCard), false)
+})
+
+test('keyless: a bundle bound to different content fails on this card', async () => {
+  const otherDigest = keylessSubjectDigest({ ...baseCard, name: 'other-tool' })
+  const result = await new KeylessVerifier().verify(cardWithBundle({ subjectDigest: otherDigest }))
+  assert.equal(result.valid, false)
+  assert.match(result.error ?? '', /subject/i)
 })
 
 test('keyless: an issuer outside the policy is not trusted', async () => {

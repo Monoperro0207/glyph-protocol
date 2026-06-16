@@ -4,6 +4,11 @@
 - **Targets:** Glyph Protocol 1.x (additive, backwards-compatible)
 - **Author:** Glyph Protocol
 - **Created:** 2026-05-29
+- **Updated:** 2026-06-12 — `subjectDigest` redefined over the
+  **attestation-exclusive** canonical id (§3.1.1). The original definition
+  (`sha256(card.id)`) was unsatisfiable: the bundle lives inside
+  `card.attestation`, which itself enters `card.id`, so no bundle could
+  commit to the id that contains it.
 
 ## 1. Motivation
 
@@ -73,7 +78,7 @@ new value this RFC introduces.
 ```json
 {
   "bundleVersion": "glyph-keyless-v1",
-  "subjectDigest": "<sha-256 of the card's glyph id, hex>",
+  "subjectDigest": "<sha-256 of the card's attestation-exclusive glyph id, hex — see §3.1.1>",
   "issuer": "https://token.actions.githubusercontent.com",
   "identity": "repo:acme/tools:ref:refs/tags/v1.2.0",
   "signingCertificate": "<PEM of the ephemeral cert issued by the CA>",
@@ -85,15 +90,53 @@ new value this RFC introduces.
 }
 ```
 
-- **`subjectDigest`** binds the bundle to *this* card: it is the SHA-256 of the
-  card's content-addressed `id` (RFC: `computeGlyphId`). A bundle lifted onto a
-  different card fails this check, so keyless provenance cannot be replayed.
+- **`subjectDigest`** binds the bundle to *this* card's content: it is the
+  SHA-256 of the card's **attestation-exclusive** canonical id (§3.1.1). A
+  bundle lifted onto a card with different content fails this check, so
+  keyless provenance cannot be replayed.
 - **`identity`** is the human-meaningful provenance claim the consumer matches
   policy against (see §4.2).
 - **`signingCertificate`** + **`logEntry`** are the Sigstore-style proof that
   the ephemeral key was bound to `identity` by `issuer` and recorded in a log.
   Their internal format is the upstream verifier's concern; Glyph treats them
   as opaque inputs to that verifier.
+
+### 3.1.1 The subject digest and the id fixed point
+
+The card's content-addressed `id` (RFC: `computeGlyphId`) covers the
+`attestation` field — an attested card and its unattested twin are different
+tools, and tampering with the attestation must flip the id. But the keyless
+bundle *is* the attestation payload: a bundle that committed to
+`sha256(card.id)` would have to contain a digest of the very bytes that
+contain it, and no sha256 fixed point exists. The original draft of this RFC
+required exactly that, which made a card that passes both `verifyGlyph()` and
+keyless verification unconstructible.
+
+The resolution mirrors the ed25519 path, which already solves the same
+problem: the canonical id *excludes* `signature`/`publicKey` precisely so the
+signature can commit to the id without containing itself. Keyless excludes
+the slot that carries *its* proof:
+
+> **`subjectDigest` = SHA-256 (hex) of the card's canonical id computed with
+> the `attestation` slot absent** (the *attestation-exclusive id*). All other
+> canonical fields are covered. For a card without an attestation the
+> attestation-exclusive id and `card.id` coincide, so the digest degenerates
+> to `sha256(card.id)`.
+
+The final `card.id` still includes the attestation, so the published card
+remains tamper-evident end to end: the bundle commits to the behavioral
+content, and the id commits to the content *plus* the bundle.
+
+Producer flow (two steps, no fixed point needed):
+
+1. Assemble the card content, compute the attestation-exclusive id, and
+   keyless-sign its SHA-256 → the bundle (§3.1).
+2. Attach the `attestation` envelope, then compute the final `card.id` (which
+   now covers the attestation). If the card is also key-signed (§3.2), the
+   ed25519 signature is made over this final id, as always.
+
+SDK helpers: `keylessSubjectDigest()` in `@glyphp/core`,
+`compute_keyless_subject_digest()` in `glyph-protocol` (Python).
 
 ### 3.2 Interaction with `card.signature`
 
@@ -108,7 +151,11 @@ Three valid shapes, all already expressible:
 A keyless-only card has no `publicKey`/`signature`. `verifyGlyph()` already
 returns `false` for such a card (no signature to verify); keyless verification
 (§4) is what establishes its provenance instead. The content integrity check
-(`computeGlyphId(card) === card.id`) still applies in both worlds.
+(`computeGlyphId(card) === card.id`) still applies in both worlds — and is
+satisfiable in both, because the bundle commits to the attestation-exclusive
+id (§3.1.1) while `card.id` is computed *after* the attestation is attached.
+In the belt-and-suspenders shape the ed25519 signature covers the final id
+(content **and** attestation), and the bundle covers the content.
 
 ## 4. Trust model & verification contract
 
@@ -136,7 +183,13 @@ the paranoid case can pin identities, restrict issuers, or run its own root.
 A `glyph-keyless-v1` verifier (an `AttestationVerifier`, reusing the existing
 interface) MUST, in order, and fail closed on any miss:
 
-1. **Subject binding** — `bundle.subjectDigest === sha256(card.id)`.
+1. **Subject binding** — `bundle.subjectDigest` equals the SHA-256 of the
+   card's attestation-exclusive canonical id (§3.1.1), **recomputed from the
+   received card's content**. A verifier MUST NOT compare against
+   `sha256(card.id)`: for an attested card the final id covers the
+   attestation and never matches, and trusting the self-declared `id` field
+   would not bind content anyway. (Integrity of `card.id` itself is the §3.2
+   content-integrity check, which is independent of this one.)
 2. **Bundle validity** — the `signingCertificate` chains to a trusted root and
    the `logEntry` inclusion proof verifies against a trusted log. (Delegated to
    the upstream Sigstore-style verifier; Glyph does not reimplement it.)
@@ -177,7 +230,11 @@ breaking updates **only** when they carry verifiable keyless provenance from
 
 ## 6. Security considerations
 
-- **Replay across cards** — prevented by `subjectDigest` binding (§4.2.1).
+- **Replay across cards** — prevented by `subjectDigest` binding (§4.2.1):
+  the digest covers every canonical field except the `attestation` slot
+  itself, so a bundle only verifies on a card with byte-identical canonical
+  content. Replaying a bundle onto the *same* content is by definition not a
+  replay — the provenance claim is about the content, not the envelope.
 - **Issuer spoofing** — the bundle's certificate must chain to a trusted root;
   an attacker cannot mint a `token.actions.githubusercontent.com` identity
   without GitHub's CA. Glyph delegates this to the upstream verifier rather
