@@ -39,7 +39,7 @@ and callers may pass an optional client correlation id.
 
 Python currently covers protocol verification and client calls. TypeScript-only
 features include Provider Trust Resolver enforcement, attestation verifier
-plugins/policy gates, `GlyphServer`, and experimental FROST signing.
+plugins/policy gates, and `GlyphServer`.
 
 See `spec/protocol.md` and `spec/rfcs/RFC-0001-key-registry.md` for the
 normative protocol.

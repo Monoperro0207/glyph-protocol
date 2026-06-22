@@ -32,6 +32,6 @@ and callers may pass an optional client correlation id.
 
 Go currently covers protocol verification and client calls. TypeScript-only
 features include Provider Trust Resolver enforcement, attestation verifier
-plugins/policy gates, `GlyphServer`, and experimental FROST signing.
+plugins/policy gates, and `GlyphServer`.
 
 Run `go test ./...` from this directory to verify.
