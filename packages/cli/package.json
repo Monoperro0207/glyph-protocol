@@ -54,9 +54,9 @@
     "@glyphp/types": "workspace:*",
     "@iarna/toml": "^2.2.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "ink": "^7.0.6",
+    "ink": "^7.1.1",
     "ink-text-input": "^6.0.0",
-    "react": "^19.2.0"
+    "react": "^19.2.8"
   },
   "devDependencies": {
     "@glyphp/server": "workspace:*",
