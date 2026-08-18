@@ -1,6 +1,7 @@
 # RFC-0007: Keyless Signing (OIDC-bound provenance)
 
-- **Status:** Draft (spec only, no implementation in this RFC)
+- **Status:** Implemented (V1) — `KeylessVerifier` + `keylessSubjectDigest()` in
+  `@glyphp/core`, `compute_keyless_subject_digest()` in the Python SDK
 - **Targets:** Glyph Protocol 1.x (additive, backwards-compatible)
 - **Author:** Glyph Protocol
 - **Created:** 2026-05-29

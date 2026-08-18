@@ -34,10 +34,12 @@ pnpm --filter 08-attestation-gate test   # the assertions behind it
             │
             ▼
    a registered verifier returns valid && trusted ≠ false ?
-     ├── container-digest, valid sha256  ───────►  runs
-     ├── malformed digest  ─────────────────────►  REFUSED (rejected)
-     └── SLSA/Sigstore structure-only           ─►  REFUSED (trusted: false)
-         (valid shape, but no cryptographic chain yet — RFC-0008 §4.1 step 3)
+     ├── container-digest matching the pinned digest  ─►  runs
+     ├── container-digest, no pin configured  ───────►  REFUSED (trusted: false)
+     ├── container-digest for another artifact  ─────►  REFUSED (binding failed)
+     ├── malformed digest  ──────────────────────────►  REFUSED (rejected)
+     └── SLSA/Sigstore structure-only                ─►  REFUSED (trusted: false)
+         (valid shape, but no cryptographic chain — RFC-0008 §4.1 step 3)
 ```
 
 ## What it demonstrates
@@ -47,20 +49,29 @@ pnpm --filter 08-attestation-gate test   # the assertions behind it
 2. **Gate closed** — under `requireAttestation: 'danger'`, an unattested
    `danger` tool is refused with `GlyphAttestationError` **before its handler
    runs**.
-3. **Gate open** — a card carrying a valid `container-digest` attestation
-   (`{ "digest": "sha256:…" }`, checked by `DigestVerifier`) passes and executes.
-4. **Malformed evidence** — a broken digest is rejected by the verifier.
-5. **The honest limit** — a *structurally* valid SLSA provenance is `valid` but
+3. **Gate open** — a card whose `container-digest` attestation
+   (`{ "digest": "sha256:…" }`) matches the digest the consumer pinned via
+   `new DigestVerifier({ expectedDigest })` passes and executes.
+4. **Unbound evidence** — the *same card*, checked by a `DigestVerifier` with no
+   `expectedDigest`, is **refused**. Without a pin the verifier validates format
+   only and reports `trusted: false`: an unbound digest is a provider self-claim,
+   not evidence about this deployment
+   ([RFC-0008 §3.2](../../spec/rfcs/RFC-0008-execution-attestation.md)).
+5. **Lifted evidence** — a well-formed digest belonging to a *different*
+   artifact fails the subject binding. This is the attack §3.2 exists to stop:
+   format validation alone would wave it through.
+6. **Malformed evidence** — a broken digest is rejected by the verifier.
+7. **The honest limit** — a *structurally* valid SLSA provenance is `valid` but
    `trusted: false` (the shipped `SlsaVerifier`/`SigstoreVerifier` validate
-   shape, not the cryptographic chain: _"full cryptographic verification requires
-   sigstore-js"_). `ensureAttested()` treats valid-but-not-trusted as
-   **insufficient**, so the gate stays **closed**. This is the exact gap
-   [`RFC-0008 §4.1 step 3`](../../spec/rfcs/RFC-0008-execution-attestation.md)
-   exists to close — the example proves the gate fails *closed* rather than
-   pretending structure is proof.
-6. **Tier-scoped** — under the same `danger` policy, a `safe` tool needs no
+   shape, not the cryptographic chain). `ensureAttested()` treats
+   valid-but-not-trusted as **insufficient**, so the gate stays **closed**. To
+   close that gap, use `SigstoreBundleVerifier` from
+   [`@glyphp/attestation-sigstore`](../../packages/attestation-sigstore), which
+   performs the real DSSE + certificate-chain check
+   ([RFC-0008 §4.1 step 3](../../spec/rfcs/RFC-0008-execution-attestation.md)).
+8. **Tier-scoped** — under the same `danger` policy, a `safe` tool needs no
    attestation and runs untouched. The policy gates by risk tier.
-7. **Downgrade-resistant** — the attestation is part of the card's canonical
+9. **Downgrade-resistant** — the attestation is part of the card's canonical
    content, so it is bound to the `id`. Stripping it yields a **different `id`**:
    an attacker cannot quietly downgrade a pinned, attested card to an unattested
    one without breaking the pin.

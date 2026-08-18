@@ -271,6 +271,55 @@ test('DigestVerifier handles attestation of different type gracefully', async ()
 })
 
 // ---------------------------------------------------------------------------
+// DigestVerifier — RFC-0008 §3.2 subject-digest binding
+// ---------------------------------------------------------------------------
+
+const OTHER_SHA256 = 'sha256:5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03'
+
+test('DigestVerifier without expectedDigest is valid but not trusted', async () => {
+  // An unbound digest is a provider self-claim. It is well-formed, but it
+  // establishes nothing about this deployment, so it must not open the
+  // `requireAttestation` gate (RFC-0008 §3.2, §4.1 step 4).
+  const verifier = new DigestVerifier()
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: VALID_SHA256 }),
+  })
+
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, true)
+  assert.equal(result.trusted, false)
+  assert.equal(result.details?.subjectBound, false)
+})
+
+test('DigestVerifier with a matching expectedDigest is trusted', async () => {
+  const verifier = new DigestVerifier({ expectedDigest: VALID_SHA256 })
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: VALID_SHA256 }),
+  })
+
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, true)
+  assert.equal(result.trusted, true)
+  assert.equal(result.details?.subjectBound, true)
+})
+
+test('DigestVerifier fails closed when the digest does not match the pin', async () => {
+  // The lifted-attestation attack: a well-formed digest for a *different*
+  // artifact. Format validation alone would pass it.
+  const verifier = new DigestVerifier({ expectedDigest: VALID_SHA256 })
+  const card = makeCard({
+    type: 'container-digest',
+    payload: JSON.stringify({ digest: OTHER_SHA256 }),
+  })
+
+  const result = await verifier.verify(card)
+  assert.equal(result.valid, false)
+  assert.match(result.error ?? '', /does not match the pinned expected digest/)
+})
+
+// ---------------------------------------------------------------------------
 // AttestationVerifierRegistry tests
 // ---------------------------------------------------------------------------
 

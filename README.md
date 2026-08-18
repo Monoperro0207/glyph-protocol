@@ -29,6 +29,7 @@
 | `@glyphp/server` | GlyphServer (Hono) |
 | `@glyphp/client` | GlyphClient + the spotlighting render layer |
 | `@glyphp/resolver` | Intent → glyph resolver (pluggable scorers) |
+| `@glyphp/attestation-sigstore` | Opt-in verifier: real Sigstore DSSE + chain verification with RFC-0008 subject-digest binding |
 | `@glyphp/adapter-openapi` | Convert an OpenAPI document into glyphs |
 | `@glyphp/adapter-mcp` | Convert an MCP server's tools into glyphs |
 | `@glyphp/adapter-mcp-server` | Expose a Glyph server's tools to any MCP client |
@@ -142,9 +143,10 @@ for which client adapters are stable today vs. pending verification.
   runnable demo and asserted by a test
 - [`08-attestation-gate`](examples/08-attestation-gate) — the
   `requireAttestation` gate end to end: an unattested `danger` tool is refused, a
-  valid `container-digest` opens the gate, and a structure-only SLSA bundle fails
-  *closed* (`trusted: false`) — showing both what the gate guarantees and the
-  exact limit [`RFC-0008`](spec/rfcs/RFC-0008-execution-attestation.md) closes
+  `container-digest` matching the consumer's pinned digest opens the gate, and an
+  unbound, lifted, or structure-only attestation each fails *closed*
+  (`trusted: false`) — showing both what the gate guarantees and the exact limit
+  [`RFC-0008`](spec/rfcs/RFC-0008-execution-attestation.md) closes
 
 ## Verify
 

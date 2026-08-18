@@ -17,9 +17,23 @@ test("policy 'danger': an unattested danger tool is refused before its handler r
   assert.match(t.unattestedError, /no attestation/)
 })
 
-test("policy 'danger': a valid container-digest attestation opens the gate", async () => {
+test("policy 'danger': a container-digest matching the pinned digest opens the gate", async () => {
   const t = await runAttestationWorkflow()
   assert.equal(t.digestAttestedCallSucceeded, true)
+})
+
+test('an unbound DigestVerifier (no expectedDigest) cannot open the gate', async () => {
+  // RFC-0008 §3.2: an unbound digest is a provider self-claim — valid, but not
+  // trusted. The very card that passes in the pinned case is refused here.
+  const t = await runAttestationWorkflow()
+  assert.equal(t.unboundDigestRefused, true)
+  assert.match(t.unboundDigestError, /structural validation only/)
+})
+
+test('a well-formed digest for a different artifact fails the subject binding', async () => {
+  const t = await runAttestationWorkflow()
+  assert.equal(t.liftedDigestRefused, true)
+  assert.match(t.liftedDigestError, /does not match the pinned expected digest/)
 })
 
 test("policy 'danger': a malformed digest is rejected", async () => {

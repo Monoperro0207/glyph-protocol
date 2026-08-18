@@ -13,17 +13,24 @@
  *   1. opt-in — with no policy, an unattested `danger` tool runs as before.
  *   2. gate closed — under `requireAttestation: 'danger'`, an unattested
  *      `danger` tool is refused before its handler runs.
- *   3. gate open — a card carrying a valid `container-digest` attestation
- *      (DigestVerifier) passes the gate and executes.
- *   4. malformed evidence — a broken digest is rejected.
- *   5. THE HONEST LIMIT — a structurally-valid SLSA provenance is `valid` but
+ *   3. gate open — a card whose `container-digest` attestation matches the
+ *      consumer's pinned expected digest passes the gate and executes.
+ *   4. unbound evidence — the same card, verified by a `DigestVerifier` with no
+ *      `expectedDigest`, is refused. An unbound digest is a provider self-claim;
+ *      it is `valid` but `trusted: false` (RFC-0008 §3.2).
+ *   5. lifted evidence — a well-formed digest belonging to a *different*
+ *      artifact fails the subject binding and is refused.
+ *   6. malformed evidence — a broken digest is rejected.
+ *   7. THE HONEST LIMIT — a structurally-valid SLSA provenance is `valid` but
  *      `trusted: false` ("structure-only validation; full cryptographic
- *      verification requires sigstore-js"), so it does NOT open the gate. This
- *      is the gap RFC-0008 §4.1 step 3 exists to close. The example proves the
- *      gate fails *closed* on structure-only evidence rather than pretending.
- *   6. tier-scoped — under the same `danger` policy, a `safe` tool needs no
+ *      verification requires sigstore-js"), so it does NOT open the gate. To
+ *      close it, use `SigstoreBundleVerifier` from
+ *      `@glyphp/attestation-sigstore`, which performs the real DSSE + chain
+ *      check (RFC-0008 §4.1 step 3). The example proves the gate fails *closed*
+ *      on structure-only evidence rather than pretending.
+ *   8. tier-scoped — under the same `danger` policy, a `safe` tool needs no
  *      attestation and runs untouched.
- *   7. bound to the id — the attestation is canonical content, so stripping it
+ *   9. bound to the id — the attestation is canonical content, so stripping it
  *      yields a different `id`: an attacker cannot quietly downgrade a pinned,
  *      attested card to an unattested one.
  *
@@ -39,6 +46,8 @@ import type { CardAttestation, GlyphCard } from '@glyphp/types'
 type KeyPair = { publicKey: string; privateKey: string }
 
 const VALID_DIGEST = `sha256:${'a'.repeat(64)}`
+/** A well-formed digest for a *different* artifact — used for the lifted-evidence case. */
+const OTHER_DIGEST = `sha256:${'b'.repeat(64)}`
 
 /** A well-formed `container-digest` attestation — the only kind that opens the gate today. */
 function containerDigestAttestation(digest = VALID_DIGEST): CardAttestation {
@@ -154,16 +163,22 @@ export interface AttestationTrace {
   /** 2. Policy 'danger', card has no attestation → refused before the handler runs. */
   unattestedRefused: boolean
   unattestedError: string
-  /** 3. Policy 'danger', valid container-digest → gate opens, call executes. */
+  /** 3. Policy 'danger', container-digest matching the pin → gate opens. */
   digestAttestedCallSucceeded: boolean
-  /** 4. Malformed digest → rejected. */
+  /** 4. Same card, verifier with no expectedDigest → unbound, refused. */
+  unboundDigestRefused: boolean
+  unboundDigestError: string
+  /** 5. Well-formed digest for another artifact → fails the binding, refused. */
+  liftedDigestRefused: boolean
+  liftedDigestError: string
+  /** 6. Malformed digest → rejected. */
   malformedDigestRefused: boolean
-  /** 5. Structurally-valid SLSA is valid-but-not-trusted → still refused (the honest limit). */
+  /** 7. Structurally-valid SLSA is valid-but-not-trusted → still refused (the honest limit). */
   slsaStructureOnlyRefused: boolean
   slsaError: string
-  /** 6. Same 'danger' policy, a `safe` tool needs no attestation → runs. */
+  /** 8. Same 'danger' policy, a `safe` tool needs no attestation → runs. */
   safeToolUnaffected: boolean
-  /** 7. The attestation is bound to the id: stripping it changes the id. */
+  /** 9. The attestation is bound to the id: stripping it changes the id. */
   idWithAttestation: string
   idWithoutAttestation: string
   strippingAttestationChangesId: boolean
@@ -190,6 +205,14 @@ export async function runAttestationWorkflow(
     riskTier: 'danger',
     attestation: containerDigestAttestation('sha256:not-a-real-digest'),
   })
+  // Well-formed evidence — for the wrong artifact. Format validation alone
+  // passes it; only the subject binding catches it.
+  const lifted = makeCard({
+    keyPair,
+    name,
+    riskTier: 'danger',
+    attestation: containerDigestAttestation(OTHER_DIGEST),
+  })
   const slsaAttested = makeCard({
     keyPair,
     name,
@@ -208,27 +231,45 @@ export async function runAttestationWorkflow(
   log(`   requireAttestation: 'none' → call executed: ${noPolicyCallSucceeded}`)
 
   log("\n── 2. Policy 'danger', no attestation → gate closed ────────")
+  // The consumer pins the digest of the artifact it expects to serve this card
+  // (RFC-0008 §3.2). Without that pin the verifier reports `trusted: false` and
+  // can never open the gate — see step 4.
   const strict = (card: GlyphCard) =>
     new GlyphClient({
       baseUrl: 'http://glyph',
       fetch: serve(card),
       requireAttestation: 'danger',
-      attestationVerifiers: [new DigestVerifier()],
+      attestationVerifiers: [new DigestVerifier({ expectedDigest: VALID_DIGEST })],
     })
   const unattestedResult = await callRefused(strict(unattested), name)
   log(`   refused: ${unattestedResult.refused} — "${unattestedResult.error}"`)
 
-  log("\n── 3. Policy 'danger', valid container-digest → gate opens ──")
+  log("\n── 3. Policy 'danger', digest matches the pin → gate opens ──")
   const digestAttestedCallSucceeded = await callSucceeds(strict(digestAttested), name)
   log(
     `   DigestVerifier accepted ${VALID_DIGEST.slice(0, 20)}… → call executed: ${digestAttestedCallSucceeded}`,
   )
 
-  log('\n── 4. Malformed digest → rejected ──────────────────────────')
+  log('\n── 4. Unbound verifier (no pin) → refused ──────────────────')
+  const unbound = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(digestAttested),
+    requireAttestation: 'danger',
+    attestationVerifiers: [new DigestVerifier()],
+  })
+  const unboundResult = await callRefused(unbound, name)
+  log(`   same card, no expectedDigest → refused: ${unboundResult.refused}`)
+  log(`   "${unboundResult.error}"`)
+
+  log('\n── 5. Lifted digest (wrong artifact) → binding fails ───────')
+  const liftedResult = await callRefused(strict(lifted), name)
+  log(`   refused: ${liftedResult.refused} — "${liftedResult.error}"`)
+
+  log('\n── 6. Malformed digest → rejected ──────────────────────────')
   const malformedResult = await callRefused(strict(malformed), name)
   log(`   refused: ${malformedResult.refused} — "${malformedResult.error}"`)
 
-  log('\n── 5. THE HONEST LIMIT — structure-only SLSA is not enough ──')
+  log('\n── 7. THE HONEST LIMIT — structure-only SLSA is not enough ──')
   // The client auto-registers SlsaVerifier. It returns valid:true, trusted:false
   // ("structure-only; full cryptographic verification requires sigstore-js").
   // ensureAttested treats valid-but-not-trusted as INSUFFICIENT, so the gate
@@ -237,17 +278,17 @@ export async function runAttestationWorkflow(
   log(`   SLSA provenance is structurally valid but trusted:false → refused: ${slsaResult.refused}`)
   log(`   "${slsaResult.error}"`)
 
-  log('\n── 6. Tier-scoped — a `safe` tool needs no attestation ─────')
+  log('\n── 8. Tier-scoped — a `safe` tool needs no attestation ─────')
   const safeClient = new GlyphClient({
     baseUrl: 'http://glyph',
     fetch: serve(safeTool),
     requireAttestation: 'danger',
-    attestationVerifiers: [new DigestVerifier()],
+    attestationVerifiers: [new DigestVerifier({ expectedDigest: VALID_DIGEST })],
   })
   const safeToolUnaffected = await callSucceeds(safeClient, 'list-releases')
   log(`   safe tool under 'danger' policy → call executed: ${safeToolUnaffected}`)
 
-  log('\n── 7. Bound to the id — stripping the attestation changes it ')
+  log('\n── 9. Bound to the id — stripping the attestation changes it ')
   const idWithAttestation = digestAttested.id
   const idWithoutAttestation = unattested.id
   const strippingAttestationChangesId = idWithAttestation !== idWithoutAttestation
@@ -261,6 +302,10 @@ export async function runAttestationWorkflow(
     unattestedRefused: unattestedResult.refused,
     unattestedError: unattestedResult.error,
     digestAttestedCallSucceeded,
+    unboundDigestRefused: unboundResult.refused,
+    unboundDigestError: unboundResult.error,
+    liftedDigestRefused: liftedResult.refused,
+    liftedDigestError: liftedResult.error,
     malformedDigestRefused: malformedResult.refused,
     slsaStructureOnlyRefused: slsaResult.refused,
     slsaError: slsaResult.error,

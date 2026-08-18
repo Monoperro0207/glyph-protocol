@@ -11,6 +11,22 @@ interface SigstoreBundle {
   messageSignature?: unknown
 }
 
+/**
+ * Structure-only validation of a Sigstore bundle envelope.
+ *
+ * @deprecated Use `SigstoreBundleVerifier` from `@glyphp/attestation-sigstore`,
+ * which performs the real DSSE + certificate-chain check and enforces the
+ * RFC-0008 §3.2 subject-digest binding.
+ *
+ * This verifier returns `trusted: false` unconditionally, and
+ * `GlyphClient.ensureAttested()` only opens the gate on
+ * `valid && trusted !== false`. It therefore **can never satisfy
+ * `requireAttestation`** — treat it as a diagnostic for inspecting envelope
+ * shape, not as a security control.
+ *
+ * Registered under the legacy type `sigstore`; RFC-0008 §3.1 registers the
+ * chain-verifying implementation as `sigstore-bundle`.
+ */
 export class SigstoreVerifier implements AttestationVerifier {
   readonly type = 'sigstore'
 
@@ -93,6 +109,24 @@ interface SlsaProvenance {
   }>
 }
 
+/**
+ * Structure-only validation of a SLSA Provenance v1.0 statement.
+ *
+ * @deprecated Use `SigstoreBundleVerifier` from `@glyphp/attestation-sigstore`,
+ * which performs the real DSSE + certificate-chain check and enforces the
+ * RFC-0008 §3.2 subject-digest binding.
+ *
+ * This verifier returns `trusted: false` unconditionally, and
+ * `GlyphClient.ensureAttested()` only opens the gate on
+ * `valid && trusted !== false`. It therefore **can never satisfy
+ * `requireAttestation`** — treat it as a diagnostic for inspecting envelope
+ * shape, not as a security control. In particular it reads
+ * `subject[0].digest.sha256` but does not bind it to anything, so a statement
+ * lifted from another artifact passes.
+ *
+ * Registered under the legacy type `slsa`; RFC-0008 §3.1 registers the
+ * chain-verifying path as `slsa-provenance` / `sigstore-bundle`.
+ */
 export class SlsaVerifier implements AttestationVerifier {
   readonly type = 'slsa'
 

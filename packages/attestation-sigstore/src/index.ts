@@ -1,5 +1,5 @@
 /**
- * @glyphp/attestation-sigstore — SPIKE
+ * @glyphp/attestation-sigstore
  *
  * An opt-in `AttestationVerifier` that performs **real cryptographic**
  * verification of a Sigstore bundle via `@sigstore/verify`, as opposed to the
@@ -9,7 +9,9 @@
  * signature and the certificate/key chain against an **injected** trust root,
  * and (RFC-0008 §3.2) binds the attested subject digest to the consumer's
  * expected digest. On success it returns `trusted: true` — the verdict that
- * actually opens the `requireAttestation` gate.
+ * actually opens the `requireAttestation` gate. The structure-only verifiers
+ * hardcode `trusted: false`, so this package is what makes
+ * `requireAttestation` usable at all.
  *
  * It is deliberately a **separate, injected** package: `@sigstore/verify`
  * (pure-JS, ~940 KB incl. deps, no native bindings) is a dependency of *this*
@@ -17,9 +19,8 @@
  * dependencies. A consumer opts in by constructing one and passing it via
  * `GlyphClient`'s `attestationVerifiers: [...]`.
  *
- * Status: spike. Private, unpublished. Trust-material distribution (TUF vs.
- * pinned root) and the public-good keyless default are open questions in
- * RFC-0008 §8; here the trust material is injected by the caller.
+ * Trust-material distribution (TUF vs. pinned root) stays the caller's choice:
+ * the trust material is injected, never fetched by this package.
  */
 
 import type { AttestationResult, AttestationVerifier } from '@glyphp/core'
