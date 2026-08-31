@@ -12,10 +12,10 @@
     "@glyphp/client": "workspace:*",
     "@glyphp/resolver": "workspace:*",
     "@glyphp/server": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "tsx": "^4.22.4"
+    "tsx": "^4.23.12"
   }
 }
