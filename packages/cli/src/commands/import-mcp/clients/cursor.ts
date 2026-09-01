@@ -10,7 +10,9 @@ import { parseClaudeDesktopJson } from './claude-desktop.js'
  * per-project entries shadowing globals on name collision (matches Cursor's
  * own resolution order).
  */
-const GLOBAL = join(homedir(), '.cursor', 'mcp.json')
+function globalPath(): string {
+  return join(homedir(), '.cursor', 'mcp.json')
+}
 function projectPath(): string {
   return join(process.cwd(), '.cursor', 'mcp.json')
 }
@@ -26,13 +28,13 @@ async function tryRead(path: string): Promise<string | null> {
 export const cursorAdapter: ClientAdapter = {
   id: 'cursor',
   displayName: 'Cursor',
-  configPathHint: `${GLOBAL} (+ ${projectPath()})`,
+  configPathHint: `${globalPath()} (+ ${projectPath()})`,
   async detect() {
-    return (await tryRead(GLOBAL)) !== null || (await tryRead(projectPath())) !== null
+    return (await tryRead(globalPath())) !== null || (await tryRead(projectPath())) !== null
   },
   async load(): Promise<McpServerConfig[]> {
     const merged = new Map<string, McpServerConfig>()
-    const globalRaw = await tryRead(GLOBAL)
+    const globalRaw = await tryRead(globalPath())
     if (globalRaw) {
       for (const s of parseClaudeDesktopJson(globalRaw, 'cursor')) {
         merged.set(s.name, s)
