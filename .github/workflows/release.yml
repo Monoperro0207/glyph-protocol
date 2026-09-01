@@ -54,12 +54,14 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
-      # npm >=11.5 is required for OIDC trusted publishing.
+      # npm >=11.5 is required for OIDC trusted publishing. `npm@latest` is
+      # unpinned, so the runner Node must satisfy whatever engine range the
+      # current npm declares — npm 12 dropped Node 20, which broke this step.
       - run: npm install -g npm@latest
 
       - id: changesets
