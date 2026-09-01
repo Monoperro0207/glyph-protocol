@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/attestation-sigstore",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Opt-in AttestationVerifier performing real cryptographic Sigstore-bundle verification (DSSE + certificate chain) with RFC-0008 subject-digest binding",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
