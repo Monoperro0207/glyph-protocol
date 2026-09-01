@@ -1,9 +1,9 @@
 {
   "name": "@glyphp/attestation-sigstore",
   "version": "0.0.2",
-  "private": true,
-  "description": "SPIKE — opt-in AttestationVerifier that performs real cryptographic Sigstore-bundle verification via @sigstore/verify. Not yet published.",
+  "description": "Opt-in AttestationVerifier performing real cryptographic Sigstore-bundle verification (DSSE + certificate chain) with RFC-0008 subject-digest binding",
   "license": "Apache-2.0",
+  "author": "Patrick Espino",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
@@ -14,8 +14,36 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
   },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Monoperro0207/glyph-protocol.git",
+    "directory": "packages/attestation-sigstore"
+  },
+  "homepage": "https://github.com/Monoperro0207/glyph-protocol#readme",
+  "bugs": "https://github.com/Monoperro0207/glyph-protocol/issues",
+  "keywords": [
+    "glyph",
+    "glyph-protocol",
+    "attestation",
+    "sigstore",
+    "dsse",
+    "slsa",
+    "supply-chain"
+  ],
   "engines": {
     "node": ">=20"
   },

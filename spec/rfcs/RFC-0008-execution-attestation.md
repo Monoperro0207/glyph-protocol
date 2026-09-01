@@ -1,9 +1,15 @@
 # RFC-0008: Execution Attestation (binding the card to the code that runs)
 
-- **Status:** Draft (spec only, no implementation in this RFC)
+- **Status:** Implemented (V1) — `SigstoreBundleVerifier` in
+  `@glyphp/attestation-sigstore` (chain verification, §4.1 step 3) and the
+  subject-digest binding (§3.2) in both it and `DigestVerifier`
 - **Targets:** Glyph Protocol 1.x (additive, backwards-compatible)
 - **Author:** Glyph Protocol
 - **Created:** 2026-05-31
+- **Updated:** 2026-08-18 — implemented. `DigestVerifier` now reports
+  `trusted: false` unless an `expectedDigest` pin is configured: an unbound
+  digest is a provider self-claim and must not open the `requireAttestation`
+  gate (§3.2, §4.1 step 4). This is a breaking change to `@glyphp/core`.
 
 ## 1. Motivation
 
@@ -80,14 +86,22 @@ with a defined verifier contract (§4):
 
 | `type` | Evidence in `payload` | Verifier |
 |---|---|---|
-| `slsa-provenance` | SLSA Provenance v1.0 predicate (in-toto statement) | `SlsaVerifier` |
-| `sigstore-bundle` | Sigstore bundle v0.3 (DSSE + Rekor entry) | `SigstoreVerifier` |
+| `slsa-provenance` | SLSA Provenance v1.0 predicate (in-toto statement) | `SigstoreBundleVerifier` |
+| `sigstore-bundle` | Sigstore bundle v0.3 (DSSE + Rekor entry) | `SigstoreBundleVerifier` |
 | `container-digest` | `{ "digest": "sha256:<64 hex>" }` of the serving image | `DigestVerifier` |
 | `in-toto` | generic in-toto statement | (consumer-supplied) |
 | `glyph-keyless-v1` | provenance bundle from [RFC-0007](RFC-0007-keyless-signing.md) | `KeylessVerifier` |
 
 A consumer with no verifier registered for a given `type` treats it as
 unrecognised and falls back to its non-attestation policy — today's behavior.
+
+**Legacy structure-only aliases.** `@glyphp/client` also ships `SigstoreVerifier`
+(type `sigstore`) and `SlsaVerifier` (type `slsa`). They validate envelope
+*shape* and return `trusted: false` unconditionally, so they can never satisfy
+`requireAttestation` (§4.2) — they are diagnostics, and are deprecated in favour
+of `SigstoreBundleVerifier`. They keep their legacy `type` strings deliberately:
+`AttestationVerifierRegistry` is keyed by `type`, so reusing the registered names
+would let a structure-only verifier silently displace the chain-verifying one.
 
 ### 3.2 The subject-digest binding rule (the core of this RFC)
 
@@ -155,16 +169,21 @@ the policy is satisfied. `valid && !trusted` MUST NOT release a `danger` tool.
   express "auto-promote a `danger` update only when it carries a chain-valid,
   digest-bound SLSA provenance from `builder:acme-ci`".
 
-## 5. CLI & API surface (specified, implemented later)
+## 5. CLI & API surface
 
-- `glyph verify <card> --attestation` — runs the full layered check (§4.1) and
-  reports each layer's result, including whether the subject digest is bound.
-- `GlyphClient` gains an explicit *expected-digest* pin alongside the existing
-  `(id, publicKey)` pin so §3.2 can be enforced; `attestationVerifiers[]` and
-  `requireAttestation` are unchanged.
-- Verifiers upgrade from structure-only to chain-verifying behind an injected
-  upstream verifier, keeping `@glyphp/core` dependency-light (the verifier is an
-  optional peer / injected dependency, same stance as RFC-0007 §8).
+**Landed.** Verifiers upgraded from structure-only to chain-verifying behind an
+injected upstream verifier, keeping `@glyphp/core` dependency-light (the
+verifier is a separate opt-in package, same stance as RFC-0007 §8). The §3.2
+binding is configured **per verifier** at construction —
+`SigstoreBundleVerifier({ expectedSubjectDigest })` and
+`DigestVerifier({ expectedDigest })` — which is where the consumer declares
+"card `X` is served by artifact `sha256:…`".
+
+**Still open.** `GlyphClient` does not yet carry an explicit *expected-digest*
+pin alongside the `(id, publicKey)` pin. That is a distribution question, not a
+verification one — see §8 Q2 — and the per-verifier pin already satisfies §3.2
+in the meantime. `glyph verify <card> --attestation`, which would report each
+layer of §4.1 separately, is likewise not implemented.
 - No change to `signGlyph`, `verifyGlyph`, `computeGlyphId`, the wire protocol
   version, or the card schema.
 
@@ -183,10 +202,16 @@ the policy is satisfied. `valid && !trusted` MUST NOT release a `danger` tool.
 - **Downgrade / stripping** — removing the attestation yields a new `id`
   (it is canonical content) and an "unattested" card, which fails any
   `requireAttestation` policy. Attestation never weakens an existing pin.
-- **Structure-only false confidence** — the shipped verifiers validate shape,
-  not the cryptographic chain. Until §4.1 step 3 is implemented, a deployment
-  MUST treat a passing structural check as *necessary but not sufficient*. This
-  RFC exists partly to make that limitation explicit and time-boxed.
+- **Structure-only false confidence** — resolved. The chain-verifying path is
+  `SigstoreBundleVerifier` (`@glyphp/attestation-sigstore`), the only verifier
+  that returns `trusted: true`. The legacy structure-only verifiers (§3.1) are
+  hard-wired to `trusted: false`, so a passing structural check can no longer be
+  mistaken for a gate-opening verdict — it cannot open the gate at all.
+- **Unbound self-claims** — a `container-digest` attestation with no consumer
+  pin is a provider assertion about itself, backed by nothing external.
+  `DigestVerifier` therefore reports `trusted: false` unless constructed with
+  `expectedDigest`. Treating an unbound digest as sufficient would have let any
+  well-formed sha256 string open a `danger` gate.
 
 ## 7. Backwards compatibility
 
@@ -196,17 +221,14 @@ path are untouched. The registered `type` table (§3.1) only documents and
 constrains values that were already conventional; an unrecognised `type` falls
 back to today's behavior. No wire-version bump.
 
-## 8. Open questions (to resolve before implementation)
+## 8. Open questions
 
-1. **Upstream verifier dependency.** Which library performs the real Sigstore/
-   SLSA chain verification (`sigstore-js`?), and whether it is a hard dependency
-   of `@glyphp/core` or an injected peer. Leaning peer, to keep core light —
-   consistent with RFC-0007. _A spike (`packages/attestation-sigstore`,
-   private/unpublished) validated `@sigstore/verify` for this: ~940 KB across 4
-   pure-JS packages (no native bindings), capable of fully offline, deterministic
-   DSSE + chain verification with injected trust material. It is wired as a
+1. **Upstream verifier dependency.** _Resolved._ `@sigstore/verify` performs the
+   chain verification: ~940 KB across 4 pure-JS packages (no native bindings),
+   capable of fully offline, deterministic DSSE + chain verification with
+   injected trust material. It ships as `@glyphp/attestation-sigstore`, a
    separate opt-in package implementing `AttestationVerifier`, so `@glyphp/core`
-   and `@glyphp/client` take zero new runtime dependencies._
+   and `@glyphp/client` take zero new runtime dependencies.
 2. **Expected-digest distribution.** How a deployment publishes "card `X` →
    image `sha256:…`": inside the card (a self-referential digest is circular), a
    side-channel signed by the server key, or the public registry (RFC-0003).
