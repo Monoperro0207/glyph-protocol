@@ -12,7 +12,9 @@ import type { ClientAdapter, McpServerConfig } from '../types.js'
  *
  * Documented at https://developers.openai.com/codex/mcp.
  */
-const GLOBAL = join(homedir(), '.codex', 'config.toml')
+function globalPath(): string {
+  return join(homedir(), '.codex', 'config.toml')
+}
 function projectPath(): string {
   return join(process.cwd(), '.codex', 'config.toml')
 }
@@ -28,13 +30,13 @@ async function tryRead(path: string): Promise<string | null> {
 export const codexAdapter: ClientAdapter = {
   id: 'codex',
   displayName: 'Codex (OpenAI)',
-  configPathHint: `${GLOBAL} (+ ${projectPath()})`,
+  configPathHint: `${globalPath()} (+ ${projectPath()})`,
   async detect() {
-    return (await tryRead(GLOBAL)) !== null || (await tryRead(projectPath())) !== null
+    return (await tryRead(globalPath())) !== null || (await tryRead(projectPath())) !== null
   },
   async load(): Promise<McpServerConfig[]> {
     const merged = new Map<string, McpServerConfig>()
-    const globalRaw = await tryRead(GLOBAL)
+    const globalRaw = await tryRead(globalPath())
     if (globalRaw) {
       for (const s of parseCodexToml(globalRaw)) merged.set(s.name, s)
     }

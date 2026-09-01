@@ -564,13 +564,39 @@ test('runImportMcp --dry-run with --url prints the http transport plan', async (
   }
 })
 
+/**
+ * Enter `dir` as BOTH the working directory and the home directory, and return
+ * a restore function.
+ *
+ * chdir alone is not enough: the client adapters also read a *global* config
+ * under `homedir()`. Without isolating home, these tests read the developer's
+ * real ~/.cursor/mcp.json (or ~/.codex/config.toml) and merge those servers
+ * into the result — so they pass on a clean CI runner and fail on any machine
+ * that actually uses Cursor or Codex.
+ */
+function enterIsolatedHome(dir: string): () => void {
+  const prevCwd = process.cwd()
+  const prevHome = process.env.HOME
+  const prevUserProfile = process.env.USERPROFILE
+  process.chdir(dir)
+  process.env.HOME = dir
+  process.env.USERPROFILE = dir
+  return () => {
+    process.chdir(prevCwd)
+    if (prevHome === undefined) delete process.env.HOME
+    else process.env.HOME = prevHome
+    if (prevUserProfile === undefined) delete process.env.USERPROFILE
+    else process.env.USERPROFILE = prevUserProfile
+  }
+}
+
 test('runImportMcp --from with an empty client config throws no-servers', async () => {
   const tmp = await mkdtemp(join(tmpdir(), 'glyph-empty-from-'))
-  const prevCwd = process.cwd()
+  let restore = () => {}
   try {
     await mkdir(join(tmp, '.cursor'), { recursive: true })
     await writeFile(join(tmp, '.cursor', 'mcp.json'), JSON.stringify({ mcpServers: {} }))
-    process.chdir(tmp)
+    restore = enterIsolatedHome(tmp)
     await assert.rejects(
       () =>
         runImportMcp({
@@ -580,28 +606,28 @@ test('runImportMcp --from with an empty client config throws no-servers', async 
       /no MCP servers declared/,
     )
   } finally {
-    process.chdir(prevCwd)
+    restore()
     await rm(tmp, { recursive: true, force: true })
   }
 })
 
 test('cursorAdapter detect + load read .cursor/mcp.json from the project cwd', async () => {
   const tmp = await mkdtemp(join(tmpdir(), 'glyph-cursor-'))
-  const prevCwd = process.cwd()
+  let restore = () => {}
   try {
     await mkdir(join(tmp, '.cursor'), { recursive: true })
     await writeFile(
       join(tmp, '.cursor', 'mcp.json'),
       JSON.stringify({ mcpServers: { fs: { command: 'npx', args: ['-y', 'server-fs'] } } }),
     )
-    process.chdir(tmp)
+    restore = enterIsolatedHome(tmp)
     assert.equal(await cursorAdapter.detect(), true)
     const configs = await cursorAdapter.load()
     assert.equal(configs.length, 1)
     assert.equal(configs[0]?.name, 'fs')
     assert.equal(configs[0]?.source, 'cursor')
   } finally {
-    process.chdir(prevCwd)
+    restore()
     await rm(tmp, { recursive: true, force: true })
   }
 })
