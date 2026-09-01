@@ -48,10 +48,10 @@
   "dependencies": {
     "@glyphp/client": "workspace:*",
     "@glyphp/types": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
     "@glyphp/server": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.2"
   }
 }

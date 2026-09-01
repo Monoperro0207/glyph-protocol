@@ -51,7 +51,7 @@
     "@glyphp/core": "workspace:*",
     "@glyphp/types": "workspace:*",
     "@sigstore/bundle": "^5.0.0",
-    "@sigstore/verify": "^4.0.0"
+    "@sigstore/verify": "^4.1.2"
   },
   "devDependencies": {
     "@glyphp/client": "workspace:*"
