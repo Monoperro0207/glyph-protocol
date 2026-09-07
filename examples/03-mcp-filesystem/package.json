@@ -13,9 +13,9 @@
     "@glyphp/resolver": "workspace:*",
     "@glyphp/server": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "zod": "4.5.2"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.13"
   }
 }

@@ -51,7 +51,7 @@
     "@glyphp/types": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "hono": "^4.13.5",
-    "zod": "^4.5.2",
+    "zod": "^4.5.4",
     "zod-to-json-schema": "^3.23.0"
   }
 }
