@@ -1,5 +1,12 @@
 # @glyphp/server
 
+## 1.4.2
+
+### Patch Changes
+
+- Updated dependencies [346973e]
+  - @glyphp/core@2.0.0
+
 ## 1.4.1
 
 ### Patch Changes

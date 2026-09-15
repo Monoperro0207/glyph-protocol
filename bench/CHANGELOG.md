@@ -1,5 +1,15 @@
 # @glyphp/bench
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [346973e]
+- Updated dependencies [346973e]
+  - @glyphp/client@1.3.3
+  - @glyphp/core@2.0.0
+  - @glyphp/server@1.4.2
+
 ## 0.0.7
 
 ### Patch Changes

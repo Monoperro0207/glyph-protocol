@@ -1,6 +1,6 @@
 {
   "name": "@glyphp/integration-langchain",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Expose Glyph Protocol glyphs as LangChain StructuredTools",
   "license": "Apache-2.0",
   "author": "Patrick Espino",
