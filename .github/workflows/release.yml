@@ -59,10 +59,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # npm >=11.5 is required for OIDC trusted publishing. `npm@latest` is
-      # unpinned, so the runner Node must satisfy whatever engine range the
-      # current npm declares — npm 12 dropped Node 20, which broke this step.
-      - run: npm install -g npm@latest
+      # npm >=11.5 is required for OIDC trusted publishing. Pinned to the 11.x
+      # line on purpose: npm 12 prints `npm info --json` as a one-element array,
+      # which @changesets/cli 2.x reads as "no published versions", so it tried to
+      # republish every unchanged package and failed the release. Revisit the pin
+      # only together with a changesets upgrade that handles that output.
+      - run: npm install -g npm@11
 
       - id: changesets
         uses: changesets/action@v1
