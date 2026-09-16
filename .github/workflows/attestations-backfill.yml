@@ -1,0 +1,120 @@
+# Attestations backfill — regenerates SBOM + cosign assets for releases that
+# already happened.
+#
+# The attestation jobs in release.yml are gated on
+# `needs.release.outputs.published == 'true'`, so they only ever run in the
+# same workflow run that published. When a release publishes but its
+# attestation jobs are skipped or fail (as in the 2026-09-15 release, where
+# the publish step exited non-zero after npm 12 broke changesets), re-running
+# release.yml will not regenerate them: nothing new is published, so the gate
+# stays false. This workflow is that missing path.
+#
+# It packs each tarball straight from the npm registry, so the signature and
+# the SBOM cover the exact published bytes, and uploads both assets to the
+# matching GitHub release with --clobber.
+#
+# Usage: Actions -> Attestations backfill -> Run workflow, and paste the
+# release tags to attest, whitespace-separated. Tags are exactly the release
+# tag names, e.g. `@glyphp/core@2.0.0 @glyphp/client@1.3.3`.
+
+name: Attestations backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Release tags to attest, whitespace-separated (e.g. "@glyphp/core@2.0.0 @glyphp/client@1.3.3")'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Install cdxgen
+        run: npm install -g @cyclonedx/cdxgen@^11
+
+      - name: Generate SBOM and cosign for the requested release tags
+        env:
+          TAGS: ${{ inputs.tags }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          mkdir -p .attest-backfill
+          cd .attest-backfill
+          failed=0
+          attested=0
+          # Fed by a here-string on purpose: a piped `while` would run in a
+          # subshell and `failed` would never reach the exit check below.
+          while read -r tag; do
+            [ -z "$tag" ] && continue
+            name="${tag%@*}"
+            version="${tag##*@}"
+
+            echo "::group::$tag"
+
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              echo "::error::no GitHub release exists for $tag"
+              failed=1
+              echo "::endgroup::"
+              continue
+            fi
+
+            tarball=$(npm pack "$name@$version" --silent) || {
+              echo "::error::npm pack failed for $tag"
+              failed=1
+              echo "::endgroup::"
+              continue
+            }
+
+            extracted=$(mktemp -d)
+            tar -xzf "$tarball" -C "$extracted" || {
+              echo "::error::extract failed for $tag"
+              failed=1
+              echo "::endgroup::"
+              continue
+            }
+
+            sbom="${tarball%.tgz}.cdx.sbom.json"
+            cdxgen -t npm -o "$sbom" "$extracted/package" || {
+              echo "::error::cdxgen failed for $tag"
+              failed=1
+            }
+
+            bundle="${tarball%.tgz}.cosign.bundle"
+            cosign sign-blob --yes --bundle "$bundle" "$tarball" || {
+              echo "::error::cosign failed for $tag"
+              failed=1
+            }
+
+            uploads=()
+            [ -f "$sbom" ] && uploads+=("$sbom")
+            [ -f "$bundle" ] && uploads+=("$bundle")
+            if [ ${#uploads[@]} -eq 2 ]; then
+              if gh release upload "$tag" "${uploads[@]}" --clobber; then
+                attested=$((attested + 1))
+              else
+                echo "::error::release upload failed for $tag"
+                failed=1
+              fi
+            else
+              echo "::error::incomplete attestation for $tag, nothing uploaded"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done <<< "$(tr -s ' \t' '\n\n' <<< "$TAGS")"
+
+          echo "Fully attested: $attested"
+          if [ "$failed" -eq 1 ]; then exit 1; fi
