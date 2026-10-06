@@ -20,6 +20,22 @@
 [![conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMonoperro0207%2Fglyph-protocol%2Fmain%2Fdocs%2Fconformance-badge.json)](packages/conformance)
 [![CI](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Monoperro0207/glyph-protocol/actions/workflows/ci.yml)
 
+## How it works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/protocol-map-dark.png" />
+  <img src="docs/assets/protocol-map-light.png" alt="Glyph Protocol map: the tool provider defines a glyph, the GlyphServer signs and serves it, the agent's GlyphClient fetches and verifies the card, runs its pin, trust and attestation gates, calls the server pipeline (with a single-use confirmation token for risky tools) and verifies the signed receipt; new or breaking cards need human approval and failed checks are refused." width="960" />
+</picture>
+
+One tool call, left to right: **publish** (content-address and sign the card) →
+**discover + verify** (handshake, pick a tool, check `id = hash` and the
+signature) → **gate** (pin, provider trust, attestation, confirmation token) →
+**execute + prove** (server pipeline, signed receipt, receipt check in
+`secureMode`).
+
+The interactive version, [`docs/protocol-map.html`](docs/protocol-map.html), links every
+step to the source lines that implement it. Download it and open it in a browser.
+
 ## Packages
 
 | Package | Description |
@@ -489,6 +505,9 @@ The wire protocol is documented in [`spec/`](spec):
 - [`SECURITY.md`](SECURITY.md) — supported versions, disclosure policy.
 - [`docs/why-glyph.md`](docs/why-glyph.md) — when to use Glyph vs MCP /
   OpenAPI / function-calling.
+- [`docs/protocol-map.html`](docs/protocol-map.html) — interactive map of a tool
+  call, source-linked; generated with [Archify](https://github.com/tt-a1i/archify)
+  from [`docs/protocol-map.workflow.json`](docs/protocol-map.workflow.json).
 - [`docs/deployment.md`](docs/deployment.md) — operational checklist,
   Docker, secrets, observability.
 - [`docs/release-verification.md`](docs/release-verification.md) — verifying
