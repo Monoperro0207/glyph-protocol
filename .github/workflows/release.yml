@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changesets.outputs.published }}
-      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
+      published_packages: ${{ steps.changesets.outputs.published-packages }}
     steps:
       - uses: actions/checkout@v7
 
@@ -67,12 +67,11 @@ jobs:
       - run: npm install -g npm@11
 
       - id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          version: pnpm version-packages
-          publish: pnpm release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version-script: pnpm version-packages
+          publish-script: pnpm release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   attestations-core:
     # Required post-publish status for core packages. Npm publish has already
