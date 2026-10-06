@@ -1,5 +1,12 @@
 # @glyphp/adapter-openapi
 
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [1824506]
+  - @glyphp/server@1.4.3
+
 ## 3.1.3
 
 ### Patch Changes
