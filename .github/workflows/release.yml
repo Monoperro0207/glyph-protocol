@@ -107,7 +107,11 @@ jobs:
           mkdir -p .attest-core
           cd .attest-core
           failed=0
-          echo "$PUBLISHED" | jq -c '.[]' | while read -r row; do
+          # Feed the loop from a here-string, not a pipe: a `while` at the end
+          # of a pipeline runs in a subshell, so `failed=1` would never reach
+          # the exit check below and this required job could not fail.
+          while read -r row; do
+            [ -z "$row" ] && continue
             name=$(echo "$row" | jq -r .name)
             matches=$(echo "$CORE_PACKAGES" | jq -r --arg n "$name" '.[] | select(. == $n)')
             [ -z "$matches" ] && continue
@@ -152,7 +156,7 @@ jobs:
               }
             fi
             echo "::endgroup::"
-          done
+          done <<< "$(echo "$PUBLISHED" | jq -c '.[]')"
           if [ "$failed" -eq 1 ]; then exit 1; fi
 
       - name: Retry core attestation on transient failure
