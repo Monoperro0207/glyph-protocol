@@ -497,6 +497,22 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
+  packages/verify-browser:
+    dependencies:
+      '@glyphp/types':
+        specifier: workspace:*
+        version: link:../types
+      '@noble/ed25519':
+        specifier: ^3.2.0
+        version: 3.2.0
+      '@noble/hashes':
+        specifier: ^2.4.0
+        version: 2.4.0
+    devDependencies:
+      '@glyphp/core':
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@alcalzone/ansi-tokenize@0.3.0':
