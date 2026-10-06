@@ -1,0 +1,536 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Glyph Protocol — How a Tool Call Works",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/protocol-map.html",
+    "repository": {
+      "url": "https://github.com/Monoperro0207/glyph-protocol.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "326e9f64b8981fb0517a514702a5213e8946ae0e"
+    },
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Agent step"
+        },
+        "backend": {
+          "label": "Server step"
+        },
+        "security": {
+          "label": "Check or gate"
+        },
+        "database": {
+          "label": "Signed record"
+        },
+        "external": {
+          "label": "Person or author"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "provider",
+      "label": "Tool provider"
+    },
+    {
+      "id": "server",
+      "label": "GlyphServer"
+    },
+    {
+      "id": "agent",
+      "label": "Agent · GlyphClient"
+    },
+    {
+      "id": "policy",
+      "label": "Approval & refusals",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "ph_publish",
+      "label": "Publish",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "ph_discover",
+      "label": "Discover + verify",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "ph_gate",
+      "label": "Gate",
+      "fromCol": 3,
+      "toCol": 3,
+      "variant": "security"
+    },
+    {
+      "id": "ph_execute",
+      "label": "Execute + prove",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "g_pipeline",
+      "label": "Server pipeline",
+      "lane": "server",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "author",
+    "sign",
+    "serve",
+    "discover",
+    "verify",
+    "gates",
+    "execute",
+    "receipt",
+    "check"
+  ],
+  "nodes": [
+    {
+      "id": "author",
+      "lane": "provider",
+      "col": 0,
+      "type": "external",
+      "icon": "person",
+      "label": "Define glyph",
+      "sublabel": "id = sha256(card)",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/define.ts",
+          "line": 23,
+          "end_line": 76,
+          "label": "defineGlyph"
+        },
+        {
+          "path": "packages/core/src/index.ts",
+          "line": 50,
+          "end_line": 74,
+          "label": "computeGlyphId"
+        }
+      ]
+    },
+    {
+      "id": "sign",
+      "lane": "server",
+      "col": 0,
+      "type": "security",
+      "label": "Register + sign",
+      "sublabel": "ed25519 over card id",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 231,
+          "end_line": 242,
+          "label": "register()"
+        }
+      ]
+    },
+    {
+      "id": "serve",
+      "lane": "server",
+      "col": 1,
+      "type": "backend",
+      "label": "Serve over HTTP",
+      "sublabel": "handshake · lexicon",
+      "tag": "GET /keys · /manifest",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 375,
+          "end_line": 424,
+          "label": "handshake, lexicon, card"
+        },
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 357,
+          "label": "GET /keys"
+        },
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 426,
+          "label": "GET manifest"
+        }
+      ]
+    },
+    {
+      "id": "discover",
+      "lane": "agent",
+      "col": 1,
+      "type": "frontend",
+      "label": "Handshake + pick",
+      "sublabel": "lexicon → intent",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 391,
+          "end_line": 405,
+          "label": "connect()"
+        },
+        {
+          "path": "packages/resolver/src/resolver.ts",
+          "line": 95,
+          "end_line": 115,
+          "label": "GlyphResolver"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "lane": "agent",
+      "col": 2,
+      "type": "security",
+      "label": "Fetch + verify card",
+      "sublabel": "id = hash · signature",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 407,
+          "end_line": 418,
+          "label": "getCard()"
+        },
+        {
+          "path": "packages/core/src/index.ts",
+          "line": 87,
+          "end_line": 98,
+          "label": "verifyGlyph"
+        }
+      ]
+    },
+    {
+      "id": "gates",
+      "lane": "agent",
+      "col": 3,
+      "type": "security",
+      "label": "Client gates",
+      "sublabel": "pin · trust · attest",
+      "tag": "before every call",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 431,
+          "end_line": 433,
+          "label": "gate order"
+        },
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 683,
+          "end_line": 752,
+          "label": "ensureApproved"
+        },
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 913,
+          "end_line": 961,
+          "label": "ensureAttested"
+        }
+      ]
+    },
+    {
+      "id": "approve",
+      "lane": "policy",
+      "col": 3,
+      "type": "external",
+      "icon": "person",
+      "label": "Approve + pin",
+      "sublabel": "approveCard / CLI",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 488,
+          "label": "approveCard()"
+        },
+        {
+          "path": "packages/cli/src/cli.ts",
+          "line": 115,
+          "end_line": 125,
+          "label": "glyph approve"
+        }
+      ]
+    },
+    {
+      "id": "confirm",
+      "lane": "server",
+      "col": 3,
+      "type": "security",
+      "label": "Confirmation ticket",
+      "sublabel": "POST /prepare · 1 use",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 438,
+          "end_line": 505,
+          "label": "POST /prepare"
+        },
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 422,
+          "label": "prepare()"
+        }
+      ]
+    },
+    {
+      "id": "execute",
+      "lane": "server",
+      "col": 4,
+      "type": "backend",
+      "label": "Call pipeline",
+      "sublabel": "gates → handler",
+      "tag": "scope · token · sanitize",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 507,
+          "end_line": 648,
+          "label": "POST /call"
+        },
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 530,
+          "end_line": 545,
+          "label": "scope gate"
+        },
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 560,
+          "end_line": 602,
+          "label": "confirmation gate"
+        }
+      ]
+    },
+    {
+      "id": "receipt",
+      "lane": "server",
+      "col": 5,
+      "type": "database",
+      "label": "Signed receipt",
+      "sublabel": "hashes · callId · key",
+      "tag": "onCall audit hook",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 650,
+          "end_line": 676,
+          "label": "receipt + onCall"
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "lane": "agent",
+      "col": 5,
+      "type": "security",
+      "label": "Verify receipt",
+      "sublabel": "key · sig · id · hash",
+      "tag": "secureMode",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 446,
+          "end_line": 450,
+          "label": "secureMode check"
+        },
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 611,
+          "end_line": 641,
+          "label": "verifyReceipt"
+        },
+        {
+          "path": "packages/client/src/render.ts",
+          "line": 43,
+          "label": "renderEnvelope"
+        }
+      ]
+    },
+    {
+      "id": "refused",
+      "lane": "policy",
+      "col": 5,
+      "type": "security",
+      "icon": "failure",
+      "label": "Refused",
+      "sublabel": "HTTP 4xx/5xx · error",
+      "width": 128,
+      "sources": [
+        {
+          "path": "packages/server/src/server.ts",
+          "line": 563,
+          "end_line": 602,
+          "label": "token errors"
+        },
+        {
+          "path": "packages/client/src/index.ts",
+          "line": 611,
+          "end_line": 641,
+          "label": "receipt mismatch"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_register",
+      "from": "author",
+      "to": "sign",
+      "label": "register()",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "e_publish",
+      "from": "sign",
+      "to": "serve",
+      "label": "signed card",
+      "variant": "default"
+    },
+    {
+      "id": "e_handshake",
+      "from": "serve",
+      "to": "discover",
+      "label": "POST /handshake",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_fetch",
+      "from": "discover",
+      "to": "verify",
+      "label": "GET card",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_verified",
+      "from": "verify",
+      "to": "gates",
+      "label": "verified",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_new",
+      "from": "verify",
+      "to": "approve",
+      "label": "new or breaking",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "e_pinned",
+      "from": "approve",
+      "to": "gates",
+      "label": "pinned",
+      "variant": "security",
+      "role": "branch",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "e_needs_token",
+      "from": "gates",
+      "to": "confirm",
+      "label": "requiresConfirmation",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "e_call",
+      "from": "gates",
+      "to": "execute",
+      "label": "POST /call",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_token",
+      "from": "confirm",
+      "to": "execute",
+      "label": "token",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "e_sign_receipt",
+      "from": "execute",
+      "to": "receipt",
+      "label": "output",
+      "variant": "default"
+    },
+    {
+      "id": "e_envelope",
+      "from": "receipt",
+      "to": "check",
+      "label": "envelope",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_rejected",
+      "from": "execute",
+      "to": "refused",
+      "label": "gate fails",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "e_mismatch",
+      "from": "check",
+      "to": "refused",
+      "label": "mismatch",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "What gets signed",
+      "items": [
+        "Card: server key signs the content id (sha256 of canonical JSON)",
+        "Receipt: server key signs callId, glyphId and input/output hashes",
+        "Update manifest and key registry: signed chain for rotation"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Where a call stops",
+      "items": [
+        "Client: unknown or breaking card, revoked tool, untrusted key, missing attestation",
+        "Server: invalid input 400, missing scope 403, missing or bad token 403",
+        "secureMode: receipt key, signature, id or hash mismatch"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Opt-in, not automatic",
+      "items": [
+        "Provider trust and attestation run only when configured",
+        "Reviewing a confirmation ticket is up to the consumer",
+        "The client does not fetch /keys during a call"
+      ]
+    }
+  ]
+}
