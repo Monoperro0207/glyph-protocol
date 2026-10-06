@@ -119,7 +119,7 @@ jobs:
 
             echo "::group::$tag (core)"
 
-            tarball=$(npm pack "$name@$version" --silent) || {
+            tarball=$(node "$GITHUB_WORKSPACE/scripts/npm-pack-retry.mjs" "$name@$version") || {
               echo "::error::npm pack failed for core package $tag"
               failed=1
               echo "::endgroup::"
@@ -207,7 +207,7 @@ jobs:
             tag="${name}@${version}"
 
             echo "::group::$tag"
-            tarball=$(npm pack "$name@$version" --silent) || {
+            tarball=$(node "$GITHUB_WORKSPACE/scripts/npm-pack-retry.mjs" "$name@$version") || {
               echo "::warning::npm pack failed for $tag"
               echo "::endgroup::"
               continue
