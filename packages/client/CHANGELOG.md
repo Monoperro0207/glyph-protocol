@@ -1,5 +1,12 @@
 # @glyphp/client
 
+## 1.3.4
+
+### Patch Changes
+
+- acc08a8: Receipt verification in `secureMode` now fails closed. `call()` used to return the payload unverified when the response carried no receipt, and skipped verification entirely when the card was not in the session cache (e.g. a card served without its signature, which still matched the pin by id and key). Both cases now throw `GlyphVerificationError`, and the receipt is always checked against the pinned card. Servers that do not sign receipts need the explicit `verifyReceipts: false` opt-out.
+- 3a42fb0: Receipt verification in `secureMode` now binds the receipt to the call it answers. `call()` already sent a fresh `callId`, but never compared it with the receipt, so a genuine envelope recorded from an earlier call of the same tool passed every check and could be replayed in place of the real response. The receipt's `clientCallId` (or `callId` on a 0.2 receipt) must now equal the `callId` sent, otherwise `call()` throws `GlyphVerificationError`. Servers that sign receipts but do not echo the client `callId` (RFC-0005) need the explicit `verifyReceipts: false` opt-out.
+
 ## 1.3.3
 
 ### Patch Changes

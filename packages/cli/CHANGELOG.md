@@ -1,5 +1,13 @@
 # @glyphp/cli
 
+## 1.3.6
+
+### Patch Changes
+
+- Updated dependencies [acc08a8]
+- Updated dependencies [3a42fb0]
+  - @glyphp/client@1.3.4
+
 ## 1.3.5
 
 ### Patch Changes
