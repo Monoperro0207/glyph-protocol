@@ -472,7 +472,7 @@ test('call() auto-approves non-breaking changes and blocks breaking ones', async
 function serveWithReceipt(
   card: GlyphCard,
   keyPair: { publicKey: string; privateKey: string },
-  overrides?: Partial<CallReceipt>,
+  overrides?: Partial<CallReceipt> | ((clientCallId?: string) => Partial<CallReceipt>),
 ): typeof fetch {
   return async (input) => {
     const url = (input as Request).url
@@ -483,9 +483,12 @@ function serveWithReceipt(
     if (url.endsWith('/call')) {
       const payload = { ok: true }
       const inspection = { modified: false, findings: [] as const }
+      // Like the reference server, echo the caller's callId as clientCallId.
+      const { callId: clientCallId } = (await (input as Request).json()) as { callId?: string }
       const receiptBase: Omit<CallReceipt, 'signature'> = {
         receiptVersion: '0.3',
         callId: 'c1',
+        ...(clientCallId ? { clientCallId } : {}),
         glyphId: card.id,
         glyphName: card.name,
         inputHash: canonicalHash({}),
@@ -496,7 +499,7 @@ function serveWithReceipt(
         latencyMs: 1,
         timestamp: new Date().toISOString(),
         serverPublicKey: keyPair.publicKey,
-        ...overrides,
+        ...(typeof overrides === 'function' ? overrides(clientCallId) : overrides),
       }
       const receipt: CallReceipt = {
         ...receiptBase,
@@ -773,6 +776,67 @@ test('verifyReceipts: false tolerates a server that sends no receipt', async () 
     pins,
     secureMode: true,
     verifyReceipts: false,
+  })
+  await client.approveCard(card)
+
+  const result = await client.call(card.name, {})
+  assert.deepEqual(result.payload, { ok: true })
+})
+
+test('secureMode: a genuine envelope replayed from an earlier call rejects', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  // An intermediary records the first /call response and answers every later
+  // call with it. The recorded receipt is genuine — signed by the pinned key
+  // and consistent with its payload — but it answers a different call.
+  const inner = serveWithReceipt(card, keyPair)
+  let recorded: string | undefined
+  const replaying: typeof fetch = async (input, init) => {
+    if (!(input as Request).url.endsWith('/call')) return inner(input, init)
+    recorded ??= await (await inner(input, init)).text()
+    return new Response(recorded, { headers: { 'content-type': 'application/json' } })
+  }
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: replaying,
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  await client.call(card.name, {})
+  await assert.rejects(() => client.call(card.name, {}), GlyphVerificationError)
+})
+
+test('secureMode: a receipt that does not echo the callId rejects', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair, { clientCallId: undefined }),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  await assert.rejects(() => client.call(card.name, {}), GlyphVerificationError)
+})
+
+test('secureMode: a 0.2 receipt carrying the client callId as callId is accepted', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serveWithReceipt(card, keyPair, (clientCallId) => ({
+      receiptVersion: '0.2',
+      callId: clientCallId,
+      clientCallId: undefined,
+    })),
+    pins,
+    secureMode: true,
   })
   await client.approveCard(card)
 

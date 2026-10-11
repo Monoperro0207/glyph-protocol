@@ -52,9 +52,11 @@ function serve(card: GlyphCard, keyPair: GlyphKeyPair): typeof fetch {
     if (url.endsWith('/call')) {
       const payload = { ok: true }
       const inspection = { modified: false, findings: [] as const }
+      const { callId: clientCallId } = (await (input as Request).json()) as { callId?: string }
       const receiptBase: Omit<CallReceipt, 'signature'> = {
         receiptVersion: '0.3',
         callId: 'c1',
+        ...(clientCallId ? { clientCallId } : {}),
         glyphId: card.id,
         glyphName: card.name,
         inputHash: canonicalHash({}),
