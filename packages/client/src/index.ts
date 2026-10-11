@@ -452,7 +452,7 @@ export class GlyphClient {
     if (this.secureMode && this.verifyReceipts && this.pins) {
       const pin = await this.pins.get(name)
       if (!pin) throw new GlyphVerificationError(`Receipt for "${name}"`)
-      this.verifyReceipt(envelope, pin.card)
+      this.verifyReceipt(envelope, pin.card, callId)
     }
     return envelope as SealedEnvelope & { payload: T }
   }
@@ -610,11 +610,12 @@ export class GlyphClient {
   }
 
   /**
-   * Verifies a call receipt against the pinned card's key and content.
+   * Verifies a call receipt against the pinned card's key and content, and
+   * against the call it answers.
    * Called during call() when secureMode is active and verifyReceipts is
    * not explicitly disabled. Throws GlyphVerificationError on any mismatch.
    */
-  private verifyReceipt(envelope: SealedEnvelope, card: GlyphCard): void {
+  private verifyReceipt(envelope: SealedEnvelope, card: GlyphCard, callId: string): void {
     const receipt = envelope.receipt as CallReceipt | undefined
     // A missing receipt fails closed: every successful call produces one
     // (protocol §8.2), so its absence means a non-signing server or a receipt
@@ -648,6 +649,15 @@ export class GlyphClient {
     // (e) inspectionHash must match the actual inspection in the envelope.
     const actualInspectionHash = canonicalHash(envelope.inspection ?? {})
     if (actualInspectionHash !== receipt.inspectionHash) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
+
+    // (f) The receipt must answer THIS call, not an earlier one. The server
+    // echoes the callId we sent as `clientCallId` (RFC-0005); a 0.2 receipt
+    // carries it as `callId` instead. Without this, a genuine envelope
+    // recorded from a previous call of the same tool passes (a)-(e) and can
+    // be replayed in place of the real response.
+    if ((receipt.clientCallId ?? receipt.callId) !== callId) {
       throw new GlyphVerificationError(`Receipt for "${card.name}"`)
     }
   }
