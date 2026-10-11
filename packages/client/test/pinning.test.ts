@@ -376,7 +376,7 @@ test('secureMode + autoApproveReviewChanges: intent change auto-approves', async
   const original = makeCard({ keyPair, intent: 'Refund a payment', riskTier: 'safe' })
   const client = new GlyphClient({
     baseUrl: 'http://glyph',
-    fetch: serve(original),
+    fetch: serveWithReceipt(original, keyPair),
     pins,
     secureMode: true,
     autoApproveReviewChanges: true,
@@ -387,7 +387,7 @@ test('secureMode + autoApproveReviewChanges: intent change auto-approves', async
   const intentChanged = makeCard({ keyPair, intent: 'Process a payment refund', riskTier: 'safe' })
   const smClient = new GlyphClient({
     baseUrl: 'http://glyph',
-    fetch: serve(intentChanged),
+    fetch: serveWithReceipt(intentChanged, keyPair),
     pins,
     secureMode: true,
     autoApproveReviewChanges: true,
@@ -682,4 +682,100 @@ test('verifyReceipts: false skips receipt verification', async () => {
   })
   const result = await tamperClient.call(card.name, {})
   assert.ok(result.payload !== undefined, 'verifyReceipts: false should skip verification')
+})
+
+/** Wraps a fetch impl, rewriting the JSON body of every matching response. */
+function tamperResponses(
+  inner: typeof fetch,
+  suffix: string,
+  rewrite: (body: Record<string, unknown>) => Record<string, unknown>,
+): typeof fetch {
+  return async (input, init) => {
+    const res = await inner(input, init)
+    if (!(input as Request).url.endsWith(suffix)) return res
+    return new Response(JSON.stringify(rewrite(await res.json())), {
+      status: res.status,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+}
+
+test('secureMode: a response with no receipt rejects', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(card),
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  await assert.rejects(() => client.call(card.name, {}), GlyphVerificationError)
+})
+
+test('secureMode: a receipt stripped in transit rejects the tampered payload', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  // An intermediary drops the receipt and swaps the payload — without the
+  // receipt there is nothing left to bind the payload to the pinned card.
+  const stripped = tamperResponses(serveWithReceipt(card, keyPair), '/call', (body) => {
+    const { receipt: _receipt, ...rest } = body
+    return { ...rest, payload: { ok: false, injected: true } }
+  })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: stripped,
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  await assert.rejects(() => client.call(card.name, {}), GlyphVerificationError)
+})
+
+test('secureMode: a card served without its signature cannot skip receipt verification', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  // The unsigned card still matches the pin by (id, publicKey), so the pin gate
+  // passes — but it is never cached. The receipt must be checked against the
+  // pin regardless, or a tampered outputHash sails through.
+  const wrongHash = canonicalHash({ tampered: true })
+  const unsigned = tamperResponses(
+    serveWithReceipt(card, keyPair, { outputHash: wrongHash }),
+    `/glyphs/${encodeURIComponent(card.name)}`,
+    (body) => {
+      const { signature: _signature, ...rest } = body
+      return rest
+    },
+  )
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: unsigned,
+    pins,
+    secureMode: true,
+  })
+  await client.approveCard(card)
+
+  await assert.rejects(() => client.call(card.name, {}), /receipt/i)
+})
+
+test('verifyReceipts: false tolerates a server that sends no receipt', async () => {
+  const keyPair = generateKeyPair()
+  const pins = new MemoryPinStore()
+  const card = makeCard({ keyPair })
+  const client = new GlyphClient({
+    baseUrl: 'http://glyph',
+    fetch: serve(card),
+    pins,
+    secureMode: true,
+    verifyReceipts: false,
+  })
+  await client.approveCard(card)
+
+  const result = await client.call(card.name, {})
+  assert.deepEqual(result.payload, { ok: true })
 })

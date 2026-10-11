@@ -443,10 +443,16 @@ export class GlyphClient {
     // unaudited new card — governs: a server that actually swapped to the new
     // card produces a receipt whose glyphId won't match the pin, so its output
     // is rejected. The unaudited card's result never reaches the caller.
+    //
+    // The pin — never the session cache — is the reference. ensureApproved()
+    // leaves a pin on every path that reaches here, whereas the cache only
+    // holds signed cards: a card served without its signature still matches
+    // the pin by (id, publicKey) but is never cached, and must not turn
+    // verification into a no-op.
     if (this.secureMode && this.verifyReceipts && this.pins) {
-      const pending = this.resilientUpdates ? await this.pendingAuditQueue?.get(name) : undefined
-      const card = pending ? (await this.pins.get(name))?.card : this.cardCache.get(name)
-      if (card) this.verifyReceipt(envelope, card)
+      const pin = await this.pins.get(name)
+      if (!pin) throw new GlyphVerificationError(`Receipt for "${name}"`)
+      this.verifyReceipt(envelope, pin.card)
     }
     return envelope as SealedEnvelope & { payload: T }
   }
@@ -610,7 +616,13 @@ export class GlyphClient {
    */
   private verifyReceipt(envelope: SealedEnvelope, card: GlyphCard): void {
     const receipt = envelope.receipt as CallReceipt | undefined
-    if (!receipt) return // No receipt to verify — skip silently.
+    // A missing receipt fails closed: every successful call produces one
+    // (protocol §8.2), so its absence means a non-signing server or a receipt
+    // stripped in transit — and with it, any binding between the payload and
+    // the pinned card. `verifyReceipts: false` is the explicit opt-out.
+    if (!receipt) {
+      throw new GlyphVerificationError(`Receipt for "${card.name}"`)
+    }
 
     // (a) The receipt must be signed by the pinned key, not some other key.
     if (receipt.serverPublicKey !== card.publicKey) {
