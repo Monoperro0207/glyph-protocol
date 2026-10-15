@@ -2,4 +2,4 @@ module github.com/Monoperro0207/glyph-protocol/sdks/go/glyphprotocol
 
 go 1.26.0
 
-require golang.org/x/text v0.42.0
+require golang.org/x/text v0.43.0
